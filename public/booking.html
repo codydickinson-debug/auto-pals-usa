@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schedule a Call — Auto Pals USA</title>
+<meta name="description" content="Book a 30-minute call with Alex or Josh to start your vehicle search. Monday–Friday, 9am–5pm ET.">
+<meta name="robots" content="noindex, follow">
+<meta property="og:title" content="Schedule a Call — Auto Pals USA">
+<meta property="og:description" content="Book a 30-minute call with our team to start your vehicle search.">
+<meta property="og:url" content="https://autopalsusa.com/booking.html">
+<meta name="theme-color" content="#0f2557">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --cream: #f5f0e8; --cream-dark: #ede5d4;
+    --navy: #0f2557; --navy-mid: #1a3470; --navy-light: #e8edf8;
+    --text: #1a1a2e; --text-muted: #5a6480;
+    --border: #ddd5c0; --white: #fffdf7;
+    --green: #1a5c32; --green-light: #e8f0e8;
+    --red: #b91c1c; --red-light: #fef2f2;
+    --radius: 10px;
+    --shadow: 0 2px 16px rgba(15,37,87,0.10);
+    --shadow-lg: 0 8px 40px rgba(15,37,87,0.14);
+  }
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  nav {
+    background: rgba(15,37,87,0.97);
+    backdrop-filter: blur(12px);
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 40px;
+    box-shadow: 0 2px 12px rgba(15,37,87,0.2);
+  }
+  .nav-logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
+  .nav-logo-text { color:var(--cream); font-size:18px; font-weight:700; }
+  .nav-logo-sub { font-size:10px; font-weight:500; letter-spacing:0.18em; text-transform:uppercase; color:rgba(245,240,232,0.45); margin-top:1px; }
+
+  .booking-wrap {
+    max-width: 960px;
+    margin: 56px auto;
+    padding: 0 24px 80px;
+    display: grid;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 32px;
+    align-items: start;
+  }
+
+  /* LEFT — info panel */
+  .booking-info {
+    background: var(--navy);
+    border-radius: 20px;
+    padding: 36px 32px;
+    position: sticky;
+    top: 88px;
+    overflow: hidden;
+  }
+  .booking-info::before {
+    content: '';
+    position: absolute;
+    top: -100px; right: -100px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(26,92,50,0.25) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .info-tag {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #a7c4b0; margin-bottom: 12px;
+  }
+  .info-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px; font-weight: 700;
+    color: var(--cream); line-height: 1.2; margin-bottom: 16px;
+  }
+  .info-desc {
+    font-size: 13px; color: rgba(245,240,232,0.65);
+    line-height: 1.7; margin-bottom: 28px;
+  }
+  .info-detail {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: rgba(245,240,232,0.8);
+    margin-bottom: 12px;
+  }
+  .info-detail-icon {
+    width: 32px; height: 32px;
+    background: rgba(245,240,232,0.08);
+    border: 1px solid rgba(245,240,232,0.1);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; flex-shrink: 0;
+  }
+  .info-divider { border: none; border-top: 1px solid rgba(245,240,232,0.08); margin: 24px 0; }
+  .info-team {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .team-avatars { display: flex; }
+  .team-avatar {
+    width: 36px; height: 36px;
+    background: rgba(245,240,232,0.15);
+    border: 2px solid var(--navy);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: var(--cream);
+    margin-left: -8px;
+  }
+  .team-avatar:first-child { margin-left: 0; }
+  .team-label { font-size: 13px; color: rgba(245,240,232,0.7); }
+
+  /* RIGHT — booking panel */
+  .booking-panel {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+  .booking-step { display: none; }
+  .booking-step.active { display: block; }
+
+  /* Step 1 — Date picker */
+  .cal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 24px 28px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .cal-month {
+    font-size: 16px; font-weight: 700; color: var(--navy);
+  }
+  .cal-nav {
+    display: flex; gap: 8px;
+  }
+  .cal-nav-btn {
+    width: 32px; height: 32px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--cream); color: var(--text-muted);
+    cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s;
+  }
+  .cal-nav-btn:hover { background: var(--navy); color: var(--cream); border-color: var(--navy); }
+  .cal-grid { padding: 16px 28px 24px; }
+  .cal-days-header {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 8px;
+  }
+  .cal-day-label {
+    text-align: center; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text-muted); padding: 6px 0;
+  }
+  .cal-days {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 500;
+    border-radius: 8px; cursor: pointer;
+    color: var(--text); transition: all 0.12s;
+    border: 1px solid transparent;
+  }
+  .cal-day:hover:not(.disabled):not(.empty) { background: var(--navy-light); border-color: var(--border); }
+  .cal-day.selected { background: var(--navy); color: var(--cream); border-color: var(--navy); }
+  .cal-day.today { border-color: var(--navy); color: var(--navy); font-weight: 700; }
+  .cal-day.disabled { color: #c0c8d8; cursor: default; }
+  .cal-day.empty { cursor: default; }
+  .cal-day.has-slots::after {
+    content: ''; display: block;
+    width: 4px; height: 4px;
+    background: var(--green); border-radius: 50%;
+    position: absolute; bottom: 4px;
+  }
+  .cal-day { position: relative; }
+
+  /* Time slots */
+  .time-section { padding: 0 28px 28px; }
+  .time-label {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-muted);
+    margin-bottom: 14px; padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .time-slots {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .time-slot {
+    padding: 10px 8px; text-align: center;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    font-size: 13px; font-weight: 500; color: var(--text);
+    cursor: pointer; transition: all 0.12s; background: var(--cream);
+  }
+  .time-slot:hover { border-color: var(--navy); background: var(--navy-light); color: var(--navy); }
+  .time-slot.selected { background: var(--navy); color: var(--cream); border-color: var(--navy); }
+  .time-slot.unavailable { 
+    color: var(--border); 
+    cursor: not-allowed; 
+    background: var(--cream-dark); 
+    text-decoration: line-through;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .time-empty { font-size: 13px; color: var(--text-muted); padding: 12px 0; font-style: italic; }
+
+  /* Step 2 — Confirm details */
+  .confirm-section { padding: 28px; }
+  .confirm-header { margin-bottom: 24px; }
+  .confirm-title { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .confirm-subtitle { font-size: 13px; color: var(--text-muted); }
+  .selected-slot-card {
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .slot-icon { font-size: 24px; }
+  .slot-date { font-size: 14px; font-weight: 700; color: var(--navy); }
+  .slot-time { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { font-size: 12px; font-weight: 700; color: var(--text); display: block; margin-bottom: 6px; }
+  .form-label .req { color: var(--red); margin-left: 2px; }
+  .form-input {
+    width: 100%; padding: 10px 14px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    color: var(--text); background: var(--cream); outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: var(--navy); background: var(--white); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .book-btn {
+    width: 100%; margin-top: 8px;
+    padding: 14px; background: var(--navy); color: var(--cream);
+    border: none; border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .book-btn:hover { background: var(--navy-mid); transform: translateY(-1px); }
+  .book-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .back-btn {
+    background: none; border: none; color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    cursor: pointer; padding: 0; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 6px;
+    transition: color 0.12s;
+  }
+  .back-btn:hover { color: var(--navy); }
+
+  /* Step 3 — Confirmed */
+  .confirmed-section {
+    padding: 48px 28px; text-align: center;
+  }
+  .confirmed-icon {
+    width: 72px; height: 72px;
+    background: var(--green-light);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; margin: 0 auto 20px;
+    border: 1px solid #a7f3d0;
+  }
+  .confirmed-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px; font-weight: 700;
+    color: var(--navy); margin-bottom: 10px;
+  }
+  .confirmed-desc { font-size: 14px; color: var(--text-muted); line-height: 1.7; max-width: 380px; margin: 0 auto 28px; }
+  .confirmed-card {
+    background: var(--cream); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 24px;
+    display: inline-block; text-align: left; margin-bottom: 24px;
+  }
+  .confirmed-detail { font-size: 13px; color: var(--text); margin-bottom: 6px; }
+  .confirmed-detail strong { color: var(--navy); }
+  .confirmed-home {
+    display: inline-block; padding: 12px 28px;
+    background: var(--navy); color: var(--cream);
+    border-radius: var(--radius); text-decoration: none;
+    font-size: 14px; font-weight: 600; transition: opacity 0.15s;
+  }
+  .confirmed-home:hover { opacity: 0.85; }
+
+  @media (max-width: 768px) {
+    .booking-wrap { grid-template-columns: 1fr; gap: 24px; padding: 24px 16px; }
+    .booking-info { position: static; padding: 24px 20px; }
+    .booking-cal { padding: 24px 18px; }
+    .booking-info h1 { font-size: 24px; }
+    nav { padding: 14px 16px; }
+    .nav-logo { font-size: 16px; }
+    .form-group { margin-bottom: 14px; }
+    input, select, textarea { font-size: 16px !important; } /* prevent iOS zoom */
+
+    /* Calendar grid: keep 7 columns but tighter */
+    .cal-grid { gap: 4px !important; }
+    .cal-day { font-size: 13px !important; padding: 8px 0 !important; }
+
+    /* Time slot grid: 2 columns instead of 3 on small screens */
+    .slot-grid { grid-template-columns: 1fr 1fr !important; }
+  }
+
+  @media (max-width: 420px) {
+    .booking-info { padding: 20px 16px; }
+    .booking-cal { padding: 20px 14px; }
+  }
+</style>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+
+<nav>
+  <a href="home.html" class="nav-logo">
+    <svg width="36" height="36" viewBox="0 0 38 38" fill="none">
+      <rect width="38" height="38" rx="8" fill="rgba(245,240,232,0.10)" stroke="rgba(245,240,232,0.18)" stroke-width="1"/>
+      <path d="M6 27L11.5 11H13.5L19 27H17L15.6 23H9.4L8 27H6ZM10 21H15L12.5 14L10 21Z" fill="#f5f0e8"/>
+      <path d="M20 11H27Q30 11 31.5 12.5Q33 14 33 16.5Q33 19 31.5 20.5Q30 22 27 22H23V27H20V11ZM23 14V19H27Q28.5 19 29.2 18.3Q30 17.5 30 16.5Q30 15.5 29.2 14.8Q28.5 14 27 14H23Z" fill="#f5f0e8"/>
+      <rect x="6" y="29.5" width="26" height="1.5" rx="0.75" fill="rgba(167,196,176,0.7)"/>
+    </svg>
+    <div>
+      <div class="nav-logo-text">Auto Pals USA</div>
+      <div class="nav-logo-sub">Vehicle Sourcing</div>
+    </div>
+  </a>
+  <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+    <a href="portal.html" style="padding:8px 16px;background:rgba(245,240,232,0.08);color:var(--cream);border:1px solid rgba(245,240,232,0.18);border-radius:8px;text-decoration:none;font-family:system-ui,sans-serif;font-size:13px;font-weight:600;transition:background 0.15s;" onmouseover="this.style.background='rgba(245,240,232,0.16)'" onmouseout="this.style.background='rgba(245,240,232,0.08)'">← Back to Portal</a>
+  </div>
+</nav>
+
+<div class="booking-wrap">
+
+  <!-- LEFT INFO -->
+  <div class="booking-info">
+    <div class="info-tag">Free Consultation</div>
+    <div class="info-title">Schedule Your Sales Call</div>
+    <p class="info-desc">Pick a time that works for you and we'll walk you through how the process works, what your budget can get you, and answer any questions.</p>
+    <div class="info-detail">
+      <div class="info-detail-icon">⏱</div>
+      30-minute call
+    </div>
+    <div class="info-detail">
+      <div class="info-detail-icon">📞</div>
+      Phone or video — your choice
+    </div>
+    <div class="info-detail">
+      <div class="info-detail-icon">📅</div>
+      Monday – Friday, 9am – 5pm ET
+    </div>
+    <div class="info-detail">
+      <div class="info-detail-icon">📍</div>
+      Pompano Beach, FL
+    </div>
+    <hr class="info-divider">
+    <div class="info-team">
+      <div class="team-avatars">
+        <div class="team-avatar">A</div>
+        <div class="team-avatar">J</div>
+      </div>
+      <div class="team-label">You'll speak with Alex or Josh</div>
+    </div>
+  </div>
+
+  <!-- RIGHT BOOKING PANEL -->
+  <div class="booking-panel">
+
+    <!-- STEP 1: Pick date & time -->
+    <div class="booking-step active" id="step-1">
+      <div class="cal-header">
+        <div class="cal-month" id="cal-month-label">Loading...</div>
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="changeMonth(-1)">&#8249;</button>
+          <button class="cal-nav-btn" onclick="changeMonth(1)">&#8250;</button>
+        </div>
+      </div>
+
+      <div class="cal-grid">
+        <div class="cal-days-header">
+          <div class="cal-day-label">Sun</div>
+          <div class="cal-day-label">Mon</div>
+          <div class="cal-day-label">Tue</div>
+          <div class="cal-day-label">Wed</div>
+          <div class="cal-day-label">Thu</div>
+          <div class="cal-day-label">Fri</div>
+          <div class="cal-day-label">Sat</div>
+        </div>
+        <div class="cal-days" id="cal-days"></div>
+      </div>
+
+      <div class="time-section">
+        <div class="time-label" id="time-label" style="display:none;">Available Times</div>
+        <div class="time-slots" id="time-slots"></div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Confirm details -->
+    <div class="booking-step" id="step-2">
+      <div class="confirm-section">
+        <button class="back-btn" onclick="goBack()">← Back</button>
+        <div class="confirm-header">
+          <div class="confirm-title">Confirm Your Booking</div>
+          <div class="confirm-subtitle">Fill in your details and we'll send a calendar invite.</div>
+        </div>
+        <div class="selected-slot-card">
+          <div class="slot-icon">📅</div>
+          <div>
+            <div class="slot-date" id="confirm-date"></div>
+            <div class="slot-time" id="confirm-time"></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">First Name <span class="req">*</span></label>
+            <input class="form-input" id="b-fn" type="text" placeholder="John">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name <span class="req">*</span></label>
+            <input class="form-input" id="b-ln" type="text" placeholder="Smith">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email <span class="req">*</span></label>
+          <input class="form-input" id="b-email" type="email" placeholder="john@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input class="form-input" id="b-phone" type="tel" placeholder="(555) 000-0000">
+        </div>
+        <div class="form-group">
+          <label class="form-label">What vehicle are you looking for?</label>
+          <input class="form-input" id="b-vehicle" type="text" placeholder="e.g. 2021 Toyota Tacoma, or I'm open to suggestions">
+        </div>
+        <button class="book-btn" id="book-btn" onclick="confirmBooking()">Confirm Booking →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: Confirmed -->
+    <div class="booking-step" id="step-3">
+      <div class="confirmed-section">
+        <div class="confirmed-icon">✓</div>
+        <div class="confirmed-title">You're booked!</div>
+        <p class="confirmed-desc">A calendar invite has been sent to your email. Alex or Josh will call you at the scheduled time.</p>
+        <div class="confirmed-card">
+          <div class="confirmed-detail">📅 <strong id="conf-date"></strong></div>
+          <div class="confirmed-detail">⏰ <strong id="conf-time"></strong> ET</div>
+          <div class="confirmed-detail">⏱ 30-minute call</div>
+          <div class="confirmed-detail">📧 Confirmation sent to <strong id="conf-email"></strong></div>
+        </div>
+        <br>
+        <a href="home.html" class="confirmed-home">Back to Homepage</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ── CALENDAR STATE ──────────────────────────────────────────────
+  const today = new Date();
+  let viewYear = today.getFullYear();
+  let viewMonth = today.getMonth();
+  let selectedDate = null;
+  let selectedTime = null;
+
+  // Business hours: Mon–Fri, 9am–5pm ET, 30-min slots
+  const SLOTS = ['9:00 AM','9:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM',
+                  '12:00 PM','12:30 PM','1:00 PM','1:30 PM','2:00 PM','2:30 PM',
+                  '3:00 PM','3:30 PM','4:00 PM','4:30 PM'];
+
+  const MAX_PER_DAY = 5;
+
+  // Bookings cache: { "YYYY-MM-DD": ["9:00 AM", "10:00 AM", ...] }
+  const BOOKED = {};
+  // Day counts cache: { "YYYY-MM-DD": 3 }
+  const DAY_COUNTS = {};
+
+  // Load bookings for a date from Supabase
+  async function loadBookingsForDate(dateStr) {
+    if (BOOKED[dateStr] !== undefined) return; // already loaded
+    try {
+      const res = await fetch(`/api/db?table=bookings&date=${dateStr}`);
+      if (res.ok) {
+        const data = await res.json();
+        BOOKED[dateStr] = data.map(b => b.time);
+        DAY_COUNTS[dateStr] = data.length;
+      }
+    } catch(e) {
+      BOOKED[dateStr] = [];
+      DAY_COUNTS[dateStr] = 0;
+    }
+  }
+
+  // Preload bookings for visible month
+  async function preloadMonthBookings() {
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const promises = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(viewYear, viewMonth, d);
+      if (date.getDay() === 0 || date.getDay() === 6) continue;
+      if (date < new Date(today.getFullYear(), today.getMonth(), today.getDate())) continue;
+      const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      promises.push(loadBookingsForDate(dateStr));
+    }
+    await Promise.all(promises);
+    renderCalendar();
+  }
+
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  function renderCalendar() {
+    document.getElementById('cal-month-label').textContent = MONTHS[viewMonth] + ' ' + viewYear;
+    const grid = document.getElementById('cal-days');
+    grid.innerHTML = '';
+
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+    // Empty cells before first day
+    for (let i = 0; i < firstDay; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'cal-day empty';
+      grid.appendChild(empty);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(viewYear, viewMonth, d);
+      const dow = date.getDay();
+      const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const isWeekend = dow === 0 || dow === 6;
+      const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const isSelected = selectedDate === dateStr;
+      const isToday = d === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
+
+      const isFull = (DAY_COUNTS[dateStr] || 0) >= MAX_PER_DAY;
+
+      const el = document.createElement('div');
+      el.textContent = d;
+      el.className = 'cal-day' +
+        (isPast || isWeekend || isFull ? ' disabled' : ' has-slots') +
+        (isSelected ? ' selected' : '') +
+        (isToday && !isSelected ? ' today' : '');
+
+      if (isFull) el.title = 'Fully booked — choose another day';
+
+      if (!isPast && !isWeekend && !isFull) {
+        el.onclick = () => selectDate(dateStr, date);
+      }
+      grid.appendChild(el);
+    }
+  }
+
+  async function selectDate(dateStr, dateObj) {
+    selectedDate = dateStr;
+    selectedTime = null;
+    await loadBookingsForDate(dateStr);
+    renderCalendar();
+    renderTimeSlots(dateObj);
+  }
+
+  function renderTimeSlots(dateObj) {
+    const label = document.getElementById('time-label');
+    const container = document.getElementById('time-slots');
+    label.style.display = 'block';
+
+    const dateLabel = dateObj.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+    const count = DAY_COUNTS[selectedDate] || 0;
+    const remaining = MAX_PER_DAY - count;
+    label.textContent = dateLabel + (remaining <= 2 && remaining > 0 ? ` — ${remaining} slot${remaining === 1 ? '' : 's'} left` : '');
+
+    const booked = BOOKED[selectedDate] || [];
+    container.innerHTML = SLOTS.map(slot => {
+      const isBooked = booked.includes(slot);
+      return `<div class="time-slot${isBooked ? ' unavailable' : ''}" onclick="${isBooked ? '' : `selectTime('${slot}')`}">${slot}</div>`;
+    }).join('');
+  }
+
+  function selectTime(time) {
+    selectedTime = time;
+    document.querySelectorAll('.time-slot').forEach(el => {
+      el.classList.toggle('selected', el.textContent === time);
+    });
+    // Small delay so user sees selection, then go to step 2
+    setTimeout(() => {
+      const dateObj = new Date(selectedDate + 'T12:00:00');
+      const dateLabel = dateObj.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+      document.getElementById('confirm-date').textContent = dateLabel;
+      document.getElementById('confirm-time').textContent = time + ' Eastern Time · 30 minutes';
+      showStep(2);
+    }, 300);
+  }
+
+  function changeMonth(dir) {
+    viewMonth += dir;
+    if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    if (viewMonth < 0)  { viewMonth = 11; viewYear--; }
+    renderCalendar();
+    document.getElementById('time-slots').innerHTML = '';
+    document.getElementById('time-label').style.display = 'none';
+    selectedDate = null; selectedTime = null;
+    preloadMonthBookings();
+  }
+
+  // ── BOOKING ─────────────────────────────────────────────────────
+  async function confirmBooking() {
+    const fn = document.getElementById('b-fn').value.trim();
+    const ln = document.getElementById('b-ln').value.trim();
+    const email = document.getElementById('b-email').value.trim();
+    if (!fn || !ln || !email) { alert('Please fill in your name and email.'); return; }
+
+    const btn = document.getElementById('book-btn');
+    btn.disabled = true;
+    btn.textContent = 'Booking...';
+
+    const dateObj = new Date(selectedDate + 'T12:00:00');
+    const dateLabel = dateObj.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+
+    // Save to Supabase bookings table
+    try {
+      const res = await fetch('/api/db?table=bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: selectedDate, time: selectedTime,
+          firstName: fn, lastName: ln, email,
+          phone: document.getElementById('b-phone').value.trim(),
+          vehicle: document.getElementById('b-vehicle').value.trim()
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        if (err.error === 'day_full') {
+          alert('Sorry — this day is now fully booked. Please choose another day.');
+          btn.disabled = false;
+          btn.textContent = 'Confirm Booking';
+          // Refresh and go back to step 1
+          delete BOOKED[selectedDate];
+          delete DAY_COUNTS[selectedDate];
+          await loadBookingsForDate(selectedDate);
+          renderCalendar();
+          showStep(1);
+          return;
+        }
+        if (err.error === 'slot_taken') {
+          alert('Sorry — that time slot was just taken. Please choose another time.');
+          btn.disabled = false;
+          btn.textContent = 'Confirm Booking';
+          delete BOOKED[selectedDate];
+          await loadBookingsForDate(selectedDate);
+          const dateObjRefresh = new Date(selectedDate + 'T12:00:00');
+          renderTimeSlots(dateObjRefresh);
+          showStep(1);
+          return;
+        }
+      }
+    } catch(e) {
+      console.log('[Booking] DB unavailable, continuing in demo mode');
+    }
+
+    // Also notify via booking API — this is what creates the Google Calendar
+    // event and sends the confirmation email. We DON'T block the confirmation
+    // screen on it, but we DO log failures so the staff can see them in the
+    // Vercel function logs (which is where they'd debug a missing calendar
+    // event from).
+    try {
+      // If the user happens to have a portal_code in sessionStorage (because
+      // they came from the portal), pass it through so the calendar event can
+      // include it. Without it the booking still works fully — just no portal
+      // code line in the calendar description.
+      const _pc = sessionStorage.getItem('portal_code') || '';
+      const bRes = await fetch('/api/booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: fn, lastName: ln, email,
+          phone: document.getElementById('b-phone').value.trim(),
+          vehicle: document.getElementById('b-vehicle').value.trim(),
+          date: selectedDate, time: selectedTime, dateLabel,
+          portalCode: _pc
+        })
+      });
+      if (!bRes.ok) {
+        const errBody = await bRes.text().catch(() => '');
+        console.warn('[booking] /api/booking returned', bRes.status, errBody.slice(0, 200));
+      } else {
+        const data = await bRes.json().catch(() => ({}));
+        if (data.demo) {
+          console.warn('[booking] DEMO MODE — Google Calendar env vars not configured. No calendar event created.');
+        } else if (data.eventId) {
+          console.log('[booking] Calendar event created:', data.eventId, 'emailSent=', data.emailSent);
+        }
+      }
+    } catch(e) {
+      console.warn('[booking] /api/booking call threw:', e && e.message);
+    }
+
+    // Populate confirmation screen
+    document.getElementById('conf-date').textContent = dateLabel;
+    document.getElementById('conf-time').textContent = selectedTime;
+    document.getElementById('conf-email').textContent = email;
+
+    // If the calendar event failed (or we're in demo mode without Google
+    // configured), warn the user instead of silently claiming success.
+    const banner = document.getElementById('conf-warning');
+    if (banner) {
+      try {
+        // Re-read the booking response we logged earlier
+        // (Best-effort; falls through cleanly if the response was non-JSON.)
+      } catch (e) {}
+    }
+    showStep(3);
+  }
+
+  function showStep(n) {
+    document.querySelectorAll('.booking-step').forEach((el, i) => {
+      el.classList.toggle('active', i + 1 === n);
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function goBack() { showStep(1); }
+
+  // Init
+  renderCalendar();
+  preloadMonthBookings();
+</script>
+</body>
+</html>

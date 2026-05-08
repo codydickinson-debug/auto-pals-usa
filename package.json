@@ -1,0 +1,9 @@
+{
+  "name": "auto-motivation",
+  "version": "1.0.0",
+  "description": "Auto Pals USA - Vehicle Sourcing CRM",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}

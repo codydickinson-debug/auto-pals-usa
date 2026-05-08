@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auto Pals USA — Personal Car Sourcing Through Dealer Auctions</title>
+<meta name="description" content="Skip the dealership. Auto Pals USA finds your perfect vehicle through dealer-only auctions in Pompano Beach, Florida. Personal sourcing, transparent pricing, 60-day search guarantee.">
+<meta name="keywords" content="car sourcing, dealer auction cars, used car concierge, vehicle sourcing service, Pompano Beach car finder, Florida auto sourcing">
+<meta name="author" content="Auto Pals USA">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://autopalsusa.com/">
+
+<!-- Open Graph (Facebook, LinkedIn, iMessage previews) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Auto Pals USA">
+<meta property="og:title" content="Auto Pals USA — Personal Car Sourcing">
+<meta property="og:description" content="Skip the dealership. We find your perfect vehicle through dealer-only auctions. Personal sourcing, transparent pricing, 60-day guarantee.">
+<meta property="og:url" content="https://autopalsusa.com/">
+<meta property="og:image" content="https://autopalsusa.com/images/team-barrett-jackson.jpeg">
+<meta property="og:image:alt" content="The Auto Pals USA team at the Barrett-Jackson auction">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter / X cards -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Auto Pals USA — Personal Car Sourcing">
+<meta name="twitter:description" content="Skip the dealership. We find your perfect vehicle through dealer-only auctions.">
+<meta name="twitter:image" content="https://autopalsusa.com/images/team-barrett-jackson.jpeg">
+
+<!-- Theme color for mobile browsers -->
+<meta name="theme-color" content="#0f2557">
+
+<!-- Structured data — helps Google show a rich result for your business -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "AutomotiveBusiness",
+  "name": "Auto Pals USA",
+  "alternateName": "Automotivation Enterprises LLC",
+  "description": "Personal car sourcing through dealer-only auctions",
+  "url": "https://autopalsusa.com",
+  "telephone": "",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "450D NE 27th Street",
+    "addressLocality": "Pompano Beach",
+    "addressRegion": "FL",
+    "postalCode": "33064",
+    "addressCountry": "US"
+  },
+  "areaServed": {
+    "@type": "Country",
+    "name": "United States"
+  },
+  "priceRange": "$"
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #f5f0e8;
+    --cream-dark: #ede5d4;
+    --navy: #0f2557;
+    --navy-mid: #1a3470;
+    --navy-light: #e8edf8;
+    --brg: #1a5c32;
+    --brg-light: #e8f0e8;
+    --text: #1a1a2e;
+    --text-muted: #5a6480;
+    --border: #ddd5c0;
+    --white: #fffdf7;
+    --radius: 10px;
+    --shadow: 0 2px 16px rgba(15,37,87,0.10);
+    --shadow-lg: 0 8px 40px rgba(15,37,87,0.14);
+  }
+
+  html { scroll-behavior: smooth; }
+
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 48px 0;
+    height: auto;
+    background: rgba(15,37,87,0.97);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 4px 24px rgba(15,37,87,0.3);
+  }
+  .nav-logo {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--cream);
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-decoration: none;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(245,240,232,0.12);
+  }
+  .nav-logo-icon {
+    width: 38px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 0;
+  }
+  .nav-link {
+    font-size: 14px; font-weight: 500;
+    color: rgba(255,255,255,0.6);
+    text-decoration: none;
+    padding: 7px 16px;
+    border-radius: 8px;
+    transition: all 0.15s;
+  }
+  .nav-link:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .nav-cta {
+    background: var(--cream);
+    color: var(--navy);
+    font-weight: 600;
+    padding: 8px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.15s;
+    margin-left: 8px;
+  }
+  .nav-cta:hover { background: var(--cream-dark); transform: translateY(-1px); }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    padding: 150px 48px 100px;
+    position: relative;
+    overflow: hidden;
+    background: var(--navy);
+  }
+  /* Radial glow blobs */
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -20%;  left: -10%;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(26,52,112,0.8) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-glow-1 {
+    position: absolute;
+    top: 10%; right: 5%;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(26,92,50,0.25) 0%, transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .hero-glow-2 {
+    position: absolute;
+    bottom: 0; left: 30%;
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse, rgba(26,52,112,0.5) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* Floating geometric shapes */
+  .hero-shape-1 {
+    position: absolute;
+    top: 15%; right: 8%;
+    width: 180px; height: 180px;
+    border: 1px solid rgba(245,240,232,0.06);
+    border-radius: 24px;
+    transform: rotate(15deg);
+    pointer-events: none;
+  }
+  .hero-shape-2 {
+    position: absolute;
+    bottom: 20%; left: 5%;
+    width: 100px; height: 100px;
+    border: 1px solid rgba(245,240,232,0.05);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .hero-shape-3 {
+    position: absolute;
+    top: 55%; right: 15%;
+    width: 60px; height: 60px;
+    background: rgba(26,92,50,0.15);
+    border-radius: 12px;
+    transform: rotate(30deg);
+    pointer-events: none;
+  }
+  /* Wave bottom */
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0; right: 0;
+    height: 100px;
+    background: var(--cream);
+    clip-path: polygon(0 60%, 15% 40%, 30% 55%, 50% 30%, 70% 50%, 85% 35%, 100% 55%, 100% 100%, 0 100%);
+  }
+  .hero-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(245,240,232,0.08);
+    border: 1px solid rgba(245,240,232,0.15);
+    color: var(--cream);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 99px;
+    margin-bottom: 28px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.1s forwards;
+  }
+  .hero-tag-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; animation: pulse 2s ease infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.3)} }
+  /* Pulsing glow behind headline */
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(38px, 5vw, 58px);
+    font-weight: 700;
+    color: var(--cream);
+    line-height: 1.15;
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.2s forwards;
+    position: relative;
+  }
+  .hero-title::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: -10%;
+    width: 120%; height: 140%;
+    transform: translateY(-50%);
+    background: radial-gradient(ellipse, rgba(26,92,50,0.18) 0%, transparent 70%);
+    border-radius: 50%;
+    animation: glowPulse 3.5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+  }
+  @keyframes glowPulse {
+    0%, 100% { opacity: 0.6; transform: translateY(-50%) scale(1); }
+    50%       { opacity: 1;   transform: translateY(-50%) scale(1.08); }
+  }
+
+  /* Parallax layers */
+  .parallax-slow { will-change: transform; }
+  .parallax-mid  { will-change: transform; }
+  .hero-title em { font-style: italic; color: #7dd4a8; }
+  .hero-sub {
+    font-size: 17px;
+    color: rgba(245,240,232,0.7);
+    line-height: 1.7;
+    margin-bottom: 40px;
+    font-weight: 300;
+    max-width: 480px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.3s forwards;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.4s forwards;
+  }
+  .btn-primary {
+    background: var(--cream);
+    color: var(--navy);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 14px 28px;
+    border-radius: var(--radius);
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 20px rgba(245,240,232,0.15);
+  }
+  .btn-primary:hover { background: var(--cream-dark); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(245,240,232,0.2); }
+  .btn-ghost {
+    color: rgba(245,240,232,0.8);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 14px 24px;
+    border-radius: var(--radius);
+    text-decoration: none;
+    border: 1px solid rgba(245,240,232,0.2);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: none;
+  }
+  .btn-ghost:hover { border-color: rgba(245,240,232,0.4); color: var(--cream); background: rgba(245,240,232,0.06); }
+
+  /* Hero card */
+  .hero-card {
+    background: var(--white);
+    border-radius: 20px;
+    padding: 32px;
+    box-shadow: 0 20px 60px rgba(15,37,87,0.25), 0 0 0 1px rgba(255,255,255,0.1);
+    opacity: 0;
+    animation: fadeUp 0.7s ease 0.35s forwards;
+    position: relative;
+  }
+  .hero-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,253,247,1));
+    z-index: -1;
+  }
+  .hero-card-title {
+    font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-muted); margin-bottom: 20px;
+  }
+  .hero-step {
+    display: flex; gap: 16px; align-items: flex-start;
+    padding: 14px 0; border-bottom: 1px solid var(--border);
+  }
+  .hero-step:last-child { border-bottom: none; }
+  .step-num {
+    width: 32px; height: 32px;
+    background: var(--navy);
+    border-radius: 8px; color: var(--cream);
+    font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .step-text { padding-top: 5px; }
+  .step-label { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .step-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .hero-card-footer {
+    margin-top: 20px; padding-top: 20px;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; color: var(--text-muted);
+  }
+  .hero-card-stat { text-align: center; }
+  .hero-card-stat-val { font-size: 22px; font-weight: 700; color: var(--navy); display: block; }
+
+  /* ── HOW IT WORKS ── */
+  /* Hero video — auto-plays muted on load, no loop, responsive frame */
+  .hero-video-wrap {
+    max-width: 1100px;
+    margin: 0 auto 64px;
+    padding: 0 24px;
+  }
+  .hero-video-frame {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #0a1b3f;
+    box-shadow:
+      0 4px 24px rgba(15,37,87,0.10),
+      0 16px 48px rgba(15,37,87,0.12);
+  }
+  .hero-video-frame video {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+  @media (max-width: 720px) {
+    .hero-video-wrap { padding: 0 16px; margin-bottom: 48px; }
+    .hero-video-frame { border-radius: 14px; }
+  }
+
+  .how-section-wrap {
+    background: var(--cream);
+    position: relative;
+    padding: 100px 48px;
+  }
+  .section {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .section-tag {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--brg); margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 700; color: var(--navy);
+    line-height: 1.2; margin-bottom: 16px;
+  }
+  .section-sub {
+    font-size: 16px; color: var(--text-muted);
+    line-height: 1.7; max-width: 520px;
+    font-weight: 300; margin-bottom: 60px;
+  }
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
+  }
+  .step-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px 28px;
+    box-shadow: var(--shadow);
+    position: relative;
+    transition: transform 0.25s, box-shadow 0.25s;
+    overflow: hidden;
+  }
+  .step-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--navy), var(--navy-mid));
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+  }
+  .step-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+  .step-card:hover::after { transform: scaleX(1); }
+  .step-card-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 64px; font-weight: 700;
+    color: rgba(15,37,87,0.18);
+    line-height: 1; margin-bottom: 16px;
+  }
+  .step-card-title { font-size: 17px; font-weight: 600; color: var(--navy); margin-bottom: 10px; }
+  .step-card-desc { font-size: 14px; color: var(--text-muted); line-height: 1.7; }
+  .step-card-accent {
+    position: absolute; top: 0; left: 32px;
+    width: 40px; height: 3px;
+    background: var(--navy);
+    border-radius: 0 0 3px 3px;
+  }
+
+  /* ── WHY US ── */
+  .why-section {
+    background: var(--navy);
+    padding: 100px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .why-section::before {
+    content: '';
+    position: absolute;
+    top: -200px; right: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(26,52,112,0.9) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .why-section::after {
+    content: '';
+    position: absolute;
+    bottom: -150px; left: -150px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(26,92,50,0.2) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  .why-shape {
+    position: absolute;
+    top: 20%; right: 48%;
+    width: 1px; height: 60%;
+    background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.06), transparent);
+  }
+  .why-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 80px; align-items: center;
+    position: relative; z-index: 1;
+  }
+  .why-tag { color: #a7c4b0; }
+  .why-title { color: var(--cream); }
+  .why-sub { color: rgba(245,240,232,0.65); }
+  .why-list { display: flex; flex-direction: column; gap: 20px; }
+  .why-item { display: flex; gap: 16px; align-items: flex-start; }
+  .why-icon {
+    width: 44px; height: 44px;
+    background: rgba(245,240,232,0.06);
+    border: 1px solid rgba(245,240,232,0.1);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .why-item:hover .why-icon { background: rgba(245,240,232,0.12); }
+  .why-item-title { font-size: 15px; font-weight: 600; color: var(--cream); margin-bottom: 4px; }
+  .why-item-desc { font-size: 13px; color: rgba(245,240,232,0.6); line-height: 1.6; }
+  .why-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .why-stat {
+    background: rgba(245,240,232,0.04);
+    border: 1px solid rgba(245,240,232,0.08);
+    border-radius: 16px; padding: 28px 24px; text-align: center;
+    transition: all 0.2s; position: relative; overflow: hidden;
+  }
+  .why-stat::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(245,240,232,0.15), transparent);
+  }
+  .why-stat:hover { background: rgba(245,240,232,0.08); transform: translateY(-2px); }
+  .why-stat-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 40px; font-weight: 700;
+    color: var(--cream); display: block; margin-bottom: 6px;
+  }
+  .why-stat-label { font-size: 12px; color: rgba(245,240,232,0.5); }
+
+  /* ── CTA ── */
+  .cta-section { padding: 100px 48px; text-align: center; position: relative; }
+  .cta-inner { max-width: 640px; margin: 0 auto; }
+  .cta-section .section-title { margin-bottom: 16px; }
+  .cta-section .section-sub { margin: 0 auto 40px; }
+  .cta-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-top: 4px solid var(--navy);
+    border-radius: 20px; padding: 48px 40px;
+    box-shadow: var(--shadow-lg);
+    position: relative; overflow: hidden;
+  }
+  .cta-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(15,37,87,0.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  /* ── FAQ ── */
+  .faq-section { background: var(--cream-dark); padding: 100px 48px; position: relative; overflow: hidden; }
+  .faq-section::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+  }
+  .faq-inner { max-width: 720px; margin: 0 auto; }
+  .faq-list { display: flex; flex-direction: column; gap: 0; }
+  .faq-item { border-bottom: 1px solid var(--border); overflow: hidden; }
+  .faq-q {
+    width: 100%; text-align: left; background: none; border: none;
+    padding: 22px 0;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+    color: var(--navy); cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    transition: color 0.15s;
+  }
+  .faq-q:hover { color: var(--navy-mid); }
+  .faq-chevron { font-size: 18px; color: var(--text-muted); transition: transform 0.25s; flex-shrink: 0; }
+  .faq-item.open .faq-chevron { transform: rotate(180deg); color: var(--navy); }
+  .faq-a {
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.35s ease, padding 0.35s;
+    font-size: 14px; color: var(--text-muted); line-height: 1.75;
+  }
+  .faq-item.open .faq-a { max-height: 220px; padding-bottom: 20px; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--navy);
+    padding: 48px;
+    /* Reserve room on the right so the floating Report Bug button (bottom-right,
+       fixed) never sits on top of footer content when the user scrolls down. */
+    padding-right: 96px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+  }
+  /* Employee Access link — anchored to the top-LEFT corner of the footer,
+     out of reach of the bottom-right Report Bug floating button. Stays the
+     same nearly-invisible muted color (a deliberate "discreet" entry point). */
+  .employee-access-link {
+    position: absolute;
+    top: 14px; left: 14px;
+    font-size: 11px;
+    color: rgba(245,240,232,0.12);
+    text-decoration: none;
+    cursor: default;
+    user-select: none;
+    transition: color 0.15s;
+  }
+  .employee-access-link:hover { color: rgba(245,240,232,0.4); }
+  footer::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(245,240,232,0.12), transparent);
+  }
+  .footer-logo { font-family: 'DM Sans', sans-serif; font-size: 18px; font-weight: 700; color: var(--cream); }
+  .footer-copy { font-size: 13px; color: rgba(245,240,232,0.35); }
+  .footer-links { display: flex; gap: 24px; }
+  .footer-link { font-size: 13px; color: rgba(245,240,232,0.45); text-decoration: none; transition: color 0.15s; }
+  .footer-link:hover { color: var(--cream); }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .reveal {
+    opacity: 0; transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 768px) {
+    /* Stacked nav: logo centered on top, links underneath */
+    nav {
+      flex-direction: column;
+      padding: 10px 16px 0;
+      height: auto;
+      align-items: stretch;
+      gap: 0;
+    }
+    .nav-logo {
+      justify-content: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid rgba(245,240,232,0.12);
+      font-size: 19px;
+      gap: 10px;
+    }
+    .nav-logo-icon { width: 32px; height: 32px; }
+    .nav-links {
+      justify-content: center;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      gap: 2px;
+      padding: 8px 0;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .nav-links::-webkit-scrollbar { display: none; }
+    .nav-link {
+      padding: 6px 10px;
+      font-size: 12px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .nav-cta {
+      padding: 6px 12px;
+      font-size: 12px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    /* Hero needs more top padding now that nav is taller */
+    .hero { padding: 130px 24px 60px; }
+    .hero-inner { grid-template-columns: 1fr; gap: 48px; }
+    .how-section-wrap { padding: 60px 24px; }
+    .steps-grid { grid-template-columns: 1fr; }
+    .why-section { padding: 60px 24px; }
+    .why-inner { grid-template-columns: 1fr; gap: 48px; }
+    .cta-section { padding: 60px 24px; }
+    .faq-section { padding: 60px 24px; }
+    footer { padding: 56px 24px 32px; flex-direction: column; align-items: flex-start; }
+    .employee-access-link { top: 10px; left: 14px; }
+
+    /* Reviews: stack as one column, truncate quote with read-more toggle */
+    .review-grid { grid-template-columns: 1fr !important; gap: 16px !important; margin-top: 32px !important; }
+    .review-card { padding: 20px 18px !important; gap: 12px !important; }
+    .review-quote {
+      font-size: 14px !important;
+      line-height: 1.65 !important;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      max-height: 6.6em;
+    }
+    .review-card.expanded .review-quote {
+      -webkit-line-clamp: unset;
+      max-height: none;
+    }
+    .read-more-toggle {
+      display: inline;
+      background: none;
+      border: none;
+      color: var(--navy);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      align-self: flex-start;
+    }
+
+    /* Team cards: stack vertically, photo on left, content on right */
+    .team-grid { grid-template-columns: 1fr !important; gap: 16px !important; max-width: 100% !important; }
+    .team-card { padding: 20px !important; text-align: left !important; display: flex !important; gap: 16px !important; align-items: flex-start !important; }
+    .team-card > div:first-of-type {
+      /* photo circle */
+      width: 80px !important; height: 80px !important;
+      flex-shrink: 0; margin: 0 !important;
+    }
+    .team-card-content {
+      flex: 1; min-width: 0;
+    }
+    .team-card .team-name-row {
+      display: flex; align-items: baseline; gap: 10px;
+      margin-bottom: 8px; flex-wrap: wrap;
+    }
+    .team-card .team-name {
+      font-family: 'Playfair Display', serif !important;
+      font-size: 22px !important;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 0 !important;
+    }
+    .team-card .team-role {
+      font-size: 10px !important;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 0 !important;
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: 99px;
+    }
+    .team-card .team-divider { display: none !important; }
+    .team-bio {
+      font-size: 13px !important;
+      line-height: 1.6 !important;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      max-height: 5em;
+    }
+    .team-card.expanded .team-bio {
+      -webkit-line-clamp: unset;
+      max-height: none;
+    }
+  }
+  /* Read-more button is mobile-only — hide on desktop where bios fit fine */
+  @media (min-width: 769px) {
+    .read-more-toggle { display: none; }
+  }
+</style>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="home.html" class="nav-logo">
+    <div class="nav-logo-icon">
+      <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="38" height="38" rx="8" fill="rgba(245,240,232,0.10)" stroke="rgba(245,240,232,0.18)" stroke-width="1"/>
+        <path d="M6 27L11.5 11H13.5L19 27H17L15.6 23H9.4L8 27H6ZM10 21H15L12.5 14L10 21Z" fill="#f5f0e8"/>
+        <path d="M20 11H27Q30 11 31.5 12.5Q33 14 33 16.5Q33 19 31.5 20.5Q30 22 27 22H23V27H20V11ZM23 14V19H27Q28.5 19 29.2 18.3Q30 17.5 30 16.5Q30 15.5 29.2 14.8Q28.5 14 27 14H23Z" fill="#f5f0e8"/>
+        <rect x="6" y="29.5" width="26" height="1.5" rx="0.75" fill="rgba(167,196,176,0.7)"/>
+      </svg>
+    </div>
+    <div>
+      <div>Auto Pals USA</div>
+      
+    </div>
+  </a>
+  <div class="nav-links">
+    <a href="#how-it-works" class="nav-link">How It Works</a>
+    <a href="#why-us" class="nav-link">Why Us</a>
+    <a href="#team" class="nav-link">Meet the Team</a>
+    <a href="#faq" class="nav-link">FAQ</a>
+    <a href="portal.html" class="nav-cta">Client Portal →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow-1 parallax-slow"></div>
+  <div class="hero-glow-2 parallax-slow"></div>
+  <div class="hero-shape-1 parallax-mid"></div>
+  <div class="hero-shape-2 parallax-mid"></div>
+  <div class="hero-shape-3 parallax-mid"></div>
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-tag">
+        <span class="hero-tag-dot"></span>
+        Dealer-Only Auction Access
+      </div>
+      <h1 class="hero-title">
+        We Find the Car.<br>
+        You <em>Drive It.</em>
+      </h1>
+      <p class="hero-sub">
+        Tell us what you're looking for and we'll source it through dealer-only auctions , vehicles the public cannot access. No dealership pressure, no wasted weekends.
+      </p>
+      <div class="hero-actions">
+        <a href="form.html?form=1" class="btn-primary">Get Started →</a>
+        <a href="#how-it-works" class="btn-ghost">See How It Works</a>
+      </div>
+    </div>
+
+    <div class="hero-card">
+      <div class="hero-card-title">How We Work</div>
+      <div class="hero-card-steps">
+        <div class="hero-step">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <div class="step-label">Tell us what you want</div>
+            <div class="step-desc">Fill out a quick request : make, model, budget, or just a price range.</div>
+          </div>
+        </div>
+        <div class="hero-step">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <div class="step-label">We search the auctions</div>
+            <div class="step-desc">Our team sources vehicles through dealer-only auctions you can't access.</div>
+          </div>
+        </div>
+        <div class="hero-step">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            <div class="step-label">We deliver to your door</div>
+            <div class="step-desc">Once found, we handle the rest. Your car comes to you.</div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-card-footer">
+        <div class="hero-card-stat">
+          <span class="hero-card-stat-val">48h</span>
+          avg. response
+        </div>
+        <div class="hero-card-stat">
+          <span class="hero-card-stat-val">$750</span>
+          deposit to start
+        </div>
+        <div class="hero-card-stat">
+          <span class="hero-card-stat-val">100%</span>
+          no pressure
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<!-- HERO VIDEO — autoplays muted, no loop -->
+<div class="hero-video-wrap reveal">
+  <div class="hero-video-frame">
+    <video
+      src="/videos/autopalz.mp4"
+      autoplay muted playsinline preload="metadata" controls
+      poster=""
+      style="background:#0a1b3f;"
+    ></video>
+  </div>
+</div>
+
+<div class="how-section-wrap" id="how-it-works">
+<div class="section">
+  <div class="section-tag reveal">The Process</div>
+  <h2 class="section-title reveal">Simple from start to finish</h2>
+  <p class="section-sub reveal">No dealership games, no hidden fees. Just a straight line from your request to your driveway.</p>
+
+  <div class="steps-grid">
+    <div class="step-card reveal">
+      <div class="step-card-accent"></div>
+      <div class="step-card-num">01</div>
+      <div class="step-card-title">Submit Your Request</div>
+      <div class="step-card-desc">Tell us what you're after — a specific make and model, or just a budget and we'll find the best options. The form is straightforward and quick to fill out.</div>
+    </div>
+    <div class="step-card reveal">
+      <div class="step-card-accent"></div>
+      <div class="step-card-num">02</div>
+      <div class="step-card-title">We Search for You</div>
+      <div class="step-card-desc">Our team sources vehicles through exclusive dealer-only auction networks , inventory that simply isn't available to the public. We find the best match for your needs.</div>
+    </div>
+    <div class="step-card reveal">
+      <div class="step-card-accent"></div>
+      <div class="step-card-num">03</div>
+      <div class="step-card-title">Drive Your Car</div>
+      <div class="step-card-desc">We handle transport, paperwork, and delivery. You approve the vehicle, we take care of everything else. Your car arrives at your door.</div>
+    </div>
+  </div>
+</div><!-- /steps-grid -->
+</div><!-- /section -->
+
+<!-- WHY US -->
+<section class="why-section" id="why-us">
+  <div class="why-shape"></div>
+  <div class="why-inner">
+    <div>
+      <div class="section-tag why-tag reveal">Why Auto Pals USA</div>
+      <h2 class="section-title why-title reveal">Auction access most buyers never get</h2>
+      <p class="section-sub why-sub reveal">Dealer-only auctions have better inventory at better prices. We bring that access directly to you.</p>
+      <div class="why-list">
+        <div class="why-item reveal">
+          <div class="why-icon">🔍</div>
+          <div>
+            <div class="why-item-title">Dealer-only inventory</div>
+            <div class="why-item-desc">Access to auctions that are closed to the public , with thousands more vehicles than any lot.</div>
+          </div>
+        </div>
+        <div class="why-item reveal">
+          <div class="why-icon">💰</div>
+          <div>
+            <div class="why-item-title">Better pricing</div>
+            <div class="why-item-desc">Auction prices are typically lower than retail. We pass those savings on to you.</div>
+          </div>
+        </div>
+        <div class="why-item reveal">
+          <div class="why-icon">🤝</div>
+          <div>
+            <div class="why-item-title">No pressure, ever</div>
+            <div class="why-item-desc">We work for you, not a dealership. No pushy sales tactics . If we can't find the right car at the right price, we'll tell you straight.</div>
+          </div>
+        </div>
+        <div class="why-item reveal">
+          <div class="why-icon">🚗</div>
+          <div>
+            <div class="why-item-title">Delivered to your door</div>
+            <div class="why-item-desc">We handle transport so you never have to step foot in a lot if you don't want to.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="why-stats reveal" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="why-stat">
+        <span class="why-stat-val">120pt</span>
+        <span class="why-stat-label">Inspection by our mechanics before delivery</span>
+      </div>
+      <div class="why-stat">
+        <span class="why-stat-val">25%</span>
+        <span class="why-stat-label">Average savings vs. retail — delivered to your door</span>
+      </div>
+      <div class="why-stat">
+        <span class="why-stat-val">60</span>
+        <span class="why-stat-label">Day search window, full refund if no match</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REVIEWS -->
+<section style="padding:100px 48px;background:var(--cream);">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div class="section-tag reveal">Client Reviews</div>
+    <h2 class="section-title reveal">What our clients say</h2>
+    <div class="review-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:48px;">
+
+      <!-- Review 1 -->
+      <div class="step-card review-card reveal" style="border-top:3px solid var(--navy);padding:32px 28px;display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;gap:4px;">
+          <span style="color:#f59e0b;font-size:16px;">★★★★★</span>
+        </div>
+        <p class="review-quote" style="font-size:15px;color:#4a4a4a;line-height:1.75;flex:1;">"Great experience with Auto Pals USA in Pompano, FL! Alex and Josh were super helpful, honest, and made the car-buying process smooth and stress-free. Clean vehicles, fair pricing, and great customer service. Super satisfied with the overall experience!"</p>
+        <button class="read-more-toggle" onclick="toggleReadMore(this)">Read more</button>
+        <div style="display:flex;align-items:center;gap:12px;padding-top:16px;border-top:1px solid var(--border);">
+          <div style="width:38px;height:38px;background:var(--navy);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--cream);font-size:14px;font-weight:700;flex-shrink:0;">MF</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--navy);">Michael Faulkner</div>
+            <div style="font-size:12px;color:var(--text-muted);">Pompano Beach, FL</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review 2 -->
+      <div class="step-card review-card reveal" style="border-top:3px solid var(--navy);padding:32px 28px;display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;gap:4px;">
+          <span style="color:#f59e0b;font-size:16px;">★★★★★</span>
+        </div>
+        <p class="review-quote" style="font-size:15px;color:#4a4a4a;line-height:1.75;flex:1;">"I had an unbelievable experience in Pompano Beach. They went above and beyond helping me purchase directly from the auction . I got a 2020 Nissan Rogue valued at $21,000 for just $12,000. 10 out of 10, hands down the best experience!"</p>
+        <button class="read-more-toggle" onclick="toggleReadMore(this)">Read more</button>
+        <div style="display:flex;align-items:center;gap:12px;padding-top:16px;border-top:1px solid var(--border);">
+          <div style="width:38px;height:38px;background:var(--navy);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--cream);font-size:14px;font-weight:700;flex-shrink:0;">WA</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--navy);">Wesley Alvarado</div>
+            <div style="font-size:12px;color:var(--text-muted);">Pompano Beach, FL</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Review 3 -->
+      <div class="step-card review-card reveal" style="border-top:3px solid var(--navy);padding:32px 28px;display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;gap:4px;">
+          <span style="color:#f59e0b;font-size:16px;">★★★★★</span>
+        </div>
+        <p class="review-quote" style="font-size:15px;color:#4a4a4a;line-height:1.75;flex:1;">"I recently purchased a vehicle from Auto Pals USA and had an excellent experience. The team was professional, knowledgeable, and transparent throughout. High-quality car at a very fair price, and the process was smooth and straightforward. Highly recommend to anyone looking for a trustworthy dealership and great value."</p>
+        <button class="read-more-toggle" onclick="toggleReadMore(this)">Read more</button>
+        <div style="display:flex;align-items:center;gap:12px;padding-top:16px;border-top:1px solid var(--border);">
+          <div style="width:38px;height:38px;background:var(--navy);border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--cream);font-size:14px;font-weight:700;flex-shrink:0;">MK</div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--navy);">Mohammed Kahyam</div>
+            <div style="font-size:12px;color:var(--text-muted);">South Florida</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="request">
+  <div class="cta-inner">
+    <div class="section-tag reveal">Get Started</div>
+    <h2 class="section-title reveal">Ready to find your vehicle?</h2>
+    <p class="section-sub reveal">Submit a request in minutes. Our team reviews every submission and gets back to you within 24-48 hours.</p>
+    <div class="cta-card reveal">
+      <p style="font-size:15px;color:var(--text-muted);margin-bottom:28px;line-height:1.7;">Whether you have a specific car in mind or just a budget . We work with both. Click below to fill out our quick request form and we'll take it from there.</p>
+      <a href="form.html?form=1" class="btn-primary" style="font-size:16px;padding:16px 36px;background:var(--navy);color:var(--cream);border-radius:10px;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">
+        Submit a Vehicle Request →
+      </a>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:20px;">A $750 deposit is required to begin the sourcing process. Fully transparent , with no hidden fees.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq-section" id="faq">
+  <div class="faq-inner">
+    <div class="section-tag reveal">FAQ</div>
+    <h2 class="section-title reveal">Common questions</h2>
+    <div class="faq-list" style="margin-top:40px;">
+      <div class="faq-item reveal">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What types of vehicles can you source?
+          <span class="faq-chevron">&#8964;</span>
+        </button>
+        <div class="faq-a">We can source most makes and models through dealer-only auctions : sedans, SUVs, trucks, vans, and more. If you have something specific in mind, submit a request and we'll let you know what's realistic for your budget.</div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Is there a minimum budget?
+          <span class="faq-chevron">&#8964;</span>
+        </button>
+        <div class="faq-a">Yes, our minimum budget is $4,000. Below this it becomes very difficult to source a vehicle in good condition while covering auction, transport, and service costs. We're always upfront about this.</div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          How long does the process take?
+          <span class="faq-chevron">&#8964;</span>
+        </button>
+        <div class="faq-a">After you submit a request, our AI assistant reaches out quickly to schedule a call with one of our team members. From there, we get to work. We operate on a 60-day sourcing window . We actively search our auctions for up to 60 days before considering a deposit refund. We take that time seriously and put in the work to find the right vehicle, but if after 60 days we haven't been able to match your request, your deposit comes back to you in full.</div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          I don't have a specific car in mind. Can you still help?
+          <span class="faq-chevron">&#8964;</span>
+        </button>
+        <div class="faq-a">Absolutely. Many of our clients just give us a budget and a rough idea of what they need : family car, work truck, something reliable, etc. We'll come back with recommendations based on what's available at auction.</div>
+      </div>
+      <div class="faq-item reveal">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          What does it cost to use Auto Pals USA?
+          <span class="faq-chevron">&#8964;</span>
+        </button>
+        <div class="faq-a">Submitting a request is completely free. Once we've spoken and you're happy to proceed, we require a $750 deposit to begin the sourcing process. This covers our time searching the auctions on your behalf. We'll always be transparent about costs before anything moves forward.</div>
+      </div>
+
+      <div class="faq-item reveal">
+        <button class="faq-q" onclick="toggleFaq(this)">
+          Do you deliver anywhere in the US?
+          <span class="faq-chevron">&#8964;</span>
+        </button>
+        <div class="faq-a">We currently serve the contiguous United States only — the lower 48 states. Unfortunately we are not able to facilitate vehicle transport to Hawaii or Alaska at this time. If you're located in those states, we're not able to take your request.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MEET THE TEAM -->
+<section id="team" style="padding:100px 48px;background:var(--cream);">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div class="section-tag reveal">The People Behind It</div>
+    <h2 class="section-title reveal">Meet the team</h2>
+    <p class="section-sub reveal">We believe finding a car should feel personal, not transactional. You work directly with us from start to finish, so every decision is made with your needs in mind and nothing gets lost in the process.</p>
+
+    <!-- Featured team photo -->
+    <figure class="reveal" style="margin:8px auto 48px;max-width:440px;">
+      <div style="border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-lg);background:var(--navy);">
+        <img src="images/team-barrett-jackson.jpeg" alt="The Auto Pals USA team at the Barrett-Jackson opening party" style="display:block;width:100%;height:auto;">
+      </div>
+      <figcaption style="margin-top:16px;text-align:center;">
+        <div style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--navy);background:var(--navy-light);padding:5px 12px;border-radius:4px;margin-bottom:10px;">Barrett-Jackson Opening Party</div>
+        <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:500;line-height:1.45;color:var(--text);max-width:420px;margin:0 auto;">The team at the Barrett-Jackson opening — the same auction world we source from every day.</div>
+      </figcaption>
+    </figure>
+
+    <div class="team-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:32px;max-width:780px;margin:0 auto;">
+
+      <!-- Alex -->
+      <div class="step-card team-card reveal" style="padding:36px 32px;text-align:center;">
+        <div style="width:120px;height:120px;border-radius:50%;background:var(--navy-light);border:3px solid var(--border);margin:0 auto 20px;overflow:hidden;" id="alex-photo">
+          <img src="images/alex.png" alt="Alex, co-founder of Auto Pals USA" style="width:100%;height:100%;object-fit:cover;display:block;">
+        </div>
+        <div class="team-card-content">
+          <div class="team-name-row" style="display:block;">
+            <div class="team-name" style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--navy);margin-bottom:4px;">Alex</div>
+            <div class="team-role" style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px;">Co-Founder</div>
+          </div>
+          <div class="team-divider" style="width:32px;height:2px;background:var(--navy);margin:0 auto 16px;border-radius:2px;"></div>
+          <p class="team-bio" style="font-size:14px;color:var(--text-muted);line-height:1.7;">With years of experience navigating dealer auctions across South Florida, Alex knows exactly where to look and what to avoid. He handles the sourcing and makes sure every vehicle meets the standard before it ever reaches a client.</p>
+          <button class="read-more-toggle" onclick="toggleReadMore(this, 'team-card')" style="margin-top:8px;">Read more</button>
+        </div>
+      </div>
+
+      <!-- Josh -->
+      <div class="step-card team-card reveal" style="padding:36px 32px;text-align:center;">
+        <div style="width:120px;height:120px;border-radius:50%;background:var(--navy-light);border:3px solid var(--border);margin:0 auto 20px;overflow:hidden;" id="josh-photo">
+          <img src="images/josh.png" alt="Josh, co-founder of Auto Pals USA" style="width:100%;height:100%;object-fit:cover;display:block;">
+        </div>
+        <div class="team-card-content">
+          <div class="team-name-row" style="display:block;">
+            <div class="team-name" style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--navy);margin-bottom:4px;">Josh</div>
+            <div class="team-role" style="font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:14px;">Co-Founder</div>
+          </div>
+          <div class="team-divider" style="width:32px;height:2px;background:var(--navy);margin:0 auto 16px;border-radius:2px;"></div>
+          <p class="team-bio" style="font-size:14px;color:var(--text-muted);line-height:1.7;">Josh is the client-facing half of the operation . He's the one you'll talk to on your sales call. He keeps things transparent, moves fast, and makes sure every client understands exactly what's happening with their request every step of the way.</p>
+          <button class="read-more-toggle" onclick="toggleReadMore(this, 'team-card')" style="margin-top:8px;">Read more</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="reveal" style="margin:40px auto 0;padding:24px 32px;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);max-width:780px;display:flex;align-items:center;gap:20px;">
+      <div style="font-size:28px;">🤝</div>
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:4px;">Based in Pompano Beach, FL</div>
+        <div style="font-size:13px;color:var(--text-muted);line-height:1.6;">We're a local South Florida business. When you work with us you're talking directly to the people doing the work , no call centers, no middlemen.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Auto Pals USA</div>
+  <div class="footer-links">
+    <a href="#how-it-works" class="footer-link">How It Works</a>
+    <a href="#why-us" class="footer-link">Why Us</a>
+    <a href="#team" class="footer-link">Meet the Team</a>
+    <a href="#faq" class="footer-link">FAQ</a>
+    <a href="form.html?form=1" class="footer-link">Submit a Request</a>
+  </div>
+  <div class="footer-copy">© 2025 Auto Pals USA. All rights reserved.</div>
+  <a href="form.html?staff=1" class="employee-access-link">Employee Access</a>
+</footer>
+
+<script>
+  // FAQ toggle
+  function toggleFaq(btn) {
+    const item = btn.parentElement;
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  }
+
+  // Read-more toggle for review/team cards on mobile
+  function toggleReadMore(btn, parentClass) {
+    const card = parentClass
+      ? btn.closest('.' + parentClass)
+      : btn.closest('.review-card');
+    if (!card) return;
+    const isExpanded = card.classList.toggle('expanded');
+    btn.textContent = isExpanded ? 'Show less' : 'Read more';
+  }
+
+  // Scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 80);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // Parallax on scroll
+  const slowEls = document.querySelectorAll('.parallax-slow');
+  const midEls  = document.querySelectorAll('.parallax-mid');
+  const heroSection = document.querySelector('.hero');
+
+  window.addEventListener('scroll', () => {
+    const scrollY = window.scrollY;
+    const heroH   = heroSection ? heroSection.offsetHeight : 600;
+    if (scrollY > heroH) return;
+    const pct = scrollY / heroH;
+    slowEls.forEach(el => el.style.transform = `translateY(${scrollY * 0.25}px)`);
+    midEls.forEach(el  => el.style.transform = `translateY(${scrollY * 0.45}px)`);
+  }, { passive: true });
+</script>
+
+<!-- ── AI ASSISTANT WIDGET ── -->
+<style>
+  .ai-widget-btn {
+    position: fixed; bottom: 28px; left: 28px; z-index: 999;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--navy); border: none; cursor: pointer;
+    box-shadow: 0 4px 20px rgba(15,37,87,0.35);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .ai-widget-btn:hover { transform: scale(1.08); box-shadow: 0 8px 28px rgba(15,37,87,0.45); }
+  .ai-widget-btn svg { width: 26px; height: 26px; }
+
+  .ai-widget-panel {
+    position: fixed; bottom: 96px; left: 28px; z-index: 999;
+    width: 360px; max-height: 520px;
+    background: var(--white); border-radius: 18px;
+    box-shadow: 0 12px 48px rgba(15,37,87,0.2), 0 0 0 1px rgba(15,37,87,0.08);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.92) translateY(12px);
+    opacity: 0; pointer-events: none;
+    transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s ease;
+  }
+  .ai-widget-panel.open {
+    transform: scale(1) translateY(0);
+    opacity: 1; pointer-events: all;
+  }
+  .ai-widget-header {
+    background: var(--navy); padding: 16px 18px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .ai-widget-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(245,240,232,0.15);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .ai-widget-title { font-size: 14px; font-weight: 700; color: var(--cream); }
+  .ai-widget-sub { font-size: 11px; color: rgba(245,240,232,0.5); margin-top:1px; }
+  .ai-close-btn {
+    margin-left: auto; background: none; border: none;
+    color: rgba(245,240,232,0.5); cursor: pointer; font-size: 18px;
+    line-height: 1; padding: 2px 4px; border-radius: 4px;
+    transition: color 0.12s;
+  }
+  .ai-close-btn:hover { color: var(--cream); }
+
+  .ai-messages {
+    flex: 1; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 12px;
+    background: var(--cream);
+  }
+  .ai-msg-ai, .ai-msg-user {
+    max-width: 85%; padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; line-height: 1.6;
+    border-radius: 14px;
+  }
+  .ai-msg-ai {
+    background: var(--white); color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px 14px 14px 14px; align-self: flex-start;
+  }
+  .ai-msg-user {
+    background: var(--navy); color: var(--cream);
+    border-radius: 14px 4px 14px 14px; align-self: flex-end;
+  }
+  .ai-typing {
+    display: flex; gap: 4px; align-items: center;
+    padding: 10px 14px; background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 4px 14px 14px 14px;
+    align-self: flex-start; width: fit-content;
+  }
+  .ai-typing span {
+    width: 6px; height: 6px; background: var(--text-muted);
+    border-radius: 50%; animation: typingDot 1.2s ease infinite;
+  }
+  .ai-typing span:nth-child(2) { animation-delay: 0.2s; }
+  .ai-typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes typingDot {
+    0%,80%,100% { transform: scale(0.7); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+  .ai-input-row {
+    display: flex; gap: 8px; padding: 12px 14px;
+    border-top: 1px solid var(--border); background: var(--white);
+  }
+  .ai-input {
+    flex: 1; padding: 8px 12px;
+    border: 1px solid var(--border); border-radius: 99px;
+    font-family: 'DM Sans', sans-serif; font-size: 13px;
+    color: var(--text); background: var(--cream); outline: none;
+    transition: border-color 0.15s;
+  }
+  .ai-input:focus { border-color: var(--navy); }
+  .ai-send-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--navy); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: opacity 0.15s;
+  }
+  .ai-send-btn:hover { opacity: 0.85; }
+  .ai-unread-dot {
+    position: absolute; top: 2px; right: 2px;
+    width: 12px; height: 12px; background: #4ade80;
+    border-radius: 50%; border: 2px solid var(--white);
+    display: none;
+  }
+</style>
+
+<!-- Toggle button -->
+<button class="ai-widget-btn" onclick="toggleAIWidget()" id="ai-toggle-btn" title="Ask a question">
+  <div class="ai-unread-dot" id="ai-unread-dot"></div>
+  <svg viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M13 2C7.48 2 3 6.04 3 11c0 2.6 1.18 4.94 3.07 6.6L5 22l5.13-2.07C10.73 20.3 11.84 20.5 13 20.5c5.52 0 10-4.04 10-9s-4.48-9-10-9z" fill="rgba(245,240,232,0.9)"/>
+    <circle cx="9" cy="11" r="1.3" fill="var(--navy)"/>
+    <circle cx="13" cy="11" r="1.3" fill="var(--navy)"/>
+    <circle cx="17" cy="11" r="1.3" fill="var(--navy)"/>
+  </svg>
+</button>
+
+<!-- Chat panel -->
+<div class="ai-widget-panel" id="ai-widget-panel">
+  <div class="ai-widget-header">
+    <div class="ai-widget-avatar">🚗</div>
+    <div>
+      <div class="ai-widget-title">Auto Pals</div>
+      <div class="ai-widget-sub">USA</div>
+    </div>
+    <button class="ai-close-btn" onclick="toggleAIWidget()">✕</button>
+  </div>
+  <div class="ai-messages" id="ai-messages"></div>
+  <div class="ai-input-row">
+    <input class="ai-input" id="ai-input" type="text" placeholder="Ask a question..." onkeydown="if(event.key==='Enter')sendAIMessage()">
+    <button class="ai-send-btn" onclick="sendAIMessage()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M14 8L2 2l2.5 6L2 14l12-6z" fill="rgba(245,240,232,0.9)"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<script>
+  const SYSTEM_PROMPT = `You are the Auto Pals USA virtual assistant — a knowledgeable, warm, and professional guide for potential clients visiting the Auto Pals USA website. Your job is to help people understand how the service works and encourage them to submit a request or schedule a call.
+
+ABOUT AUTO PALS USA:
+Auto Pals USA is a vehicle sourcing company based in Pompano Beach, Florida, co-founded by Alex and Josh. Alex handles sourcing and operations — he's the one searching the auctions. Josh is client-facing — he's who clients talk to on their sales call. They are a small, hands-on team that genuinely cares about getting each client the right car. They are not a dealership, not a car lot, and have no sales floor. Everything is done personally.
+
+HOW IT WORKS:
+1. Client submits a request on the website — free, no pressure
+2. A team member reaches out within 24–48 hours to schedule a free 30-minute call
+3. On the call (with Alex or Josh), they discuss what the client needs and confirm the search details
+4. Client pays the $750 deposit to start the search
+5. Auto Pals USA actively searches dealer-only auctions for up to 60 days
+6. If a match is found, the client approves it before anything is purchased — they always have final say
+7. Auto Pals USA handles transport, paperwork, and delivery to the client's door
+8. If no match is found in 60 days, the full deposit is refunded — no questions asked
+
+THE AUCTION ACCESS:
+Auto Pals USA sources vehicles through dealer-only auctions in South Florida that the public cannot access. This gives clients access to thousands more vehicles than any dealership lot, at prices that reflect true wholesale market value — not inflated retail markups. This is the core value proposition.
+
+PRICING & FEES:
+- Submitting a request is completely free
+- The $750 deposit is required to start the active search after the sales call
+- The deposit is fully refunded if no suitable vehicle is found in 60 days
+- All fees (auction fees, transport, service fee) are disclosed upfront and itemized — no hidden costs
+- Minimum budget: $4,000. Below this it becomes very difficult to source a vehicle in good condition
+- Most clients work with budgets between $8,000 and $60,000+
+
+WHAT THEY CAN SOURCE:
+- Sedans, SUVs, trucks, crossovers, vans, and more
+- Specific make/model requests OR open searches (just give a budget and rough idea)
+- Most makes and models are available — they'll be honest if something isn't realistic
+- Domestic and import brands
+
+GEOGRAPHIC COVERAGE:
+- Serves the contiguous United States only — the lower 48 states
+- Cannot ship to Hawaii or Alaska
+- Based in Pompano Beach, FL but deliver nationwide
+
+DOCUMENTS & PROCESS:
+- Clients need to provide a driver's license and insurance card (for temp tags and registration paperwork)
+- Auto Pals USA handles all the title work and temporary tag paperwork
+- Delivery is coordinated directly with the client
+
+CLIENT PORTAL:
+- Clients get access to a portal to track their request status in real time
+- Stages: Request Received → Under Review → Actively Searching → Vehicle Found → Complete
+- Clients can message the team, see recommendations, sign their service agreement, and pay the deposit through the portal
+
+PRE-DELIVERY SERVICES (optional, priced separately):
+- Oil Change
+- Brake Inspection & Service
+- New Tires
+
+TONE & APPROACH:
+- Be warm, conversational, and genuinely helpful — not salesy or robotic
+- Answer questions directly and honestly
+- If you don't know a specific detail (like a specific car's availability), say so honestly and recommend they submit a request or call
+- Always encourage the next step: submitting a request or scheduling a call
+- Keep answers concise — 2–4 sentences is usually enough. Don't over-explain.
+- Never make up prices or availability — if unsure, say costs depend on the vehicle and will be disclosed upfront
+
+WHAT NOT TO DO:
+- Don't promise specific vehicles are available
+- Don't quote specific transport costs (varies by distance)
+- Don't discuss competitor services
+- Don't claim to be a human — you're an AI assistant for Auto Pals USA`;
+
+  let aiHistory = [];
+  let aiOpen = false;
+
+  function toggleAIWidget() {
+    aiOpen = !aiOpen;
+    document.getElementById('ai-widget-panel').classList.toggle('open', aiOpen);
+    document.getElementById('ai-unread-dot').style.display = 'none';
+    if (aiOpen && aiHistory.length === 0) {
+      setTimeout(() => {
+        showTyping();
+        setTimeout(() => {
+          removeTyping();
+          addAIMessage('ai', "Hey! I'm the Auto Pals USA assistant. Ask me anything about how our vehicle sourcing service works, what it costs, or how to get started. 🚗");
+        }, 1800);
+      }, 400);
+    }
+    if (aiOpen) setTimeout(() => document.getElementById('ai-input').focus(), 300);
+  }
+
+  function addAIMessage(from, text) {
+    const container = document.getElementById('ai-messages');
+    const div = document.createElement('div');
+    div.className = from === 'ai' ? 'ai-msg-ai' : 'ai-msg-user';
+    div.textContent = text;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function showTyping() {
+    const container = document.getElementById('ai-messages');
+    const div = document.createElement('div');
+    div.className = 'ai-typing'; div.id = 'ai-typing';
+    div.innerHTML = '<span></span><span></span><span></span>';
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function removeTyping() {
+    const el = document.getElementById('ai-typing');
+    if (el) el.remove();
+  }
+
+  async function sendAIMessage() {
+    const input = document.getElementById('ai-input');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addAIMessage('user', text);
+    aiHistory.push({ role: 'user', content: text });
+    showTyping();
+
+    try {
+      // Route through /api/ai so the ANTHROPIC_API_KEY stays on the server.
+      // Calling api.anthropic.com directly from the browser fails (no auth, blocked
+      // by CORS) and silently falls through to the canned fallback for every visitor.
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 300,
+          system: SYSTEM_PROMPT,
+          messages: aiHistory
+        })
+      });
+      if (!res.ok) throw new Error('AI proxy returned ' + res.status);
+      const data = await res.json();
+      const reply = data.content?.[0]?.text || "Sorry, I couldn't get a response. Please try again.";
+      // Natural typing delay — feels more human
+      const delay = Math.min(800 + reply.length * 8, 2800);
+      await new Promise(r => setTimeout(r, delay));
+      removeTyping();
+      addAIMessage('ai', reply);
+      aiHistory.push({ role: 'assistant', content: reply });
+    } catch(e) {
+      await new Promise(r => setTimeout(r, 1600));
+      removeTyping();
+      // Demo fallback
+      const fallbacks = [
+        "Great question! We source vehicles through dealer-only auctions in South Florida that the public simply can't access — giving you access to thousands more cars at wholesale prices. Submit a request and we'll find the right one for your budget.",
+        "The process is straightforward: submit your request for free, schedule a quick call with Alex or Josh, then pay the $750 deposit to kick off the 60-day search. If we can't find a match, you get a full refund.",
+        "We serve all 48 contiguous states — no Hawaii or Alaska, unfortunately. Once we source your vehicle, we handle all the transport, paperwork, temp tags, and delivery straight to your door.",
+        "Our minimum budget is $4,000, though most clients work with $8,000–$60,000+. The $750 deposit covers our sourcing time and auction access — and it's fully refundable if we strike out in 60 days.",
+        "You can request a specific car or just give us a budget and a rough idea of what you need. Alex will search the auctions and come back with real options — not a sales pitch.",
+        "There's no pressure and no obligation to submit a request. It's completely free to get started. Once you've had a call with Josh and you're happy to move forward, that's when the deposit comes in."
+      ];
+      addAIMessage('ai', fallbacks[Math.floor(Math.random() * fallbacks.length)]);
+    }
+  }
+
+  // Show unread dot after 3 seconds to draw attention
+  setTimeout(() => {
+    if (!aiOpen) document.getElementById('ai-unread-dot').style.display = 'block';
+  }, 3000);
+</script>
+<script>
+  // Smooth scroll for all anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', function(e) {
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+
+<!-- ── BETA FEEDBACK BUTTON ── added 2026-04-28 for beta launch -->
+<style>
+  .beta-fb-btn {
+    position: fixed; bottom: 28px; right: 28px; z-index: 999;
+    padding: 10px 18px; border-radius: 99px; border: 1px solid rgba(15,37,87,0.15);
+    background: #fff; color: #0f2557;
+    font-family: 'DM Sans', system-ui, sans-serif; font-size: 13px; font-weight: 600;
+    box-shadow: 0 4px 16px rgba(15,37,87,0.12); cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .beta-fb-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(15,37,87,0.18); }
+  .beta-fb-btn::before {
+    content: '🐛'; font-size: 14px;
+  }
+  .beta-fb-overlay {
+    position: fixed; inset: 0; background: rgba(15,27,63,0.55);
+    z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .beta-fb-overlay.open { display: flex; }
+  .beta-fb-modal {
+    background: #fff; border-radius: 14px; max-width: 460px; width: 100%;
+    padding: 26px 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    font-family: 'DM Sans', system-ui, sans-serif;
+  }
+  .beta-fb-modal h3 {
+    font-family: Georgia, serif; font-size: 20px; font-weight: 700; color: #0f2557;
+    margin: 0 0 6px;
+  }
+  .beta-fb-modal p {
+    font-size: 13px; color: #5a6480; line-height: 1.55; margin: 0 0 18px;
+  }
+  .beta-fb-modal label {
+    display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase; color: #5a6480; margin-bottom: 6px;
+  }
+  .beta-fb-modal textarea, .beta-fb-modal input {
+    width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #e4dcc6;
+    border-radius: 8px; font-family: inherit; font-size: 14px; color: #1a1f36;
+    background: #faf6ed; margin-bottom: 14px; resize: vertical;
+  }
+  .beta-fb-modal textarea:focus, .beta-fb-modal input:focus { outline: none; border-color: #0f2557; }
+  .beta-fb-modal .beta-fb-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+  .beta-fb-modal button {
+    padding: 9px 18px; border-radius: 8px; font-family: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer; border: none;
+  }
+  .beta-fb-modal .beta-fb-cancel { background: transparent; color: #5a6480; border: 1px solid #e4dcc6; }
+  .beta-fb-modal .beta-fb-submit { background: #0f2557; color: #faf6ed; }
+  .beta-fb-modal .beta-fb-submit:disabled { opacity: 0.55; cursor: default; }
+  .beta-fb-status { font-size: 12px; color: #5a6480; margin-top: 8px; min-height: 14px; }
+  .beta-fb-status.ok { color: #2d7a4f; }
+  .beta-fb-status.err { color: #b03a3a; }
+  @media (max-width: 480px) { .beta-fb-btn { bottom: 16px; right: 16px; padding: 8px 14px; font-size: 12px; } }
+</style>
+
+<button class="beta-fb-btn" onclick="document.getElementById('beta-fb-overlay').classList.add('open')" aria-label="Report a bug">Report bug</button>
+
+<div class="beta-fb-overlay" id="beta-fb-overlay" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="beta-fb-modal" role="dialog" aria-labelledby="beta-fb-title">
+    <h3 id="beta-fb-title">Spotted something off?</h3>
+    <p>This is a beta release — we're hunting for bugs. Tell us what happened, and what you were trying to do. Your email is optional but helps us follow up.</p>
+    <label for="beta-fb-msg">What's wrong?</label>
+    <textarea id="beta-fb-msg" rows="4" maxlength="4000" placeholder="The booking calendar didn't show any open slots even though…"></textarea>
+    <label for="beta-fb-email">Your email (optional)</label>
+    <input id="beta-fb-email" type="email" placeholder="you@example.com">
+    <div class="beta-fb-actions">
+      <button class="beta-fb-cancel" onclick="document.getElementById('beta-fb-overlay').classList.remove('open')">Cancel</button>
+      <button class="beta-fb-submit" id="beta-fb-submit" onclick="window.__sendBetaFeedback&&__sendBetaFeedback()">Send</button>
+    </div>
+    <div class="beta-fb-status" id="beta-fb-status"></div>
+  </div>
+</div>
+
+<script>
+window.__sendBetaFeedback = async function () {
+  const msgEl = document.getElementById('beta-fb-msg');
+  const emailEl = document.getElementById('beta-fb-email');
+  const status = document.getElementById('beta-fb-status');
+  const submit = document.getElementById('beta-fb-submit');
+  const message = msgEl.value.trim();
+  if (!message) { status.textContent = 'Please tell us what happened.'; status.className = 'beta-fb-status err'; return; }
+  submit.disabled = true; status.textContent = 'Sending…'; status.className = 'beta-fb-status';
+  try {
+    const res = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message,
+        email: emailEl.value.trim() || undefined,
+        page: location.pathname + location.search
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Server returned ' + res.status);
+    }
+    status.textContent = 'Thanks — we got it. You can close this now.';
+    status.className = 'beta-fb-status ok';
+    msgEl.value = ''; emailEl.value = '';
+    setTimeout(() => document.getElementById('beta-fb-overlay').classList.remove('open'), 1400);
+  } catch (e) {
+    status.textContent = 'Couldn\'t send: ' + e.message + '. Please email roscoert17@gmail.com directly.';
+    status.className = 'beta-fb-status err';
+  } finally {
+    submit.disabled = false;
+  }
+};
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.getElementById('beta-fb-overlay').classList.remove('open');
+});
+</script>
+<!-- ── /BETA FEEDBACK ── -->
+
+</body>
+</html>

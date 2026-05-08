@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /home.html
+Allow: /form.html?form=1
+Disallow: /api/
+Disallow: /form.html?staff=1
+Disallow: /portal.html
+
+Sitemap: https://autopalsusa.com/sitemap.xml

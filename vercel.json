@@ -1,0 +1,27 @@
+{
+  "rewrites": [
+    { "source": "/api/db",      "destination": "/api/db.js" },
+    { "source": "/api/auth",    "destination": "/api/auth.js" },
+    { "source": "/api/email",   "destination": "/api/email.js" },
+    { "source": "/api/sms",     "destination": "/api/sms.js" },
+    { "source": "/api/ai",      "destination": "/api/ai.js" },
+    { "source": "/api/booking", "destination": "/api/booking.js" },
+    { "source": "/api/cron",    "destination": "/api/cron.js" },
+    { "source": "/",            "destination": "/public/home.html" },
+    { "source": "/home",        "destination": "/public/home.html" },
+    { "source": "/home.html",   "destination": "/public/home.html" },
+    { "source": "/form",        "destination": "/public/form.html" },
+    { "source": "/form.html",   "destination": "/public/form.html" },
+    { "source": "/portal.html", "destination": "/public/portal.html" },
+    { "source": "/portal",      "destination": "/public/portal.html" },
+    { "source": "/booking.html","destination": "/public/booking.html" },
+    { "source": "/booking",     "destination": "/public/booking.html" },
+    { "source": "/(.*)",        "destination": "/public/$1" }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 14 * * *"
+    }
+  ]
+}
