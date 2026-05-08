@@ -328,6 +328,34 @@ ${footer(d)}`)
 <p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:8px 0 0;">If you've changed your mind or something's come up, no problem — just let us know so we can close things out on our end.</p>
 </td></tr>
 ${footer(d)}`)
+  }),
+
+  // ─── STAFF NOTIFICATION ──────────────────────────────────────
+  // Sent to STAFF_NOTIFY_EMAIL (or whatever email is in data) the moment
+  // staff marks a deposit received in the dashboard. Pairs with the
+  // staff_deposit_received SMS fan-out from _sms.js.
+  staffDepositReceived: (d) => ({
+    subject: `💰 Deposit received — ${d.clientName || 'client'}`,
+    html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:8px;">Deposit confirmed</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 18px;">Search window is now active for this client.</p>
+</td></tr>
+<tr><td style="padding:0 40px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:18px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;">
+<tr><td style="padding:6px 0;color:${BRAND.muted};width:38%;">Client</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientName || '—'}</td></tr>
+<tr><td style="padding:6px 0;color:${BRAND.muted};">Email</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientEmail || '—'}</td></tr>
+<tr><td style="padding:6px 0;color:${BRAND.muted};">Vehicle</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.vehicleStr || '—'}</td></tr>
+${d.budgetStr ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Budget</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.budgetStr}</td></tr>` : ''}
+<tr><td style="padding:6px 0;color:${BRAND.muted};">Amount</td><td style="padding:6px 0;color:${BRAND.green};font-weight:700;text-align:right;">$${d.amount || '750'}.00</td></tr>
+<tr><td style="padding:6px 0;color:${BRAND.muted};">Reference</td><td style="padding:6px 0;color:${BRAND.navy};font-weight:700;text-align:right;font-size:12px;">${d.depositRef || '—'}</td></tr>
+<tr><td style="padding:6px 0;color:${BRAND.muted};">Date</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.depositDate || '—'}</td></tr>
+${d.portalCode ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Portal code</td><td style="padding:6px 0;color:${BRAND.navy};font-weight:700;text-align:right;font-size:12px;">${d.portalCode}</td></tr>` : ''}
+</table>
+</td></tr></table>
+</td></tr>
+${footer(d)}`)
   })
 };
 
@@ -346,6 +374,14 @@ module.exports = async function handler(req, res) {
   const { type, data } = req.body;
   const template = TEMPLATES[type];
   if (!template) return res.status(400).json({ error: 'Unknown template type' });
+
+  // Staff-bound emails route to STAFF_NOTIFY_EMAIL when set, ignoring the
+  // placeholder address the client passes. (form.html sends 'codydickinson@...'
+  // as a fallback expecting the server to override it.)
+  const staffOverride = process.env.STAFF_NOTIFY_EMAIL;
+  if (staffOverride && /^staff/i.test(type)) {
+    data.email = staffOverride;
+  }
 
   const { subject, html } = template(data);
 
