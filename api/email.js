@@ -359,33 +359,30 @@ ${footer(d)}`)
   })
 };
 
-module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+const { verifyToken } = require('./auth.js');
 
+// In-process sender — used by db.js, booking.js, cron.js to skip the HTTP hop.
+async function sendTemplate(type, data) {
   const apiKey = process.env.SENDGRID_API_KEY;
   const fromEmail = process.env.FROM_EMAIL || 'info@autopalsusa.com';
-  const replyTo  = process.env.FROM_EMAIL || 'info@autopalsusa.com';
+  const replyTo   = process.env.FROM_EMAIL || 'info@autopalsusa.com';
 
   if (!apiKey) {
-    console.log('[EMAIL DEMO]', req.body.type, '→', req.body.data?.email);
-    return res.status(200).json({ ok: true, demo: true });
+    console.log('[EMAIL DEMO]', type, '→', data && data.email);
+    return { ok: true, demo: true };
   }
 
-  const { type, data } = req.body;
   const template = TEMPLATES[type];
-  if (!template) return res.status(400).json({ error: 'Unknown template type' });
+  if (!template) return { ok: false, error: 'unknown_type', type };
 
-  // Staff-bound emails route to STAFF_NOTIFY_EMAIL when set, ignoring the
-  // placeholder address the client passes. (form.html sends 'codydickinson@...'
-  // as a fallback expecting the server to override it.)
+  const payload = { ...(data || {}) };
   const staffOverride = process.env.STAFF_NOTIFY_EMAIL;
   if (staffOverride && /^staff/i.test(type)) {
-    data.email = staffOverride;
+    payload.email = staffOverride;
   }
+  if (!payload.email) return { ok: false, error: 'no_recipient' };
 
-  const { subject, html } = template(data);
-
-  // Plain-text fallback (spam score + accessibility)
+  const { subject, html } = template(payload);
   const plainText = html
     .replace(/<style[\s\S]*?<\/style>/gi, '')
     .replace(/<[^>]+>/g, ' ')
@@ -393,30 +390,51 @@ module.exports = async function handler(req, res) {
     .trim();
 
   try {
-    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+    const r = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        personalizations: [{ to: [{ email: data.email, name: `${data.firstName} ${data.lastName || ''}`.trim() }] }],
+        personalizations: [{ to: [{ email: payload.email, name: `${payload.firstName || ''} ${payload.lastName || ''}`.trim() }] }],
         from: { email: fromEmail, name: 'Alex & Josh — Auto Pals USA' },
         reply_to: { email: replyTo, name: 'Alex & Josh — Auto Pals USA' },
         subject,
         content: [
           { type: 'text/plain', value: plainText },
-          { type: 'text/html', value: html }
+          { type: 'text/html',  value: html }
         ]
       })
     });
-
-    if (!response.ok) {
-      const err = await response.text();
-      return res.status(500).json({ error: 'SendGrid error', detail: err });
+    if (!r.ok) {
+      const err = await r.text();
+      console.error('[EMAIL] SendGrid error', r.status, err.slice(0, 200));
+      return { ok: false, status: r.status, error: 'sendgrid_failed' };
     }
-    return res.status(200).json({ ok: true });
+    return { ok: true };
   } catch (err) {
-    return res.status(500).json({ error: 'Email failed', detail: err.message });
+    console.error('[EMAIL] fetch failed', err && err.message);
+    return { ok: false, error: err && err.message };
   }
+}
+
+module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Staff-Token');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const token = req.headers['x-staff-token']
+    || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  if (!verifyToken(token)) {
+    return res.status(401).json({ error: 'unauthorized' });
+  }
+
+  const { type, data } = req.body || {};
+  if (!type) return res.status(400).json({ error: 'missing_type' });
+
+  const result = await sendTemplate(type, data || {});
+  return res.status(result.ok ? 200 : (result.error === 'unknown_type' ? 400 : 500)).json(result);
 };
+
+module.exports.sendTemplate = sendTemplate;
+module.exports.sendEmail    = sendTemplate;   // alias for prod naming convention

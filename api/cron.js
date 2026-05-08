@@ -22,6 +22,7 @@ const DEPOSIT_REMINDER_HOURS = [24, 72];
 const BOOKING_SMS_REMINDER_HOURS = [24, 48, 72];
 
 const sms = require('./_sms.js');
+const email = require('./email.js');
 
 async function sb(table, method = 'GET', body = null, params = '') {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, {
@@ -43,12 +44,10 @@ async function sb(table, method = 'GET', body = null, params = '') {
 }
 
 async function sendEmail(host, type, data) {
-  const res = await fetch(`https://${host}/api/email`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type, data })
-  });
-  return res.ok;
+  // host is unused now — we call the in-process helper directly so we
+  // don't need to attach the staff token that /api/email requires.
+  const result = await email.sendTemplate(type, data);
+  return !!(result && result.ok);
 }
 
 function hoursSince(iso) {
