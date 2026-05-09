@@ -1030,16 +1030,17 @@
   .bubble-meta       { font-size: 11px; color: var(--text-muted); margin-top: 4px; padding-left: 4px; }
   .bubble-meta-right { font-size: 11px; color: var(--text-muted); margin-top: 4px; padding-right: 4px; text-align: right; }
 
-  /* Reply composer */
+  /* Reply composer — sticky at the bottom of the conversation pane */
   .msg-composer {
-    padding: 14px 20px;
+    padding: 12px 20px;
     border-top: 1px solid var(--border);
     background: var(--surface);
-    display: flex; gap: 10px; align-items: center;
+    display: flex; gap: 10px; align-items: flex-end;
+    flex-shrink: 0;
   }
   .msg-attach-btn {
     cursor: pointer;
-    width: 38px; height: 38px;
+    width: 40px; height: 40px;
     border-radius: var(--radius);
     background: var(--bg);
     border: 1px solid var(--border);
@@ -1052,13 +1053,20 @@
   .msg-attach-btn:hover svg { stroke: var(--accent); }
   .msg-reply-input {
     flex: 1;
+    min-width: 0;
     padding: 10px 14px;
     border: 1px solid var(--border); border-radius: var(--radius);
-    font-family: system-ui, sans-serif; font-size: 13px;
+    font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.4;
     background: var(--bg);
     color: var(--text);
     outline: none;
+    resize: none;
+    overflow-y: auto;
+    min-height: 40px;
+    max-height: 180px;     /* ~8 lines before internal scroll kicks in */
     transition: border-color 0.15s, background 0.15s;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
   }
   .msg-reply-input:focus { border-color: var(--accent); background: var(--surface); }
   .msg-reply-input::placeholder { color: var(--text-muted); }
@@ -1070,18 +1078,40 @@
     cursor: pointer;
     transition: opacity 0.15s, transform 0.06s;
     white-space: nowrap;
+    flex-shrink: 0;
+    height: 40px;
   }
   .msg-send-btn:hover  { opacity: 0.9; }
   .msg-send-btn:active { transform: translateY(1px); }
   .msg-image-preview-bar {
-    padding: 0 20px 10px;
+    padding: 8px 20px 0;
     background: var(--surface);
     border-top: 1px solid var(--border);
+    flex-shrink: 0;
   }
   .msg-image-preview-thumb {
     height: 60px; border-radius: 8px;
     border: 1px solid var(--border);
   }
+
+  /* Lock messages view to viewport so composer stays visible without scroll */
+  #view-messages.active { display: flex; flex-direction: column; }
+  .messages-shell {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    height: calc(100vh - 60px);
+    min-height: 0;
+  }
+  .convo-list-panel { min-height: 0; }
+  .msg-pane {
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+  }
+  #msg-active { min-height: 0; flex: 1; }
+  .msg-thread { min-height: 0; }
 
   .rejection-banner {
 
@@ -1270,7 +1300,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v92 · 2026-05-09</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v93 · 2026-05-09</div>
 
 <!-- NAV -->
 <nav>
@@ -1796,7 +1826,7 @@
 
 <!-- ============ MESSAGES VIEW ============ -->
 <div id="view-messages" class="view">
-  <div style="display:grid;grid-template-columns:320px 1fr;height:calc(100vh - 60px);">
+  <div class="messages-shell">
 
     <!-- LEFT: conversation list -->
     <div class="convo-list-panel" style="display:flex;flex-direction:column;">
@@ -1841,8 +1871,9 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             <input type="file" accept="image/*" style="display:none;" onchange="handleMsgImage(this)" id="msg-image-input">
           </label>
-          <input id="msg-reply-input" class="msg-reply-input" type="text" placeholder="Reply as Auto Pals USA team..."
-            onkeydown="if(event.key==='Enter')sendTeamReply()">
+          <textarea id="msg-reply-input" class="msg-reply-input" rows="1" placeholder="Reply as Auto Pals USA team... (Shift+Enter for new line)"
+            oninput="autoGrowReply(this)"
+            onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendTeamReply();}"></textarea>
           <button class="msg-send-btn" onclick="sendTeamReply()">Send</button>
         </div>
       </div>
@@ -2856,9 +2887,18 @@
     msgs.push(newMsg);
     saveMessages(activeMessageReqId, msgs);
     input.value = '';
+    autoGrowReply(input);   // reset back to single row after send
     clearMsgImage();
     renderThread(activeMessageReqId);
     renderConvoList();
+  }
+
+  // Auto-resize the reply textarea up to its CSS max-height. Past that point
+  // the textarea takes over with its own internal scrollbar, so the conversation
+  // pane and composer never get pushed off-screen.
+  function autoGrowReply(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 180) + 'px';
   }
 
   function showView(v) {
