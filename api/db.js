@@ -156,28 +156,34 @@ module.exports = async function handler(req, res) {
         const _budgStr  = budgetStr(row);
         const _name     = `${row.first_name || ''} ${row.last_name || ''}`.trim();
 
+        // Build notification fires. Await ALL of them (Promise.allSettled)
+        // before responding — Vercel terminates the lambda right after res.json()
+        // and would kill in-flight SendGrid/Twilio HTTP requests if we let
+        // them dangle as fire-and-forget.
+        const fires = [];
+
         if (row.status !== 'rejected') {
-          // Staff: SMS fan-out + email fan-out
-          fireSms('staff_new_request', {
+          fires.push(sms.send('staff_new_request', {
             firstName: row.first_name, lastName: row.last_name,
             email: row.email, phone: row.phone,
             make: row.make, model: row.model,
             budgetMin: row.budget_min, budgetMax: row.budget_max
-          });
-          fireEmail('staffNewRequest', {
+          }));
+          fires.push(email.sendTemplate('staffNewRequest', {
             clientName:  _name,
             clientEmail: row.email,
             clientPhone: row.phone,
             vehicleStr:  _vehStr,
             budgetStr:   _budgStr,
             portalCode:  row.portal_code
-          });
-          // Client: SMS book-a-call push + confirmation email
+          }));
           if (row.phone) {
-            fireSms('client_book_call', { firstName: row.first_name, phone: row.phone });
+            fires.push(sms.send('client_book_call', {
+              firstName: row.first_name, phone: row.phone
+            }));
           }
           if (row.email) {
-            fireEmail('confirmation', {
+            fires.push(email.sendTemplate('confirmation', {
               firstName:  row.first_name,
               lastName:   row.last_name,
               email:      row.email,
@@ -189,23 +195,27 @@ module.exports = async function handler(req, res) {
               budgetMax:  row.budget_max,
               bookingUrl: BOOKING_URL,
               portalUrl:  PORTAL_URL
-            });
+            }));
           }
         } else {
-          // Rejected — staff SMS notice + client rejection email
-          fireSms('staff_rejected', {
+          fires.push(sms.send('staff_rejected', {
             firstName: row.first_name, lastName: row.last_name,
             budgetMax: row.budget_max
-          });
+          }));
           if (row.email) {
-            fireEmail('rejected', {
+            fires.push(email.sendTemplate('rejected', {
               firstName: row.first_name,
               lastName:  row.last_name,
               email:     row.email,
               portalUrl: PORTAL_URL
-            });
+            }));
           }
         }
+
+        const results = await Promise.allSettled(fires);
+        results.forEach((r, i) => {
+          if (r.status === 'rejected') console.error('[DB→notify]', i, r.reason && r.reason.message);
+        });
 
         return res.json(data);
       }
@@ -270,15 +280,18 @@ module.exports = async function handler(req, res) {
         const wasPaid = !!(priorRow && priorRow.deposit_paid);
         const nowPaid = !!mapped.deposit_paid;
         if (!wasPaid && nowPaid && priorRow) {
-          fireSms('staff_deposit_received', {
-            firstName: priorRow.first_name, lastName: priorRow.last_name,
-            depositRef: mapped.deposit_ref || priorRow.deposit_ref || ''
-          });
+          const depositFires = [
+            sms.send('staff_deposit_received', {
+              firstName: priorRow.first_name, lastName: priorRow.last_name,
+              depositRef: mapped.deposit_ref || priorRow.deposit_ref || ''
+            })
+          ];
           if (priorRow.phone) {
-            fireSms('client_contract_available', {
+            depositFires.push(sms.send('client_contract_available', {
               firstName: priorRow.first_name, phone: priorRow.phone
-            });
+            }));
           }
+          await Promise.allSettled(depositFires);
         }
 
         return res.json({ ok: true });
@@ -359,7 +372,7 @@ module.exports = async function handler(req, res) {
           try {
             const reqRow = await query('requests', 'GET', null, `?id=eq.${row.request_id}&limit=1`);
             if (reqRow && reqRow.length && reqRow[0].phone) {
-              fireSms('client_portal_message', {
+              await sms.send('client_portal_message', {
                 phone: reqRow[0].phone,
                 staffName: body.staffName || 'Auto Pals USA'
               });
