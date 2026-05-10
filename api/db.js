@@ -31,6 +31,10 @@ async function query(table, method = 'GET', body = null, params = '') {
 
 const { verifyToken } = require('./auth.js');
 const sms = require('./_sms.js');
+const email = require('./email.js');
+
+const PORTAL_URL  = process.env.PORTAL_URL  || 'https://autopalsusa.com/portal.html';
+const BOOKING_URL = process.env.BOOKING_URL || 'https://autopalsusa.com/booking.html';
 
 // Fire-and-forget SMS — never block the DB response on Twilio.
 function fireSms(type, data) {
@@ -41,6 +45,31 @@ function fireSms(type, data) {
   } catch (err) {
     console.error('[DB→SMS sync]', type, err && err.message);
   }
+}
+
+// Fire-and-forget email — never block the DB response on SendGrid.
+function fireEmail(type, data) {
+  try {
+    Promise.resolve(email.sendTemplate(type, data)).catch(err =>
+      console.error('[DB→EMAIL]', type, err && err.message)
+    );
+  } catch (err) {
+    console.error('[DB→EMAIL sync]', type, err && err.message);
+  }
+}
+
+// Build the human-readable vehicle/budget/year strings used in notifications.
+function vehicleStr(row) {
+  if (!row.make) return 'Open Search';
+  const yr = (row.year_from && row.year_to)
+    ? (row.year_from === row.year_to ? String(row.year_from) : `${row.year_from}–${row.year_to}`)
+    : '';
+  const v = `${row.make}${row.model ? ' ' + row.model : ''}`.trim();
+  return yr ? `${yr} ${v}` : v;
+}
+function budgetStr(row) {
+  if (!row.budget_min && !row.budget_max) return '';
+  return `$${Number(row.budget_min || 0).toLocaleString()}–$${Number(row.budget_max || 0).toLocaleString()}`;
 }
 
 module.exports = async function handler(req, res) {
@@ -122,25 +151,60 @@ module.exports = async function handler(req, res) {
         };
         const data = await query('requests', 'POST', row);
 
-        // Fire SMS triggers — staff fan-out + client "book a call" push.
-        // Skip if the request is auto-rejected (budget too low) — different flow.
+        // Build common notification payload bits
+        const _vehStr   = vehicleStr(row);
+        const _budgStr  = budgetStr(row);
+        const _name     = `${row.first_name || ''} ${row.last_name || ''}`.trim();
+
         if (row.status !== 'rejected') {
+          // Staff: SMS fan-out + email fan-out
           fireSms('staff_new_request', {
             firstName: row.first_name, lastName: row.last_name,
             email: row.email, phone: row.phone,
             make: row.make, model: row.model,
             budgetMin: row.budget_min, budgetMax: row.budget_max
           });
+          fireEmail('staffNewRequest', {
+            clientName:  _name,
+            clientEmail: row.email,
+            clientPhone: row.phone,
+            vehicleStr:  _vehStr,
+            budgetStr:   _budgStr,
+            portalCode:  row.portal_code
+          });
+          // Client: SMS book-a-call push + confirmation email
           if (row.phone) {
-            fireSms('client_book_call', {
-              firstName: row.first_name, phone: row.phone
+            fireSms('client_book_call', { firstName: row.first_name, phone: row.phone });
+          }
+          if (row.email) {
+            fireEmail('confirmation', {
+              firstName:  row.first_name,
+              lastName:   row.last_name,
+              email:      row.email,
+              make:       row.make,
+              model:      row.model,
+              yearFrom:   row.year_from,
+              yearTo:     row.year_to,
+              budgetMin:  row.budget_min,
+              budgetMax:  row.budget_max,
+              bookingUrl: BOOKING_URL,
+              portalUrl:  PORTAL_URL
             });
           }
         } else {
+          // Rejected — staff SMS notice + client rejection email
           fireSms('staff_rejected', {
             firstName: row.first_name, lastName: row.last_name,
             budgetMax: row.budget_max
           });
+          if (row.email) {
+            fireEmail('rejected', {
+              firstName: row.first_name,
+              lastName:  row.last_name,
+              email:     row.email,
+              portalUrl: PORTAL_URL
+            });
+          }
         }
 
         return res.json(data);

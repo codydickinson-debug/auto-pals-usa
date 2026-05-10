@@ -356,6 +356,30 @@ ${d.portalCode ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Portal cod
 </td></tr></table>
 </td></tr>
 ${footer(d)}`)
+  }),
+
+  // Sent to staff (fanned out via STAFF_NOTIFY_EMAIL comma-list) the moment
+  // a client submits the request form. Pairs with the staff_new_request SMS.
+  staffNewRequest: (d) => ({
+    subject: `🚗 New request: ${d.clientName || 'client'}${d.vehicleStr ? ' — ' + d.vehicleStr : ''}`,
+    html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:8px;">New client request</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 18px;">Just landed in the dashboard — review and reach out.</p>
+</td></tr>
+<tr><td style="padding:0 40px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:18px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;">
+<tr><td style="padding:6px 0;color:${BRAND.muted};width:38%;">Client</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientName || '—'}</td></tr>
+${d.clientEmail ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Email</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientEmail}</td></tr>` : ''}
+${d.clientPhone ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Phone</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientPhone}</td></tr>` : ''}
+<tr><td style="padding:6px 0;color:${BRAND.muted};">Vehicle</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.vehicleStr || 'Open Search'}</td></tr>
+${d.budgetStr ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Budget</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.budgetStr}</td></tr>` : ''}
+${d.portalCode ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Portal code</td><td style="padding:6px 0;color:${BRAND.navy};font-weight:700;text-align:right;font-size:12px;">${d.portalCode}</td></tr>` : ''}
+</table>
+</td></tr></table>
+</td></tr>
+${footer(d)}`)
   })
 };
 
@@ -382,6 +406,12 @@ async function sendTemplate(type, data) {
   }
   if (!payload.email) return { ok: false, error: 'no_recipient' };
 
+  // Comma-separated addresses fan out as one personalization per recipient,
+  // so each staff member sees the email "To" themselves (not as a CC dump).
+  const recipients = String(payload.email)
+    .split(',').map(s => s.trim()).filter(Boolean);
+  if (!recipients.length) return { ok: false, error: 'no_recipient' };
+
   const { subject, html } = template(payload);
   const plainText = html
     .replace(/<style[\s\S]*?<\/style>/gi, '')
@@ -389,12 +419,16 @@ async function sendTemplate(type, data) {
     .replace(/\s+/g, ' ')
     .trim();
 
+  const personalizations = recipients.map(addr => ({
+    to: [{ email: addr, name: `${payload.firstName || ''} ${payload.lastName || ''}`.trim() }]
+  }));
+
   try {
     const r = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        personalizations: [{ to: [{ email: payload.email, name: `${payload.firstName || ''} ${payload.lastName || ''}`.trim() }] }],
+        personalizations,
         from: { email: fromEmail, name: 'Alex & Josh — Auto Pals USA' },
         reply_to: { email: replyTo, name: 'Alex & Josh — Auto Pals USA' },
         subject,
@@ -409,7 +443,7 @@ async function sendTemplate(type, data) {
       console.error('[EMAIL] SendGrid error', r.status, err.slice(0, 200));
       return { ok: false, status: r.status, error: 'sendgrid_failed' };
     }
-    return { ok: true };
+    return { ok: true, recipients: recipients.length };
   } catch (err) {
     console.error('[EMAIL] fetch failed', err && err.message);
     return { ok: false, error: err && err.message };
