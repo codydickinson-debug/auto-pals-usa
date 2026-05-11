@@ -18,8 +18,8 @@ const PORTAL_URL   = process.env.PORTAL_URL  || 'https://auto-pals-usa.vercel.ap
 // Matches: form submit -> 24h / 72h / 7d; call complete -> 24h / 48h / 72h.
 const BOOKING_REMINDER_HOURS = [24, 72, 168];
 const DEPOSIT_REMINDER_HOURS = [24, 48, 72];
-// SMS drip after signup: 3 nudges on 3 consecutive days.
-const BOOKING_SMS_REMINDER_HOURS = [24, 48, 72];
+// SMS drip after signup: 2 nudges, 24h apart. (Was 3 — cut the final one.)
+const BOOKING_SMS_REMINDER_HOURS = [24, 48];
 
 const sms = require('./_sms.js');
 const email = require('./email.js');

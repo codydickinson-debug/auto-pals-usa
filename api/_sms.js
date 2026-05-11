@@ -143,12 +143,8 @@ const TEMPLATES = {
     `Grab a quick 30-min call when you're free: ${d.bookingUrl || BOOKING_URL}`,
 
   client_book_call_reminder_2: (d) =>
-    `Hi ${d.firstName || 'there'} — your Auto Pals USA search is paused until we connect. ` +
-    `Pick a time, takes 30 min: ${d.bookingUrl || BOOKING_URL}`,
-
-  client_book_call_reminder_3: (d) =>
-    `Last note from Auto Pals USA, ${d.firstName || 'there'} — we'll close out your request soon. ` +
-    `Pick a call time if you still want to move forward: ${d.bookingUrl || BOOKING_URL}`,
+    `Hi ${d.firstName || 'there'} — heads up from Auto Pals USA: we can't start sourcing until we have your deposit. ` +
+    `Pick a quick 30-min call to get rolling: ${d.bookingUrl || BOOKING_URL}`,
 
   client_portal_message: (d) =>
     `Auto Pals USA: New message in your portal from ${d.staffName || 'our team'}. ` +
