@@ -40,16 +40,25 @@ function normalize(num) {
 }
 
 async function sendOne(to, body) {
-  const sid   = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const from  = process.env.TWILIO_PHONE_NUMBER;
-  const dest  = normalize(to);
+  const sid    = process.env.TWILIO_ACCOUNT_SID;
+  const token  = process.env.TWILIO_AUTH_TOKEN;
+  const svcSid = process.env.TWILIO_MESSAGING_SERVICE_SID;  // preferred for A2P 10DLC
+  const from   = process.env.TWILIO_PHONE_NUMBER;            // fallback if no service
+  const dest   = normalize(to);
 
-  if (!sid || !token || !from) {
+  // Demo mode if Twilio creds missing or no sender configured at all.
+  if (!sid || !token || (!svcSid && !from)) {
     console.log('[SMS DEMO]', dest || '<no-to>', '←', body.replace(/\n/g, ' | '));
     return { ok: true, demo: true };
   }
   if (!dest) return { ok: false, error: 'no_destination' };
+
+  // Prefer MessagingServiceSid — that's the path the A2P 10DLC campaign
+  // attaches to, so carriers see the campaign attribution. Fall back to a
+  // raw From number if the service env var isn't set yet.
+  const params = { To: dest, Body: body };
+  if (svcSid) params.MessagingServiceSid = svcSid;
+  else        params.From = from;
 
   try {
     const credentials = Buffer.from(`${sid}:${token}`).toString('base64');
@@ -61,7 +70,7 @@ async function sendOne(to, body) {
           'Authorization': `Basic ${credentials}`,
           'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: new URLSearchParams({ From: from, To: dest, Body: body })
+        body: new URLSearchParams(params)
       }
     );
     const data = await r.json();
