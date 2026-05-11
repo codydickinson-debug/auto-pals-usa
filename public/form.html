@@ -1307,7 +1307,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v97 · 2026-05-10</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v98 · 2026-05-11</div>
 
 <!-- NAV -->
 <nav>
@@ -4104,12 +4104,25 @@
   function markDepositReceived() {
     const r = requests.find(req => req.id === activeRequestId);
     if (!r) return;
-    r.depositReceived = true;
+    // Keep the legacy localStorage field for the in-dashboard UI, and also
+    // set the canonical field that the portal reads (depositPaid / deposit_date).
+    r.depositReceived   = true;
     r.depositReceivedAt = new Date().toISOString();
+    r.depositPaid       = true;
+    r.depositDate       = r.depositReceivedAt;
     // Generate a reference number
     const ref = 'AME-' + new Date().getFullYear() + '-' + String(r.id).slice(-6);
     r.depositRef = ref;
     save();
+    // Sync to Supabase so the client portal sees deposit_paid=true (this was
+    // the gap — the portal reads from Supabase, not localStorage, so without
+    // this call the green "deposit confirmed" badge never flipped client-side).
+    dbPut('requests', {
+      id: r.id,
+      depositPaid: true,
+      depositRef:  ref,
+      depositDate: r.depositReceivedAt
+    });
     // Update UI immediately
     document.getElementById('dp-deposit-pending').style.display = 'none';
     const confirmed = document.getElementById('dp-deposit-confirmed');
