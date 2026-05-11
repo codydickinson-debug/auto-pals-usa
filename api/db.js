@@ -366,19 +366,27 @@ module.exports = async function handler(req, res) {
         };
         const data = await query('messages', 'POST', row);
 
-        // Notify the client via SMS when a staff member sends a message.
-        // Look up the linked request to get the client's phone.
-        if (row.from_role === 'team' || row.from_role === 'staff') {
-          try {
-            const reqRow = await query('requests', 'GET', null, `?id=eq.${row.request_id}&limit=1`);
-            if (reqRow && reqRow.length && reqRow[0].phone) {
-              await sms.send('client_portal_message', {
-                phone: reqRow[0].phone,
-                staffName: body.staffName || 'Auto Pals USA'
+        // Notify the other side via SMS:
+        //   team→client message  →  SMS to the client's phone
+        //   client→team message  →  SMS fan-out to all staff numbers
+        try {
+          const reqRow = await query('requests', 'GET', null, `?id=eq.${row.request_id}&limit=1`);
+          if (reqRow && reqRow.length) {
+            const r0 = reqRow[0];
+            if (row.from_role === 'team' || row.from_role === 'staff') {
+              if (r0.phone) {
+                await sms.send('client_portal_message', {
+                  phone: r0.phone,
+                  staffName: body.staffName || 'Auto Pals USA'
+                });
+              }
+            } else if (row.from_role === 'client') {
+              await sms.send('staff_portal_message', {
+                clientName: `${r0.first_name || ''} ${r0.last_name || ''}`.trim() || 'A client'
               });
             }
-          } catch (e) { /* best-effort, don't fail the message post */ }
-        }
+          }
+        } catch (e) { /* best-effort, don't fail the message post */ }
 
         return res.json(data);
       }
