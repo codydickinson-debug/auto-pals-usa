@@ -148,27 +148,6 @@ ${d.statusNote ? `<p style="font-family:-apple-system,'Segoe UI',sans-serif;font
 ${footer(d)}`)
   }),
 
-  recommendations: (d) => ({
-    subject: `Some vehicles we think you'll like, ${d.firstName}`,
-    html: shell(`${header()}
-<tr><td style="padding:28px 40px 0;">
-<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:12px;">We found some good options for you</div>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 24px;">Hey ${d.firstName}, we spent some time looking at your request and put together a shortlist. These match your budget and what you told us matters. Take a look and let us know which ones catch your eye — we can dig into any of them further.</p>
-</td></tr>
-<tr><td style="padding:0 40px 8px;">
-${(d.recs || []).map((r, i) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.paper};border:1px solid ${BRAND.border};border-radius:10px;margin-bottom:12px;"><tr><td style="padding:18px 22px;">
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.accent};margin-bottom:6px;">Option ${i + 1}</div>
-<div style="font-family:Georgia,serif;font-size:17px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:6px;">${r.title}</div>
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;">${r.why}</div>
-</td></tr></table>`).join('')}
-</td></tr>
-<tr><td style="padding:12px 40px 12px;">${button(d.portalUrl, 'See full details →')}</td></tr>
-<tr><td style="padding:0 40px 8px;">
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:8px 0 0;">Want us to pursue one of these or keep looking? Just reply and let us know.</p>
-</td></tr>
-${footer(d)}`)
-  }),
-
   vehicleFound: (d) => ({
     subject: `🚗 We found your car, ${d.firstName}`,
     html: shell(`${header()}
@@ -254,24 +233,27 @@ ${footer(d)}`)
 ${footer(d)}`)
   }),
 
-  bookingReminder2: (d) => ({
-    subject: `Your search is on hold, ${d.firstName}`,
-    html: shell(`${header()}
+  bookingReminder2: (d) => {
+    // Light, friendly check-in. Use the vehicle they asked about if we have one,
+    // otherwise fall back to "car" so the sentence still reads naturally.
+    const vehicle = d.make
+      ? `${d.make}${d.model && d.model !== '—' ? ' ' + d.model : ''}`
+      : 'car';
+    return ({
+      subject: `Hey ${d.firstName} — did you find that ${vehicle} yet?`,
+      html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">
-<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Hey ${d.firstName} — your search is paused.</div>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 20px;">A few days in and we haven't been able to connect yet. We want to be upfront: <strong style="color:${BRAND.ink};">we genuinely can't start searching until we've done the intro call.</strong> Every client is different, and a 30-minute conversation is how we figure out exactly what you need and avoid wasting anyone's time.</p>
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Just checking in, ${d.firstName}.</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 18px;">Did you already grab that ${vehicle} you were looking for, or are you still on the hunt? Either way, no worries — just wanted to check in.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">If you're still looking, we'd love to help. Most of our clients find their match within 30 days once we kick things off, and the first step is just a quick 30-minute call to figure out exactly what you want.</p>
 </td></tr>
-<tr><td style="padding:0 40px 20px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-left:3px solid ${BRAND.navy};border-radius:0 8px 8px 0;"><tr><td style="padding:16px 20px;">
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.7;">Once we've had the call and you confirm you want to move forward, we get to work immediately — most matches happen within 30 days of the deposit.</div>
-</td></tr></table>
-</td></tr>
-<tr><td style="padding:0 40px 12px;">${button(d.bookingUrl, 'Book your call →')}</td></tr>
+<tr><td style="padding:0 40px 12px;">${button(d.bookingUrl, 'Book a call →')}</td></tr>
 <tr><td style="padding:0 40px 8px;">
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:8px 0 0;">Hitting a roadblock? Just reply and let us know what's going on.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:8px 0 0;">Already found one? That's awesome — just reply and let us know so we can close things out on our end.</p>
 </td></tr>
 ${footer(d)}`)
-  }),
+    });
+  },
 
   bookingReminder3: (d) => ({
     subject: `Closing your request soon, ${d.firstName}`,
@@ -290,7 +272,8 @@ ${footer(d)}`)
   }),
 
   // ─── DEPOSIT REMINDERS ────────────────────────────────────────
-  // Sent at 24h and 72h after call marked complete, if no deposit received
+  // Sent at 24h, 48h, and 72h after call marked complete, if no deposit received.
+  // 1 = friendly nudge, 2 = gentle middle check-in, 3 = firmer last call.
   depositReminder1: (d) => ({
     subject: `Quick follow-up from our call, ${d.firstName}`,
     html: shell(`${header()}
@@ -311,7 +294,24 @@ ${footer(d)}`)
 ${footer(d)}`)
   }),
 
+  // 48h — gentle middle nudge, not pushy yet
   depositReminder2: (d) => ({
+    subject: `Following up on your deposit, ${d.firstName}`,
+    html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Just a friendly nudge, ${d.firstName}.</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 18px;">Wanted to make sure the Zelle deposit instructions came through okay — they're in your portal if you need them again. As soon as we see the $750 land, the search kicks off that same day.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">Quick reminder: it's fully refundable if we don't find your car within 60 days. No risk on your end.</p>
+</td></tr>
+<tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'Submit your deposit →')}</td></tr>
+<tr><td style="padding:0 40px 8px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:8px 0 0;">Anything holding things up? Just reply and we'll help sort it out.</p>
+</td></tr>
+${footer(d)}`)
+  }),
+
+  // 72h — firmer last call (was depositReminder2 before the 48h slot was added)
+  depositReminder3: (d) => ({
     subject: `Ready to start your search, ${d.firstName}?`,
     html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">
