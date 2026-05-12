@@ -23,6 +23,10 @@ const BOOKING_REMINDER_HOURS = [24, 48, 72, 96, 168];
 const DEPOSIT_REMINDER_HOURS = [24, 48, 72];
 // SMS drip after signup: 2 nudges, 24h apart. (Was 3 — cut the final one.)
 const BOOKING_SMS_REMINDER_HOURS = [24, 48];
+// Long-term re-engagement for clients who go dormant (no deposit paid 14+ days
+// after signup). 14d, ~1mo after that (44d), ~3mo after the first (104d).
+// Stops the moment deposit_paid flips true.
+const DORMANT_REMINDER_HOURS = [336, 1056, 2496];
 
 const sms = require('./_sms.js');
 const email = require('./email.js');
@@ -69,7 +73,7 @@ module.exports = async function handler(req, res) {
   }
 
   const host = req.headers.host || 'auto-pals-usa.vercel.app';
-  const summary = { bookingRemindersSent: 0, depositRemindersSent: 0, smsRemindersSent: 0, errors: [] };
+  const summary = { bookingRemindersSent: 0, depositRemindersSent: 0, smsRemindersSent: 0, dormantRemindersSent: 0, errors: [] };
 
   try {
     // Pull all non-final-state requests (active ones where reminders could apply)
@@ -157,6 +161,38 @@ module.exports = async function handler(req, res) {
                 summary.depositRemindersSent++;
               }
               break;
+            }
+          }
+        }
+
+        // ── DORMANT RE-ENGAGEMENT ──
+        // Long-term campaign for clients who never deposited. Independent of
+        // the booking/deposit drips above so it picks up after they exhaust.
+        // Stops the moment deposit_paid flips true.
+        if (!r.deposit_paid) {
+          const h = hoursSince(r.submitted);
+          if (h !== null) {
+            const dormantArr = Array.isArray(r.dormant_reminders_sent) ? r.dormant_reminders_sent : [];
+            for (let i = 0; i < DORMANT_REMINDER_HOURS.length; i++) {
+              const threshold = DORMANT_REMINDER_HOURS[i];
+              const label = `d${i + 1}`;
+              if (h >= threshold && !dormantArr.includes(label)) {
+                const ok = await sendEmail(host, `dormantReminder${i + 1}`, {
+                  firstName: r.first_name,
+                  lastName:  r.last_name,
+                  email:     r.email,
+                  make:      r.make,
+                  model:     r.model,
+                  bookingUrl: BOOKING_URL,
+                  portalUrl:  PORTAL_URL
+                });
+                if (ok) {
+                  dormantArr.push(label);
+                  await sb('requests', 'PATCH', { dormant_reminders_sent: dormantArr }, `?id=eq.${r.id}`);
+                  summary.dormantRemindersSent++;
+                }
+                break; // one per cron run
+              }
             }
           }
         }

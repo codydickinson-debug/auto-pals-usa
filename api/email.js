@@ -447,6 +447,77 @@ ${footer(d)}`)
 ${footer(d)}`)
   }),
 
+  // ─── LONG-TERM DORMANT RE-ENGAGEMENT ─────────────────────────
+  // Sent to clients who go quiet after the short-term booking drip.
+  // d1 = 14 days post-signup, d2 = 44d (~1mo after d1), d3 = 104d (~3mo after d1).
+  // Cron stops the campaign the moment deposit_paid flips true.
+  dormantReminder1: (d) => {
+    const vehicle = d.make
+      ? `${d.make}${d.model && d.model !== '—' ? ' ' + d.model : ''}`
+      : 'vehicle';
+    return ({
+      subject: `Ready when you are, ${d.firstName}`,
+      html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Hey ${d.firstName} — checking back in.</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 18px;">It's been a couple of weeks since you submitted your ${vehicle} request and we wanted to circle back. No pressure — we know life gets in the way — but we're ready whenever you are.</p>
+</td></tr>
+<tr><td style="padding:0 40px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:20px 24px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:12px;">What you signed up for</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.9;">
+<span style="color:${BRAND.navy};">✓</span> Personal vehicle sourcing through dealer-only auctions<br>
+<span style="color:${BRAND.navy};">✓</span> Wholesale pricing, not retail<br>
+<span style="color:${BRAND.navy};">✓</span> 60-day search window, $750 deposit (fully refundable if no match)<br>
+<span style="color:${BRAND.navy};">✓</span> Free 30-minute intro call to kick everything off
+</div>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:0 40px 12px;">${button(d.bookingUrl, 'Book your intro call →')}</td></tr>
+<tr><td style="padding:0 40px 8px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:8px 0 0;">Changed your mind, or already bought somewhere else? Just reply and let us know so we can close your file — no hard feelings either way.</p>
+</td></tr>
+${footer(d)}`)
+    });
+  },
+
+  dormantReminder2: (d) => {
+    const vehicle = d.make
+      ? `${d.make}${d.model && d.model !== '—' ? ' ' + d.model : ''}`
+      : 'car';
+    return ({
+      subject: `Still thinking about that ${vehicle}, ${d.firstName}?`,
+      html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Quick check-in, ${d.firstName}.</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 18px;">A month has gone by since we first reached out about your ${vehicle} search. The market has shifted a bit — auction inventory's been good lately, and if you're still in the market we'd love to help you find a deal.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">All it takes to start is a 30-minute call. No commitment until you decide to put down the deposit.</p>
+</td></tr>
+<tr><td style="padding:0 40px 12px;">${button(d.bookingUrl, 'Book your call →')}</td></tr>
+<tr><td style="padding:0 40px 8px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:8px 0 0;">If we should close out your request, just reply STOP-LOOKING and we'll take it from there.</p>
+</td></tr>
+${footer(d)}`)
+    });
+  },
+
+  dormantReminder3: (d) => {
+    const vehicle = d.make
+      ? `${d.make}${d.model && d.model !== '—' ? ' ' + d.model : ''}`
+      : 'vehicle';
+    return ({
+      subject: `Last check-in, ${d.firstName} — door's still open`,
+      html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Last note, ${d.firstName}.</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 18px;">It's been about three months since we reached out. We won't keep emailing — but the door is still open if you ever want to pick the ${vehicle} search back up.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">If your timing's better now, just book a call and we'll start fresh. If not, no problem at all — wishing you well either way.</p>
+</td></tr>
+<tr><td style="padding:0 40px 12px;">${button(d.bookingUrl, 'Book a call →')}</td></tr>
+${footer(d)}`)
+    });
+  },
+
   // ─── STAFF NOTIFICATION ──────────────────────────────────────
   // Sent to STAFF_NOTIFY_EMAIL (or whatever email is in data) the moment
   // staff marks a deposit received in the dashboard. Pairs with the

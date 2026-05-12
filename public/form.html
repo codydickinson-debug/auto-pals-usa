@@ -1311,7 +1311,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v113 · 2026-05-12</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v114 · 2026-05-12</div>
 
 <!-- NAV -->
 <nav>
@@ -1595,6 +1595,9 @@
         </button>
         <button class="sidebar-item" onclick="filterRequests('awaiting_paperwork', this)">
           Awaiting Paperwork <span class="badge" id="badge-awaiting_paperwork">0</span>
+        </button>
+        <button class="sidebar-item" onclick="filterRequests('dormant', this)">
+          Dormant <span class="badge" id="badge-dormant">0</span>
         </button>
         <button class="sidebar-item" onclick="filterRequests('rejected', this)">
           Rejected <span class="badge" id="badge-rejected">0</span>
@@ -3111,12 +3114,26 @@
     setText('aq-search', inSearch);
   }
 
+  // Derived "dormant" — request is >= 14 days old, deposit not paid,
+  // and not yet sold or rejected. Computed view, not a stored status.
+  function isDormantRequest(r) {
+    if (!r) return false;
+    if (r.status === 'sold' || r.status === 'rejected') return false;
+    if (r.depositPaid || r.deposit_paid) return false;
+    if (!r.submitted) return false;
+    const t = new Date(r.submitted).getTime();
+    if (!t) return false;
+    return (Date.now() - t) >= 14 * 24 * 60 * 60 * 1000;
+  }
+
   function updateBadges() {
     // 'review' status still exists in the codebase (set via detail panel) and rolls
     // into the New + In Review action-queue card — we count it but no longer
     // surface a sidebar tab for it. 'searching' is the new sidebar tab.
+    // 'dormant' is a derived view, counted separately.
     const counts = { all: requests.filter(r=>r.status!=='sold').length, new: 0, review: 0, qualified: 0, called: 0, searching: 0, in_repair: 0, awaiting_paperwork: 0, rejected: 0 };
     requests.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+    counts.dormant = requests.filter(isDormantRequest).length;
     Object.entries(counts).forEach(([k,v]) => {
       const el = document.getElementById('badge-' + k);
       if (el) el.textContent = v;
@@ -3131,7 +3148,7 @@
     document.querySelectorAll('.action-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
-    const titles = { all: 'All Requests', new: 'New Requests', qualified: 'Qualified Leads', called: 'Called', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', rejected: 'Rejected' };
+    const titles = { all: 'All Requests', new: 'New Requests', qualified: 'Qualified Leads', called: 'Called', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
     document.getElementById('table-title').textContent = titles[f] || 'Requests';
     renderTable();
   }
@@ -3217,6 +3234,9 @@
       filtered = requests.filter(r => r.status === 'qualified' && !r.callCompletedAt);
     } else if (currentActionFilter === 'search') {
       filtered = requests.filter(r => (r.depositReceived || r.depositPaid) && r.status !== 'sold' && r.status !== 'rejected');
+    } else if (currentFilter === 'dormant') {
+      // 'dormant' is a derived view, not a real status field.
+      filtered = requests.filter(isDormantRequest);
     } else {
       filtered = currentFilter === 'all' ? requests.filter(r => r.status !== 'sold') : requests.filter(r => r.status === currentFilter);
     }
