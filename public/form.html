@@ -1311,10 +1311,11 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v115 · 2026-05-12</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v116 · 2026-05-12</div>
 
-<!-- Auto-refresh status pill (staff dashboard only — hidden until first tick) -->
-<div id="auto-refresh-pill" style="position:fixed;bottom:14px;left:90px;z-index:50;padding:5px 12px;background:rgba(255,255,255,0.92);color:#5a6480;border:1px solid #ddd5c0;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.04em;box-shadow:0 1px 4px rgba(15,37,87,0.08);user-select:none;display:none;align-items:center;gap:6px;">
+<!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
+     Stacked above the version stamp at bottom-left. -->
+<div id="auto-refresh-pill" style="position:fixed;bottom:48px;left:14px;z-index:50;padding:5px 12px;background:rgba(255,255,255,0.92);color:#5a6480;border:1px solid #ddd5c0;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.04em;box-shadow:0 1px 4px rgba(15,37,87,0.08);user-select:none;display:none;align-items:center;gap:6px;">
   <span id="auto-refresh-dot" style="width:6px;height:6px;border-radius:50%;background:#15803d;display:inline-block;transition:transform 0.2s, box-shadow 0.2s;"></span>
   <span>Live</span>
   <span id="auto-refresh-time" style="color:#8b93a8;font-weight:400;">—</span>
