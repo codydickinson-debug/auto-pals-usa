@@ -1113,6 +1113,14 @@
     height: calc(100vh - 60px);
     min-height: 0;
   }
+  @media (max-width: 768px) {
+    /* On mobile, stack convo list (capped at ~35vh) over the conversation pane. */
+    .messages-shell {
+      grid-template-columns: 1fr;
+      grid-template-rows: minmax(120px, 35vh) 1fr;
+    }
+    .convo-list-panel { border-right: none; border-bottom: 1px solid var(--border); }
+  }
   .convo-list-panel { min-height: 0; }
   .msg-pane {
     min-height: 0;
@@ -1311,7 +1319,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v116 · 2026-05-12</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v117 · 2026-05-12</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -1366,6 +1374,13 @@
 
         <!-- Contact Info -->
         <div class="form-section-title">Contact Information</div>
+        <!-- Honeypot field — invisible to humans, irresistible to most form bots.
+             autocomplete="off" + tabindex="-1" + offscreen positioning keeps it
+             out of the way of users. Server-side check in api/db.js rejects too. -->
+        <div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;height:0;overflow:hidden;width:1px;">
+          <label>Website (do not fill)</label>
+          <input type="text" id="f-website" name="website" autocomplete="off" tabindex="-1" value="">
+        </div>
         <div class="form-row">
           <div>
             <label>First Name <span class="req">*</span></label>
@@ -2971,8 +2986,25 @@
   }
 
   let _submitting = false;
+  // Captured the first time the form is interacted with — used as a soft
+  // bot signal (humans take time, drive-by bots submit instantly).
+  const _formLoadedAt = Date.now();
+
   function submitForm() {
     if (_submitting) return;
+
+    // ── Bot signals (silent — don't tell the bot why we rejected) ──
+    const hp = document.getElementById('f-website');
+    if (hp && hp.value && hp.value.trim() !== '') {
+      console.warn('[bot] honeypot tripped');
+      return; // pretend nothing happened
+    }
+    const elapsed = Date.now() - _formLoadedAt;
+    if (elapsed < 2500) {
+      console.warn('[bot] form submitted in', elapsed, 'ms — suspiciously fast');
+      return;
+    }
+
     const required = ['f-firstname','f-lastname','f-email','f-phone','f-date','f-zip','f-year-from','f-budget-min','f-budget-max'];
     // When the client says "I have a specific car in mind" (the default), the
     // make and model become required so we can scope the search. Open searches
@@ -4030,9 +4062,8 @@
         budgetMin: r.budgetMin, budgetMax: r.budgetMax,
         depositRef: ref, depositDate: when, portalUrl: PORTAL_URL
       });
-      sendSMS('deposit_received', {
-        firstName: r.firstName, lastName: r.lastName, depositRef: ref
-      });
+      // (staff_deposit_received SMS is fired server-side in api/db.js on the
+      // deposit_paid false→true flip — no need to also fire it here.)
     }
     // Notify the team — recipient overridden by STAFF_NOTIFY_EMAIL on the server
     const _vehicle = r.make ? `${r.make} ${r.model || ''}`.trim() : 'Open Search';

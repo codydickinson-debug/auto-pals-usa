@@ -69,7 +69,7 @@ module.exports = async function handler(req, res) {
   try {
     const lookup = await sb('GET',
       `requests?portal_code=eq.${encodeURIComponent(portalCode)}`
-      + `&select=id,first_name,last_name,email,phone,make,model,year_from,year_to,contract_signed_at`
+      + `&select=id,first_name,last_name,email,phone,make,model,year_from,year_to,status,contract_signed_at`
       + `&limit=1`);
     if (!lookup.ok || !Array.isArray(lookup.body) || !lookup.body.length) {
       return res.status(404).json({ error: 'not_found' });
@@ -87,12 +87,21 @@ module.exports = async function handler(req, res) {
   }
 
   const nowIso = sigIsoInput || new Date().toISOString();
+
+  // Auto-status: a signed contract means we're officially sourcing. Bump to
+  // 'searching' unless they've already moved further down the pipeline.
+  const advancedStatuses = ['searching', 'in_repair', 'awaiting_paperwork', 'sold'];
+  const patchBody = {
+    contract_signed_at: nowIso,
+    contract_signature_name: sigName,
+    contract_signature_ip: sigIp
+  };
+  if (row.status && !advancedStatuses.includes(row.status)) {
+    patchBody.status = 'searching';
+  }
+
   try {
-    const patch = await sb('PATCH', `requests?id=eq.${row.id}`, {
-      contract_signed_at: nowIso,
-      contract_signature_name: sigName,
-      contract_signature_ip: sigIp
-    });
+    const patch = await sb('PATCH', `requests?id=eq.${row.id}`, patchBody);
     if (!patch.ok) {
       console.error('[portal-sign] patch failed', patch.status, patch.body);
       return res.status(500).json({ error: 'save_failed' });

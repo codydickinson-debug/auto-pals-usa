@@ -113,6 +113,28 @@ module.exports = async function handler(req, res) {
         return res.json(data || []);
       }
       if (req.method === 'POST') {
+        // ── Lightweight spam guards (catch direct-POST bots that skip the form's
+        // client-side honeypot + timer). Not bulletproof, but cheap, no captcha.
+        const spamReasons = [];
+        const firstName = String(body.firstName || '').trim();
+        const lastName  = String(body.lastName  || '').trim();
+        const email     = String(body.email     || '').trim();
+        const notes     = String(body.notes     || '');
+        // 1. URL stuffing in name fields = obvious bot signal
+        if (/(https?:|www\.)/i.test(firstName + ' ' + lastName)) spamReasons.push('url_in_name');
+        // 2. Multiple URLs anywhere = spam pattern
+        const urlCount = ((firstName + lastName + notes).match(/https?:\/\//gi) || []).length;
+        if (urlCount >= 3) spamReasons.push('many_urls');
+        // 3. Excessively long notes = comment-form bot
+        if (notes.length > 4000) spamReasons.push('notes_too_long');
+        // 4. Bare email format guard (so junk like "x" doesn't even land)
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) spamReasons.push('bad_email');
+        if (spamReasons.length) {
+          console.warn('[spam] rejected request:', spamReasons.join(','), { firstName, email });
+          // Return a generic-looking success so bots don't probe for the reason.
+          return res.json({ ok: true, id: Date.now() });
+        }
+
         const row = {
           id: body.id || Date.now(),
           submitted: body.submitted,
@@ -274,6 +296,25 @@ module.exports = async function handler(req, res) {
           const prior = await query('requests', 'GET', null, `?id=eq.${b.id}&limit=1`);
           if (prior && prior.length) priorRow = prior[0];
         } catch (e) { /* best-effort */ }
+
+        // ── Auto-status transitions ────────────────────────────────
+        // Only fire when staff didn't already pick a status in this PATCH —
+        // we never override an intentional staff selection.
+        if (mapped.status === undefined && priorRow) {
+          const priorStatus = priorRow.status;
+          // 1. First booking confirmation: 'new'/'review' → 'qualified'
+          if (mapped.booking_confirmed_at && !priorRow.booking_confirmed_at
+              && (priorStatus === 'new' || priorStatus === 'review')) {
+            mapped.status = 'qualified';
+          }
+          // 2. Deposit just flipped paid: bump to 'searching' unless they've
+          //    already progressed further (e.g. into 'in_repair' / sold).
+          const advancedStatuses = ['searching', 'in_repair', 'awaiting_paperwork', 'sold'];
+          if (mapped.deposit_paid && !priorRow.deposit_paid
+              && !advancedStatuses.includes(priorStatus)) {
+            mapped.status = 'searching';
+          }
+        }
 
         await query('requests', 'PATCH', mapped, `?id=eq.${b.id}`);
 
@@ -448,10 +489,17 @@ module.exports = async function handler(req, res) {
               `?email=eq.${encodeURIComponent(body.email)}&booking_confirmed_at=is.null&order=submitted.desc&limit=1`
             );
             if (matches && matches.length) {
+              // Auto-status: bump from 'new'/'review' → 'qualified' on first booking
+              // (don't override anything later in the pipeline).
+              const matchStatus = matches[0].status;
+              const bookingPatch = { booking_confirmed_at: new Date().toISOString() };
+              if (matchStatus === 'new' || matchStatus === 'review') {
+                bookingPatch.status = 'qualified';
+              }
               await query(
                 'requests',
                 'PATCH',
-                { booking_confirmed_at: new Date().toISOString() },
+                bookingPatch,
                 `?id=eq.${matches[0].id}`
               );
             }
