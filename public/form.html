@@ -1311,7 +1311,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v109 · 2026-05-12</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v110 · 2026-05-12</div>
 
 <!-- NAV -->
 <nav>
@@ -1333,7 +1333,6 @@
     <button class="nav-tab" id="nav-client-form" onclick="showView('client')">Client Form</button>
     <div id="staff-tabs" style="display:none;">
       <button class="nav-tab" onclick="showView('dashboard')" id="nav-requests">Requests</button>
-      <button class="nav-tab" onclick="showView('calls')" id="nav-calls">Calls <span id="nav-badge-calls" class="nav-tab-badge">0</span></button>
       <button class="nav-tab" onclick="showView('repairs')" id="nav-repairs">Repairs <span id="nav-badge-repair" class="nav-tab-badge">0</span></button>
       <button class="nav-tab" onclick="showView('sales')" id="nav-sales">Sold Cars <span id="nav-badge-sold" class="nav-tab-badge">0</span></button>
       <button class="nav-tab" onclick="showView('messages')" id="nav-messages">Messages <span id="nav-badge-messages" class="nav-tab-badge">0</span></button>
@@ -1886,48 +1885,6 @@
           <button class="msg-send-btn" onclick="sendTeamReply()">Send</button>
         </div>
       </div>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════ CALLS VIEW ════════════════════════════════════ -->
-<!-- Pulls the full bookings table (staff-token grants full PII) and joins
-     each row to its matching request by email so we can show whether the
-     call was completed (call_completed_at on the request). Two sections:
-     "Upcoming" (call_completed_at is null AND date >= today) and "Completed"
-     (call_completed_at is set OR date is in the past). Click a row to open
-     the request detail panel. -->
-<div id="view-calls" class="view">
-  <div style="max-width:1100px;margin:0 auto;padding:32px 24px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
-      <div>
-        <h2 style="margin:0;font-family:Georgia,serif;font-size:22px;font-weight:700;color:var(--text);">Sales Calls</h2>
-        <div style="font-size:12px;color:var(--text-muted);font-family:system-ui,sans-serif;margin-top:2px;">Booked intro calls, grouped by status. Click any row to open the request.</div>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button id="calls-filter-upcoming" onclick="setCallsFilter('upcoming')" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--navy);color:var(--cream);font-family:system-ui,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Upcoming</button>
-        <button id="calls-filter-completed" onclick="setCallsFilter('completed')" style="padding:7px 14px;border:1px solid var(--border);border-radius:var(--radius);background:none;color:var(--text-muted);font-family:system-ui,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Completed</button>
-        <button onclick="loadAndRenderCalls()" title="Refresh" style="padding:7px 12px;border:1px solid var(--border);border-radius:var(--radius);background:none;color:var(--text-muted);font-family:system-ui,sans-serif;font-size:12px;font-weight:600;cursor:pointer;">↻</button>
-      </div>
-    </div>
-
-    <div id="calls-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);font-family:system-ui,sans-serif;margin-bottom:4px;">Upcoming</div>
-        <div id="calls-stat-upcoming" style="font-size:22px;font-weight:700;color:var(--text);font-family:system-ui,sans-serif;">—</div>
-      </div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);font-family:system-ui,sans-serif;margin-bottom:4px;">Completed</div>
-        <div id="calls-stat-completed" style="font-size:22px;font-weight:700;color:var(--text);font-family:system-ui,sans-serif;">—</div>
-      </div>
-      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
-        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);font-family:system-ui,sans-serif;margin-bottom:4px;">This Week</div>
-        <div id="calls-stat-week" style="font-size:22px;font-weight:700;color:var(--text);font-family:system-ui,sans-serif;">—</div>
-      </div>
-    </div>
-
-    <div id="calls-list" style="display:flex;flex-direction:column;gap:8px;">
-      <div style="padding:40px;text-align:center;color:var(--text-muted);font-family:system-ui,sans-serif;font-size:14px;">Loading calls…</div>
     </div>
   </div>
 </div>
@@ -2919,167 +2876,13 @@
     if (v === 'repairs') { renderRepairCards(); document.getElementById('panel-repair').style.display = 'block'; }
     if (v === 'sales')   { updateWeekLabel(); renderSoldTable(); document.getElementById('panel-sold').style.display = 'block'; }
     if (v === 'messages') { renderConvoList(); }
-    if (v === 'calls')    { loadAndRenderCalls(); }
   }
 
   function syncNavBadges() {
     const rb = document.getElementById('nav-badge-repair');
     const sb = document.getElementById('nav-badge-sold');
-    const cb = document.getElementById('nav-badge-calls');
     if (rb) rb.textContent = repairCars.length;
     if (sb) sb.textContent = sales.length;
-    // Calls badge shows upcoming-call count; falls back to 0 until first load.
-    if (cb && Array.isArray(window._cachedBookings)) {
-      const today = new Date().toISOString().slice(0, 10);
-      const upcoming = window._cachedBookings.filter(b => {
-        const r = requests.find(rq => rq.email && b.email && rq.email.toLowerCase() === b.email.toLowerCase());
-        const completed = r && r.callCompletedAt;
-        return !completed && b.date >= today;
-      });
-      cb.textContent = upcoming.length;
-    }
-  }
-
-  // ─── CALLS VIEW ────────────────────────────────────────────────
-  // Lives in its own block because the bookings table is independent of the
-  // requests table; we fetch fresh and join client-side by email.
-  let callsFilter = 'upcoming';
-
-  function setCallsFilter(f) {
-    callsFilter = f;
-    document.getElementById('calls-filter-upcoming').style.background = f === 'upcoming' ? 'var(--navy)' : 'none';
-    document.getElementById('calls-filter-upcoming').style.color = f === 'upcoming' ? 'var(--cream)' : 'var(--text-muted)';
-    document.getElementById('calls-filter-completed').style.background = f === 'completed' ? 'var(--navy)' : 'none';
-    document.getElementById('calls-filter-completed').style.color = f === 'completed' ? 'var(--cream)' : 'var(--text-muted)';
-    renderCalls();
-  }
-
-  async function loadAndRenderCalls() {
-    const list = document.getElementById('calls-list');
-    if (list) list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted);font-family:system-ui,sans-serif;font-size:14px;">Loading calls…</div>';
-    try {
-      const data = await dbGet('bookings', '');
-      window._cachedBookings = Array.isArray(data) ? data : [];
-    } catch (e) {
-      console.warn('[calls] fetch failed:', e);
-      window._cachedBookings = [];
-    }
-    renderCalls();
-    syncNavBadges();
-  }
-
-  function renderCalls() {
-    const list = document.getElementById('calls-list');
-    if (!list) return;
-    const bookings = Array.isArray(window._cachedBookings) ? window._cachedBookings.slice() : [];
-    const today = new Date().toISOString().slice(0, 10);
-
-    // Annotate each booking with the matching request (so we know if call is
-    // complete) and a sortable timestamp. Match by email — bookings table has
-    // no request_id today.
-    const annotated = bookings.map(b => {
-      const matchEmail = (b.email || '').toLowerCase();
-      const r = requests.find(rq => (rq.email || '').toLowerCase() === matchEmail);
-      const completed = !!(r && r.callCompletedAt);
-      const datetimeIso = b.date + 'T' + parseTimeTo24(b.time);
-      return { booking: b, request: r, completed, datetimeIso };
-    });
-
-    // Counts for stat cards (independent of which filter is active).
-    const upcomingCount = annotated.filter(x => !x.completed && x.booking.date >= today).length;
-    const completedCount = annotated.filter(x => x.completed || x.booking.date < today).length;
-    const weekStart = new Date(); weekStart.setHours(0,0,0,0);
-    const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 7);
-    const weekStartISO = weekStart.toISOString().slice(0, 10);
-    const weekEndISO = weekEnd.toISOString().slice(0, 10);
-    const thisWeekCount = annotated.filter(x =>
-      !x.completed && x.booking.date >= weekStartISO && x.booking.date < weekEndISO
-    ).length;
-    const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    setText('calls-stat-upcoming', upcomingCount);
-    setText('calls-stat-completed', completedCount);
-    setText('calls-stat-week', thisWeekCount);
-
-    // Filter for the visible list.
-    let rows;
-    if (callsFilter === 'upcoming') {
-      rows = annotated
-        .filter(x => !x.completed && x.booking.date >= today)
-        .sort((a, b) => a.datetimeIso.localeCompare(b.datetimeIso));
-    } else {
-      rows = annotated
-        .filter(x => x.completed || x.booking.date < today)
-        .sort((a, b) => b.datetimeIso.localeCompare(a.datetimeIso));
-    }
-
-    if (!rows.length) {
-      const emptyText = callsFilter === 'upcoming'
-        ? 'No upcoming calls.'
-        : 'No completed calls yet.';
-      list.innerHTML = `<div style="padding:40px;text-align:center;color:var(--text-muted);font-family:system-ui,sans-serif;font-size:14px;">${emptyText}</div>`;
-      return;
-    }
-
-    list.innerHTML = rows.map(({ booking, request, completed }) => {
-      const fullName = ((booking.first_name || '') + ' ' + (booking.last_name || '')).trim() || (booking.email || 'Unknown');
-      const dateLabel = formatCallDate(booking.date);
-      const vehicle = booking.vehicle || (request ? (request.make ? [request.make, request.model && request.model !== '—' ? request.model : ''].filter(Boolean).join(' ') : 'Open Search') : '—');
-      const reqId = request ? request.id : null;
-      const statusBadge = completed
-        ? `<span style="display:inline-block;padding:3px 10px;border-radius:99px;background:rgba(45,122,79,0.15);color:#2d7a4f;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">✓ Completed</span>`
-        : (booking.date < today
-            ? `<span style="display:inline-block;padding:3px 10px;border-radius:99px;background:rgba(176,58,58,0.15);color:#b03a3a;font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">⚠ Past · not marked</span>`
-            : `<span style="display:inline-block;padding:3px 10px;border-radius:99px;background:rgba(15,37,87,0.12);color:var(--navy);font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">📅 Booked</span>`);
-      const openBtn = reqId
-        ? `<button onclick="event.stopPropagation();openDetailView(${reqId})" style="padding:6px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);font-family:system-ui,sans-serif;font-size:11px;font-weight:600;color:var(--text);cursor:pointer;">Open request</button>`
-        : `<span style="font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);">no matching request</span>`;
-      const markBtn = (!completed && reqId)
-        ? `<button onclick="event.stopPropagation();markCallCompletedFromCalls(${reqId})" style="padding:6px 12px;border:1px solid #2d7a4f;border-radius:6px;background:rgba(45,122,79,0.08);font-family:system-ui,sans-serif;font-size:11px;font-weight:600;color:#2d7a4f;cursor:pointer;">Mark completed</button>`
-        : '';
-      return `<div onclick="${reqId ? `openDetailView(${reqId})` : ''}" style="display:grid;grid-template-columns:140px 1fr auto auto;gap:14px;align-items:center;padding:14px 16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);${reqId ? 'cursor:pointer;' : ''}transition:border-color 0.12s;" onmouseover="this.style.borderColor='var(--accent-bright)'" onmouseout="this.style.borderColor='var(--border)'">
-        <div style="font-family:system-ui,sans-serif;">
-          <div style="font-size:13px;font-weight:700;color:var(--text);">${escapeHtml(dateLabel)}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${escapeHtml(booking.time || '')}</div>
-        </div>
-        <div style="font-family:system-ui,sans-serif;min-width:0;">
-          <div style="font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(fullName)}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(vehicle)} · ${escapeHtml(booking.email || '')}${booking.phone ? ' · ' + escapeHtml(booking.phone) : ''}</div>
-        </div>
-        <div>${statusBadge}</div>
-        <div style="display:flex;gap:6px;">${markBtn}${openBtn}</div>
-      </div>`;
-    }).join('');
-  }
-
-  function parseTimeTo24(t) {
-    // "9:30 AM" → "09:30:00"
-    if (!t) return '00:00:00';
-    const m = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(t);
-    if (!m) return '00:00:00';
-    let h = +m[1] % 12;
-    if (m[3] === 'PM') h += 12;
-    return String(h).padStart(2, '0') + ':' + m[2] + ':00';
-  }
-
-  function formatCallDate(iso) {
-    if (!iso) return '—';
-    const [y, m, d] = iso.split('-').map(Number);
-    if (!y) return iso;
-    const dt = new Date(Date.UTC(y, m - 1, d, 12));
-    return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
-  }
-
-  function markCallCompletedFromCalls(reqId) {
-    const r = requests.find(x => x.id === reqId);
-    if (!r) return;
-    r.callCompletedAt = new Date().toISOString();
-    if (r.status === 'new' || r.status === 'review' || r.status === 'qualified') {
-      r.status = 'qualified';
-    }
-    save();
-    dbPut('requests', r);
-    renderCalls();
-    syncNavBadges();
   }
 
   // ─── FORM SUBMIT ───────────────────────────────────────────────
