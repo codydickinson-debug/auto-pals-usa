@@ -466,8 +466,10 @@
   .status-qualified { background: var(--green-light); color: var(--green); }
   .status-rejected { background: var(--red-light); color: var(--red); }
   .status-called { background: #f5f3ff; color: #6d28d9; }
+  .status-searching { background: #ecfdf5; color: #047857; }
   .status-in_repair { background: #fff7ed; color: #c2410c; }
   .status-awaiting_paperwork { background: #eff6ff; color: #1d4ed8; }
+  .status-sold { background: #f1f5f9; color: #475569; }
 
   .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
   .dot-new { background: #1d4ed8; }
@@ -475,8 +477,10 @@
   .dot-qualified { background: var(--green); }
   .dot-rejected { background: var(--red); }
   .dot-called { background: #6d28d9; }
+  .dot-searching { background: #047857; }
   .dot-in_repair { background: #c2410c; }
   .dot-awaiting_paperwork { background: #1d4ed8; }
+  .dot-sold { background: #475569; }
 
   /* Detail panel */
   .detail-overlay {
@@ -1307,7 +1311,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v106 · 2026-05-12</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v107 · 2026-05-12</div>
 
 <!-- NAV -->
 <nav>
@@ -3438,12 +3442,13 @@
       return;
     }
 
-    const statusColors = { new:'#1d4ed8', review:'var(--amber)', qualified:'var(--green)', rejected:'var(--red)', called:'#6d28d9' };
-    const statusLabels = { new:'New', review:'In Review', qualified:'Qualified', rejected:'Rejected', called:'Called', in_repair:'In Repair', awaiting_paperwork:'Awaiting Paperwork' };
+    const statusColors = { new:'#1d4ed8', review:'var(--amber)', qualified:'var(--green)', rejected:'var(--red)', called:'#6d28d9', searching:'#047857' };
+    const statusLabels = { new:'New', review:'In Review', qualified:'Qualified', rejected:'Rejected', called:'Called', searching:'Actively Searching', in_repair:'In Repair', awaiting_paperwork:'Awaiting Paperwork', sold:'Sold' };
 
     tbody.innerHTML = filtered.map(r => {
-      const statusClass = { new: 'status-new', review: 'status-review', qualified: 'status-qualified', rejected: 'status-rejected', called: 'status-called', in_repair: 'status-in_repair', awaiting_paperwork: 'status-awaiting_paperwork' }[r.status];
-      const dotClass = { new: 'dot-new', review: 'dot-review', qualified: 'dot-qualified', rejected: 'dot-rejected', called: 'dot-called', in_repair: 'dot-in_repair', awaiting_paperwork: 'dot-awaiting_paperwork' }[r.status];
+      const statusClass = { new: 'status-new', review: 'status-review', qualified: 'status-qualified', rejected: 'status-rejected', called: 'status-called', searching: 'status-searching', in_repair: 'status-in_repair', awaiting_paperwork: 'status-awaiting_paperwork', sold: 'status-sold' }[r.status] || 'status-new';
+      const dotClass = { new: 'dot-new', review: 'dot-review', qualified: 'dot-qualified', rejected: 'dot-rejected', called: 'dot-called', searching: 'dot-searching', in_repair: 'dot-in_repair', awaiting_paperwork: 'dot-awaiting_paperwork', sold: 'dot-sold' }[r.status] || 'dot-new';
+      const statusLabel = statusLabels[r.status] || r.status || '—';
       const date = new Date(r.submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const vehicle = [r.make, r.model].filter(v => v && v !== '—').join(' ') || '—';
       const budget = r.budgetMax ? '$' + Number(r.budgetMax).toLocaleString() : '—';
@@ -3459,7 +3464,7 @@
         <td data-label="Budget">${budget}</td>
         <td data-label="Years">${years}</td>
         <td data-label="AI">${tlCell}</td>
-        <td data-label="Status">${sla}<span class="status-pill ${statusClass}"><span class="dot ${dotClass}"></span>${statusLabels[r.status]}</span></td>
+        <td data-label="Status">${sla}<span class="status-pill ${statusClass}"><span class="dot ${dotClass}"></span>${statusLabel}</span></td>
         <td data-label="Submitted" style="color:var(--text-muted)">${date}</td>
         <td style="width:80px;text-align:center;">
           <div style="display:flex;align-items:center;gap:6px;justify-content:center;">
