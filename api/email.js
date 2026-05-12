@@ -118,6 +118,51 @@ ${d.portalUrl ? buttonSecondary(d.portalUrl, 'View portal') : ''}
 ${footer(d)}`)
   }),
 
+  // Client confirmation when they sign the contract. Welcomes them in,
+  // confirms the 60-day search window is live.
+  contractSigned: (d) => ({
+    subject: `Contract signed — your search starts now, ${d.firstName}`,
+    html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Welcome aboard, ${d.firstName}.</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">Your service agreement is signed and your deposit is in. Your 60-day search window is officially live — our team starts hunting auctions for your match today.</p>
+</td></tr>
+<tr><td style="padding:0 40px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.greenSoft};border-left:3px solid ${BRAND.green};border-radius:0 8px 8px 0;"><tr><td style="padding:16px 20px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.7;"><strong style="color:${BRAND.green};">What happens next:</strong> we'll be in touch through your portal as soon as we find vehicles worth your attention. Most clients see their first matches within the first 1–2 weeks.</div>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'Open your portal →', { bg: BRAND.green })}</td></tr>
+<tr><td style="padding:0 40px 8px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:8px 0 0;">Questions or want to adjust your search? Just reply to this email — we read every message.</p>
+</td></tr>
+${footer(d)}`)
+  }),
+
+  // Staff fan-out when a client signs. Pairs with the staff_contract_signed SMS.
+  staffContractSigned: (d) => ({
+    subject: `🖊 Contract signed — ${d.clientName || 'client'}`,
+    html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:8px;">Contract signed</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 18px;">Search window is officially live for this client.</p>
+</td></tr>
+<tr><td style="padding:0 40px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:18px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;">
+<tr><td style="padding:6px 0;color:${BRAND.muted};width:38%;">Client</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientName || '—'}</td></tr>
+${d.clientEmail ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Email</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientEmail}</td></tr>` : ''}
+${d.clientPhone ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Phone</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientPhone}</td></tr>` : ''}
+${d.vehicleStr ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Vehicle</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.vehicleStr}</td></tr>` : ''}
+<tr><td style="padding:6px 0;color:${BRAND.muted};">Signed name</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.signatureName || '—'}</td></tr>
+<tr><td style="padding:6px 0;color:${BRAND.muted};">Signed at</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.signedAt || '—'}</td></tr>
+${d.portalCode ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Portal code</td><td style="padding:6px 0;color:${BRAND.navy};font-weight:700;text-align:right;font-size:12px;">${d.portalCode}</td></tr>` : ''}
+</table>
+</td></tr></table>
+</td></tr>
+${footer(d)}`)
+  }),
+
   // Sent by /api/portal-recover when a client clicks "Forgot your code?".
   // Lists all portal codes tied to the email they entered.
   portalCodeRecovery: (d) => ({

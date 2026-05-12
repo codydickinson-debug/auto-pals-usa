@@ -154,6 +154,10 @@ const TEMPLATES = {
   staff_portal_message: (d) =>
     `💬 Auto Pals USA: ${d.clientName || 'A client'} just sent you a message in the portal. Open the dashboard to reply.`,
 
+  // Sent to staff when a client signs the contract in their portal.
+  staff_contract_signed: (d) =>
+    `🖊 Auto Pals USA: ${d.clientName || 'A client'} just signed the contract. 60-day search window is officially live.`,
+
   client_contract_available: (d) =>
     `Hi ${d.firstName || 'there'} — your Auto Pals USA contract is ready to sign in your portal. ` +
     `Once signed, your 60-day search begins: ${d.portalUrl || PORTAL_URL}`

@@ -12,6 +12,19 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY
   || process.env.SUPABASE_SERVICE_ROLE_KEY
   || process.env.SUPABASE_ANON_KEY
   || process.env.SUPABASE_ANNON_KEY;
+const PORTAL_URL = process.env.PORTAL_URL || 'https://autopalsusa.com/portal.html';
+
+const email = require('./email.js');
+const sms   = require('./_sms.js');
+
+function vehicleString(row) {
+  if (!row || !row.make) return 'Open Search';
+  const yr = (row.year_from && row.year_to)
+    ? (row.year_from === row.year_to ? String(row.year_from) : `${row.year_from}–${row.year_to}`)
+    : '';
+  const v = `${row.make}${row.model && row.model !== '—' ? ' ' + row.model : ''}`.trim();
+  return yr ? `${yr} ${v}` : v;
+}
 
 async function sb(method, path, body) {
   const url = `${SUPABASE_URL}/rest/v1/${path}`;
@@ -50,12 +63,14 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'invalid_signature_name' });
   }
 
-  // Look up the request by portal_code. If nothing matches, return a generic
-  // 404 — don't leak whether the code exists vs is just unsigned.
+  // Look up the request by portal_code. Pull enough fields for the
+  // notification payloads. If nothing matches, return a generic 404.
   let row;
   try {
     const lookup = await sb('GET',
-      `requests?portal_code=eq.${encodeURIComponent(portalCode)}&select=id,contract_signed_at&limit=1`);
+      `requests?portal_code=eq.${encodeURIComponent(portalCode)}`
+      + `&select=id,first_name,last_name,email,phone,make,model,year_from,year_to,contract_signed_at`
+      + `&limit=1`);
     if (!lookup.ok || !Array.isArray(lookup.body) || !lookup.body.length) {
       return res.status(404).json({ error: 'not_found' });
     }
@@ -66,7 +81,7 @@ module.exports = async function handler(req, res) {
   }
 
   // Idempotency: if already signed, return the existing state — don't overwrite
-  // the original signed timestamp.
+  // the original signed timestamp, and don't re-fire notifications.
   if (row.contract_signed_at) {
     return res.status(200).json({ ok: true, already_signed: true, contractSignedAt: row.contract_signed_at });
   }
@@ -82,9 +97,42 @@ module.exports = async function handler(req, res) {
       console.error('[portal-sign] patch failed', patch.status, patch.body);
       return res.status(500).json({ error: 'save_failed' });
     }
-    return res.status(200).json({ ok: true, contractSignedAt: nowIso });
   } catch (err) {
     console.error('[portal-sign] patch error', err && err.message);
     return res.status(500).json({ error: 'save_failed' });
   }
+
+  // Notification fan-out. Awaited via Promise.allSettled so Vercel doesn't
+  // kill in-flight SendGrid/Twilio requests when we res.json().
+  const clientName = `${row.first_name || ''} ${row.last_name || ''}`.trim();
+  const vehicleStr = vehicleString(row);
+  const signedAtLabel = new Date(nowIso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' }) + ' ET';
+
+  const fires = [];
+  // Staff: email fan-out + SMS fan-out
+  fires.push(email.sendTemplate('staffContractSigned', {
+    clientName,
+    clientEmail: row.email,
+    clientPhone: row.phone,
+    vehicleStr,
+    signatureName: sigName,
+    signedAt: signedAtLabel,
+    portalCode
+  }));
+  fires.push(sms.send('staff_contract_signed', { clientName }));
+  // Client: welcome / search-starts-now email
+  if (row.email) {
+    fires.push(email.sendTemplate('contractSigned', {
+      firstName: row.first_name,
+      lastName:  row.last_name,
+      email:     row.email,
+      portalUrl: PORTAL_URL
+    }));
+  }
+  const results = await Promise.allSettled(fires);
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') console.error('[portal-sign→notify]', i, r.reason && r.reason.message);
+  });
+
+  return res.status(200).json({ ok: true, contractSignedAt: nowIso });
 };
