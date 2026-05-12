@@ -233,9 +233,29 @@ ${footer(d)}`)
 ${footer(d)}`)
   }),
 
+  // 48h — casual "we're prepping, just need 30 min" follow-up
   bookingReminder2: (d) => {
-    // Light, friendly check-in. Use the vehicle they asked about if we have one,
-    // otherwise fall back to "car" so the sentence still reads naturally.
+    const vehicle = d.make
+      ? `${d.make}${d.model && d.model !== '—' ? ' ' + d.model : ''}`
+      : 'vehicle';
+    return ({
+      subject: `Quick thought, ${d.firstName}`,
+      html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Quick thought, ${d.firstName}.</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 18px;">Wanted to circle back on your ${vehicle} request. Our team's already getting prepped to start hunting — we just need 30 minutes on the phone first to lock in exactly what you want.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">We're at 3 South Florida dealer auctions every week. The sooner we sync up, the sooner we can start watching for your match.</p>
+</td></tr>
+<tr><td style="padding:0 40px 12px;">${button(d.bookingUrl, 'Book your call →')}</td></tr>
+<tr><td style="padding:0 40px 8px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:8px 0 0;">Not sure what you want yet? Book the call anyway — we'll help you figure it out.</p>
+</td></tr>
+${footer(d)}`)
+    });
+  },
+
+  // 72h — light check-in (was bookingReminder2 before the 48h slot was added)
+  bookingReminder3: (d) => {
     const vehicle = d.make
       ? `${d.make}${d.model && d.model !== '—' ? ' ' + d.model : ''}`
       : 'car';
@@ -255,7 +275,30 @@ ${footer(d)}`)
     });
   },
 
-  bookingReminder3: (d) => ({
+  // 96h — "saving your spot" / scarcity framing, day before the last note
+  bookingReminder4: (d) => {
+    const vehicle = d.make
+      ? `${d.make}${d.model && d.model !== '—' ? ' ' + d.model : ''}`
+      : 'vehicle';
+    return ({
+      subject: `Saving you a spot, ${d.firstName}?`,
+      html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Holding your spot, ${d.firstName}.</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 18px;">We only actively source for a handful of clients at any one time — and your request is still on our list. If you're still in the market for a ${vehicle}, grab a 30-minute call and we'll kick off the search the same week.</p>
+</td></tr>
+<tr><td style="padding:0 40px 20px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-left:3px solid ${BRAND.navy};border-radius:0 8px 8px 0;"><tr><td style="padding:16px 20px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.7;">No commitment until you decide to put down the $750 deposit — and that's fully refundable if we don't find a match in 60 days.</div>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:0 40px 12px;">${button(d.bookingUrl, 'Book your call →')}</td></tr>
+${footer(d)}`)
+    });
+  },
+
+  // 168h / 7-day — last note (was bookingReminder3 under the old schedule)
+  bookingReminder5: (d) => ({
     subject: `Closing your request soon, ${d.firstName}`,
     html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">

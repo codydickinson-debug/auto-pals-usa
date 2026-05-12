@@ -15,8 +15,11 @@ const BOOKING_URL  = process.env.BOOKING_URL || 'https://auto-pals-usa.vercel.ap
 const PORTAL_URL   = process.env.PORTAL_URL  || 'https://auto-pals-usa.vercel.app/portal.html';
 
 // Hours between a trigger event and each reminder.
-// Matches: form submit -> 24h / 72h / 7d; call complete -> 24h / 48h / 72h.
-const BOOKING_REMINDER_HOURS = [24, 72, 168];
+// Matches: form submit -> 24h / 48h / 72h / 96h / 7d (5 nudges so we don't lose
+// clients who get distracted mid-week); call complete -> 24h / 48h / 72h.
+// All of these auto-stop the moment booking_confirmed_at / call_completed_at /
+// deposit_paid flips, per the gating in this file.
+const BOOKING_REMINDER_HOURS = [24, 48, 72, 96, 168];
 const DEPOSIT_REMINDER_HOURS = [24, 48, 72];
 // SMS drip after signup: 2 nudges, 24h apart. (Was 3 — cut the final one.)
 const BOOKING_SMS_REMINDER_HOURS = [24, 48];
