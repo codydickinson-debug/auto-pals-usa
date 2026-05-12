@@ -1065,7 +1065,7 @@
 
   </div><!-- /portal-flow -->
 
-  <div id="portal-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v111 · 2026-05-12</div>
+  <div id="portal-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v112 · 2026-05-12</div>
 </div><!-- /portal-content -->
 
 <script>
@@ -1227,6 +1227,10 @@
     sessionStorage.setItem('portal_code', input);
     activeClientData = found;
     loadPortalForClient(found);
+    // Heal any client that signed before v112 (when /api/db?table=requests PUT
+    // was 401'ing the portal). If we have a local signature but the server
+    // doesn't, re-push it.
+    maybeResyncStaleSignature();
   }
 
   function loadPortalForClient(client) {
@@ -1698,26 +1702,31 @@
   }
 
   function persistSignature(sig) {
-    // Save signature to Supabase via the db API
+    // Save signature via the public, portal-code-gated endpoint.
+    // (The old approach PUT /api/db?table=requests which 401'd silently —
+    // result: client saw "signed" UI but Supabase never updated, so staff
+    // dashboard kept showing the contract as unsigned.)
     const req = activeClientData;
     if (!req || !req.id) return;
-    const payload = {
-      id: req.id,
-      contractSignedAt: sig.iso,
-      contractSignatureName: sig.name,
-      contractSignatureIp: sig.ip
-    };
     const _pc = sessionStorage.getItem('portal_code') || (req.portalCode || '');
-    fetch('/api/db?table=requests&portal_code=' + encodeURIComponent(_pc), {
-      method: 'PUT',
+    if (!_pc) {
+      console.warn('[portal] no portal_code in session — signature not synced');
+      return;
+    }
+    fetch('/api/portal-sign', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    }).then(r => {
-      // contractSigned email is fired server-side by api/db.js when this PATCH
-      // sets contract_signed_at. We used to call /api/email here directly, but
-      // that endpoint is now staff-only — the server fires the welcome email
-      // after re-reading the row, which is also more trustworthy.
-      if (!r.ok) console.warn('[portal] contract save returned', r.status);
+      body: JSON.stringify({
+        portalCode:     _pc,
+        signatureName:  sig.name,
+        signatureIp:    sig.ip,
+        signatureIso:   sig.iso
+      })
+    }).then(async r => {
+      if (!r.ok) {
+        const txt = await r.text().catch(() => '');
+        console.warn('[portal] contract save returned', r.status, txt.slice(0, 200));
+      }
     }).catch(e => console.warn('Contract save failed:', e));
     // Update cached local state
     if (activeClientData) {
@@ -1726,6 +1735,21 @@
       activeClientData.contractSignatureIp = sig.ip;
     }
     localStorage.setItem('am_contract_sig_' + req.id, JSON.stringify(sig));
+  }
+
+  // Auto-heal: if the client has a local signature in localStorage but the
+  // server-loaded request doesn't reflect it (because of the old 401 bug),
+  // re-push it now. This makes anyone already affected by the bug auto-recover
+  // the next time they open the portal.
+  function maybeResyncStaleSignature() {
+    const r = activeClientData;
+    if (!r || !r.id) return;
+    if (r.contractSignedAt) return;  // server already has it, nothing to do
+    let cached = null;
+    try { cached = JSON.parse(localStorage.getItem('am_contract_sig_' + r.id) || 'null'); } catch {}
+    if (!cached || !cached.name || !cached.iso) return;
+    console.log('[portal] re-syncing stale local signature for request', r.id);
+    persistSignature(cached);
   }
 
   function showSignedState(sig) {

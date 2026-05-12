@@ -8,6 +8,7 @@
     { "source": "/api/booking", "destination": "/api/booking.js" },
     { "source": "/api/cron",    "destination": "/api/cron.js" },
     { "source": "/api/portal-recover", "destination": "/api/portal-recover.js" },
+    { "source": "/api/portal-sign",    "destination": "/api/portal-sign.js" },
     { "source": "/",            "destination": "/public/home.html" },
     { "source": "/home",        "destination": "/public/home.html" },
     { "source": "/home.html",   "destination": "/public/home.html" },
