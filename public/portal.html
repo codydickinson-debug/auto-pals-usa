@@ -660,6 +660,21 @@
       <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:16px;line-height:1.6;">
         Don't have a code? <a href="form.html" style="color:var(--navy);font-weight:600;text-decoration:none;">Submit a request</a> first and we'll send one to your email.
       </p>
+      <div style="border-top:1px solid var(--border);margin-top:18px;padding-top:14px;text-align:center;">
+        <a id="recover-toggle-link" href="#" onclick="event.preventDefault();toggleRecoverForm()" style="font-size:13px;color:var(--text-muted);font-weight:500;text-decoration:underline;">Forgot your code?</a>
+      </div>
+
+      <!-- Code-recovery form (hidden by default) -->
+      <div id="recover-form" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);">
+        <label style="display:block;font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase;">Email on the request</label>
+        <input type="email" id="recover-email-input" placeholder="you@email.com"
+          style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:var(--cream);outline:none;margin-bottom:10px;"
+          onkeydown="if(event.key==='Enter')submitRecoverEmail()">
+        <button id="recover-submit-btn" onclick="submitRecoverEmail()" style="width:100%;padding:11px;background:var(--navy);color:var(--cream);border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity 0.15s;">
+          Email me my code
+        </button>
+        <div id="recover-result" style="display:none;margin-top:10px;padding:10px 12px;background:var(--cream);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text-muted);line-height:1.55;text-align:center;"></div>
+      </div>
     </div>
   </div>
   </div>
@@ -1050,7 +1065,7 @@
 
   </div><!-- /portal-flow -->
 
-  <div id="portal-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v110 · 2026-05-12</div>
+  <div id="portal-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v111 · 2026-05-12</div>
 </div><!-- /portal-content -->
 
 <script>
@@ -1070,6 +1085,52 @@
   const DEMO_REQUESTS = [];
 
   let activeClientData = null;
+
+  // ─── "Forgot your code?" recovery ────────────────────────────────
+  function toggleRecoverForm() {
+    const f = document.getElementById('recover-form');
+    const link = document.getElementById('recover-toggle-link');
+    if (!f) return;
+    const showing = f.style.display === 'block';
+    f.style.display = showing ? 'none' : 'block';
+    if (link) link.textContent = showing ? 'Forgot your code?' : 'Hide';
+    if (!showing) {
+      setTimeout(() => { const el = document.getElementById('recover-email-input'); if (el) el.focus(); }, 50);
+    }
+  }
+
+  async function submitRecoverEmail() {
+    const input  = document.getElementById('recover-email-input');
+    const btn    = document.getElementById('recover-submit-btn');
+    const result = document.getElementById('recover-result');
+    const email  = (input && input.value || '').trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      result.style.display = 'block';
+      result.textContent = 'Please enter a valid email address.';
+      return;
+    }
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = 'Sending…';
+    try {
+      const res = await fetch('/api/portal-recover', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email })
+      });
+      const data = await res.json().catch(() => ({}));
+      result.style.display = 'block';
+      // Always show the same friendly message so the endpoint can't be used
+      // to enumerate which emails are in our system.
+      result.textContent = data.message || 'If this email matches a request, a recovery email is on the way. Check your inbox (and spam folder) in the next minute.';
+    } catch (e) {
+      result.style.display = 'block';
+      result.textContent = 'Something went wrong sending. Try again, or email info@autopalsusa.com.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = original;
+    }
+  }
 
   async function portalLogin() {
     const input = document.getElementById('portal-code-input').value.trim().toUpperCase();

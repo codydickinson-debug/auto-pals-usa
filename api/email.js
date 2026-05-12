@@ -92,6 +92,13 @@ const TEMPLATES = {
 <div style="font-family:Georgia,serif;font-size:26px;font-weight:700;color:${BRAND.ink};line-height:1.25;margin-bottom:14px;">Hey ${d.firstName}, we got your request.</div>
 <p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">Thanks for trusting us with your search. One of us will personally look over your details and reach out within 24 hours. In the meantime, the fastest way to get moving is to book your intro call below — it takes 30 minutes and we'll walk through exactly how this works.</p>
 </td></tr>
+${d.portalCode ? `<tr><td style="padding:0 40px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border:1px solid ${BRAND.border};border-radius:10px;"><tr><td style="padding:18px 22px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:6px;">🔑 Your portal access code — save this email</div>
+<div style="font-family:'SF Mono','Menlo','Consolas',monospace;font-size:22px;font-weight:700;color:${BRAND.navy};letter-spacing:0.06em;margin-bottom:8px;">${d.portalCode}</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;color:${BRAND.muted};line-height:1.55;">Use this on the portal page to check status, message us, view recommendations, and sign your service agreement. Anyone with this code can see your request, so keep it private.</div>
+</td></tr></table>
+</td></tr>` : ''}
 <tr><td style="padding:0 40px 24px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:22px 24px;">
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:14px;">Your Request</div>
@@ -107,6 +114,28 @@ const TEMPLATES = {
 <p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 18px;">Pick a time that works. Monday through Friday, 9am–5pm ET.</p>
 ${button(d.bookingUrl, 'Book your call →')}
 ${d.portalUrl ? buttonSecondary(d.portalUrl, 'View portal') : ''}
+</td></tr>
+${footer(d)}`)
+  }),
+
+  // Sent by /api/portal-recover when a client clicks "Forgot your code?".
+  // Lists all portal codes tied to the email they entered.
+  portalCodeRecovery: (d) => ({
+    subject: `Your Auto Pals USA portal code${(d.codes && d.codes.length > 1) ? 's' : ''}`,
+    html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Here ${(d.codes && d.codes.length > 1) ? 'are your portal codes' : 'is your portal code'}.</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">You requested a code reminder for ${d.email}. Use ${(d.codes && d.codes.length > 1) ? 'any of these' : 'this'} on the portal page to access your account.</p>
+</td></tr>
+<tr><td style="padding:0 40px 22px;">
+${(d.codes || []).map((c, i) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border:1px solid ${BRAND.border};border-radius:10px;margin-bottom:10px;"><tr><td style="padding:16px 22px;">
+${c.vehicleStr ? `<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:11px;color:${BRAND.muted};margin-bottom:4px;">${c.vehicleStr}</div>` : ''}
+<div style="font-family:'SF Mono','Menlo','Consolas',monospace;font-size:22px;font-weight:700;color:${BRAND.navy};letter-spacing:0.06em;">${c.code}</div>
+</td></tr></table>`).join('')}
+</td></tr>
+<tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'Open the portal →')}</td></tr>
+<tr><td style="padding:0 40px 8px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:8px 0 0;">If you didn't request this, you can safely ignore this email — your account is unchanged.</p>
 </td></tr>
 ${footer(d)}`)
   }),

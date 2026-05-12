@@ -193,6 +193,7 @@ module.exports = async function handler(req, res) {
               yearTo:     row.year_to,
               budgetMin:  row.budget_min,
               budgetMax:  row.budget_max,
+              portalCode: row.portal_code,
               bookingUrl: BOOKING_URL,
               portalUrl:  PORTAL_URL
             }));
