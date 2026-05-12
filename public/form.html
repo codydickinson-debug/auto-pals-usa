@@ -1307,7 +1307,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v105 · 2026-05-11</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v106 · 2026-05-12</div>
 
 <!-- NAV -->
 <nav>
@@ -1578,14 +1578,14 @@
         <button class="sidebar-item" onclick="filterRequests('new', this)">
           New <span class="badge" id="badge-new">0</span>
         </button>
-        <button class="sidebar-item" onclick="filterRequests('review', this)">
-          In Review <span class="badge" id="badge-review">0</span>
-        </button>
         <button class="sidebar-item" onclick="filterRequests('qualified', this)">
           Qualified <span class="badge" id="badge-qualified">0</span>
         </button>
         <button class="sidebar-item" onclick="filterRequests('called', this)">
           Called <span class="badge" id="badge-called">0</span>
+        </button>
+        <button class="sidebar-item" onclick="filterRequests('searching', this)">
+          Actively Searching <span class="badge" id="badge-searching">0</span>
         </button>
         <button class="sidebar-item" onclick="filterRequests('in_repair', this)">
           In Repair <span class="badge" id="badge-in_repair">0</span>
@@ -3305,7 +3305,10 @@
   }
 
   function updateBadges() {
-    const counts = { all: requests.filter(r=>r.status!=='sold').length, new: 0, review: 0, qualified: 0, called: 0, in_repair: 0, awaiting_paperwork: 0, rejected: 0 };
+    // 'review' status still exists in the codebase (set via detail panel) and rolls
+    // into the New + In Review action-queue card — we count it but no longer
+    // surface a sidebar tab for it. 'searching' is the new sidebar tab.
+    const counts = { all: requests.filter(r=>r.status!=='sold').length, new: 0, review: 0, qualified: 0, called: 0, searching: 0, in_repair: 0, awaiting_paperwork: 0, rejected: 0 };
     requests.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
     Object.entries(counts).forEach(([k,v]) => {
       const el = document.getElementById('badge-' + k);
@@ -3321,7 +3324,7 @@
     document.querySelectorAll('.action-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
-    const titles = { all: 'All Requests', new: 'New Requests', review: 'In Review', qualified: 'Qualified Leads', called: 'Called', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', rejected: 'Rejected' };
+    const titles = { all: 'All Requests', new: 'New Requests', qualified: 'Qualified Leads', called: 'Called', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', rejected: 'Rejected' };
     document.getElementById('table-title').textContent = titles[f] || 'Requests';
     renderTable();
   }
