@@ -335,7 +335,27 @@
   </div>
 </nav>
 
-<div class="booking-wrap">
+<!-- ── PORTAL-CODE GATE ─────────────────────────────────────────────
+     Hides the booking calendar unless the visitor came through the
+     portal flow (which sets sessionStorage.portal_code). Reason: we
+     were getting bookings from people who never filed a request, so
+     they didn't show up in the dashboard as leads. JS below enables
+     either the gate or the booking-wrap on page load. -->
+<div id="booking-gate" style="display:none;max-width:560px;margin:64px auto;padding:0 24px;text-align:center;font-family:'DM Sans',sans-serif;">
+  <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:#0f2557;margin-bottom:14px;line-height:1.25;">
+    Let's get you set up first
+  </div>
+  <p style="font-size:15px;color:#5a6480;line-height:1.65;margin:0 0 28px;">
+    Before booking your call, we need a few details about what you're looking for so the conversation isn't starting from zero. Takes about 90 seconds.
+  </p>
+  <a href="/form.html?form=1" style="display:inline-block;padding:13px 30px;background:#0f2557;color:#f5f0e8;border-radius:10px;text-decoration:none;font-size:15px;font-weight:700;margin-bottom:14px;">Fill out the quick form →</a>
+  <div style="margin-top:20px;padding-top:20px;border-top:1px solid #ddd5c0;font-size:13px;color:#5a6480;">
+    Already submitted a request?<br>
+    <a href="/portal.html" style="color:#0f2557;font-weight:600;text-decoration:underline;">Enter your portal code →</a>
+  </div>
+</div>
+
+<div class="booking-wrap" id="booking-content" style="display:none;">
 
   <!-- LEFT INFO -->
   <div class="booking-info">
@@ -728,9 +748,23 @@
 
   function goBack() { showStep(1); }
 
-  // Init
-  renderCalendar();
-  preloadMonthBookings();
+  // Init — gate the booking calendar on the presence of a portal code.
+  // Anyone hitting /booking.html directly (Google, deep link, etc.) without
+  // having come through the form/portal flow will see the gate UI instead.
+  (function gateOrInit() {
+    const portalCode = (sessionStorage.getItem('portal_code') || '').trim();
+    const gate = document.getElementById('booking-gate');
+    const content = document.getElementById('booking-content');
+    if (!portalCode) {
+      if (gate) gate.style.display = 'block';
+      if (content) content.style.display = 'none';
+      return; // no calendar init
+    }
+    if (gate) gate.style.display = 'none';
+    if (content) content.style.display = '';  // clears inline none; CSS class restores grid layout
+    renderCalendar();
+    preloadMonthBookings();
+  })();
 </script>
 </body>
 </html>
