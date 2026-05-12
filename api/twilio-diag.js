@@ -98,11 +98,76 @@ module.exports = async function handler(req, res) {
     ? await getMessagingService(process.env.TWILIO_MESSAGING_SERVICE_SID)
     : null;
 
+  // Pull A2P 10DLC registration state. Brands are account-level (Trust Hub),
+  // campaigns are per-Messaging-Service. Both need to be Approved/Registered
+  // for carriers to stop bouncing with 30034.
+  const sidCreds = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
+    ? Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64')
+    : null;
+  const svcSid = process.env.TWILIO_MESSAGING_SERVICE_SID;
+
+  const twilioHeaders = sidCreds ? { 'Authorization': `Basic ${sidCreds}` } : null;
+
+  const [brandsRaw, campaignsRaw, allServicesRaw] = sidCreds
+    ? await Promise.all([
+        fetch('https://messaging.twilio.com/v1/a2p/BrandRegistrations', { headers: twilioHeaders })
+          .then(r => r.json()).catch(e => ({ error: e.message })),
+        svcSid
+          ? fetch(`https://messaging.twilio.com/v1/Services/${svcSid}/Compliance/Usa2p`, { headers: twilioHeaders })
+              .then(r => r.json()).catch(e => ({ error: e.message }))
+          : { skipped: 'no_service_sid' },
+        fetch('https://messaging.twilio.com/v1/Services?PageSize=20', { headers: twilioHeaders })
+          .then(r => r.json()).catch(e => ({ error: e.message }))
+      ])
+    : [{ skipped: 'no_creds' }, { skipped: 'no_creds' }, { skipped: 'no_creds' }];
+
+  const brands = Array.isArray(brandsRaw.results)
+    ? brandsRaw.results.map(b => ({
+        sid: b.sid,
+        status: b.status,
+        brand_type: b.brand_type,
+        brand_score: b.brand_score,
+        identity_status: b.identity_status,
+        russell_3000: b.russell_3000,
+        tcr_id: b.tcr_id,
+        failure_reason: b.failure_reason,
+        date_created: b.date_created,
+        date_updated: b.date_updated
+      }))
+    : brandsRaw;
+
+  const campaigns = Array.isArray(campaignsRaw.compliance) || Array.isArray(campaignsRaw.results)
+    ? (campaignsRaw.compliance || campaignsRaw.results).map(c => ({
+        sid: c.sid,
+        brand_registration_sid: c.brand_registration_sid,
+        campaign_status: c.campaign_status,
+        us_app_to_person_usecase: c.us_app_to_person_usecase,
+        description: c.description,
+        message_samples: c.message_samples,
+        has_embedded_links: c.has_embedded_links,
+        has_embedded_phone: c.has_embedded_phone,
+        rate_limits: c.rate_limits,
+        date_created: c.date_created,
+        date_updated: c.date_updated
+      }))
+    : campaignsRaw;
+
+  const allServices = Array.isArray(allServicesRaw.services)
+    ? allServicesRaw.services.map(s => ({
+        sid: s.sid,
+        friendly_name: s.friendly_name,
+        is_pointed_to_by_env: s.sid === svcSid
+      }))
+    : allServicesRaw;
+
   return res.status(200).json({
     timestamp: new Date().toISOString(),
     env_presence: envPresence,
     team_recipient_count: teamNumsCount,
     messaging_service: svcInfo,
+    a2p_brand_registrations: brands,
+    a2p_campaigns_on_this_service: campaigns,
+    all_messaging_services: allServices,
     last_messages: messagesSummary
   });
 };
