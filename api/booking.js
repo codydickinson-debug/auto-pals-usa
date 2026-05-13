@@ -57,7 +57,7 @@ async function getAccessToken() {
 }
 
 function parseTime(timeStr) {
-  // "9:00 AM" → { hours: 9, minutes: 0 }
+  // "9:00 AM" → { hours: 9, minutes: 0 } (24-hour internal)
   const [time, period] = timeStr.split(' ');
   let [hours, minutes] = time.split(':').map(Number);
   if (period === 'PM' && hours !== 12) hours += 12;
@@ -65,29 +65,24 @@ function parseTime(timeStr) {
   return { hours, minutes };
 }
 
-function buildEventDateTime(dateStr, timeStr) {
-  // dateStr: "2025-04-15", timeStr: "9:00 AM"
-  const { hours, minutes } = parseTime(timeStr);
-  // Eastern Time offset (UTC-5 standard, UTC-4 daylight)
-  const etOffset = isDST(new Date(dateStr)) ? '-04:00' : '-05:00';
+// Returns { start, end } as NAKED ISO datetime strings (no offset) plus a
+// 30-min duration. Google Calendar reads the timeZone field separately, so a
+// naked datetime + timeZone:"America/New_York" is unambiguous — and avoids
+// the previous DST bug where the Vercel UTC runtime made isDST() always
+// return false, stamping summer bookings with -05:00 (EST) instead of -04:00
+// (EDT) and pushing every Daylight Saving booking 1 hour LATE on the calendar.
+function buildEventTimes(dateStr, startTimeStr) {
+  const { hours, minutes } = parseTime(startTimeStr);
+  const startMinTotal = hours * 60 + minutes;
+  const endMinTotal   = startMinTotal + 30;
   const pad = n => String(n).padStart(2, '0');
-  return `${dateStr}T${pad(hours)}:${pad(minutes)}:00${etOffset}`;
-}
-
-function isDST(date) {
-  const jan = new Date(date.getFullYear(), 0, 1).getTimezoneOffset();
-  const jul = new Date(date.getFullYear(), 6, 1).getTimezoneOffset();
-  return date.getTimezoneOffset() < Math.max(jan, jul);
+  const startStr = `${dateStr}T${pad(hours)}:${pad(minutes)}:00`;
+  const endStr   = `${dateStr}T${pad(Math.floor(endMinTotal / 60))}:${pad(endMinTotal % 60)}:00`;
+  return { start: startStr, end: endStr };
 }
 
 async function createCalendarEvent(token, booking) {
-  const start = buildEventDateTime(booking.date, booking.time);
-  // End = start + 30 minutes
-  const { hours, minutes } = parseTime(booking.time);
-  const endMinutes = minutes + 30;
-  const endHours = hours + Math.floor(endMinutes / 60);
-  const endTime = `${booking.time.split(':')[0].replace(/\d+/, String(endHours))}:${String(endMinutes % 60).padStart(2,'0')} ${booking.time.split(' ')[1]}`;
-  const end = buildEventDateTime(booking.date, endTime);
+  const { start, end } = buildEventTimes(booking.date, booking.time);
 
   const event = {
     summary: `Sales Call — ${booking.firstName} ${booking.lastName}`,
