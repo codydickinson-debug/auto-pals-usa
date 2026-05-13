@@ -10,6 +10,7 @@
 // Safe to keep deployed (staff-gated) or delete once SMS rollout is verified.
 
 const { verifyToken } = require('./auth.js');
+const sms = require('./_sms.js');
 
 function maskPhone(p) {
   if (!p) return null;
@@ -160,6 +161,17 @@ module.exports = async function handler(req, res) {
       }))
     : allServicesRaw;
 
+  // Optional one-off test send — ?test=PHONE[&body=TEXT]
+  // Single recipient (no staff fan-out) so we don't spam the team while
+  // probing A2P state. Returns the raw Twilio response inline so we see
+  // status + error_code immediately (e.g., 30034 = unregistered campaign).
+  let testSendResult = null;
+  const testPhone = req.query.test;
+  if (testPhone) {
+    const body = req.query.body || 'Auto Pals SMS test — if you got this, A2P is delivering.';
+    testSendResult = await sms.sendOne(testPhone, body);
+  }
+
   return res.status(200).json({
     timestamp: new Date().toISOString(),
     env_presence: envPresence,
@@ -168,6 +180,7 @@ module.exports = async function handler(req, res) {
     a2p_brand_registrations: brands,
     a2p_campaigns_on_this_service: campaigns,
     all_messaging_services: allServices,
-    last_messages: messagesSummary
+    last_messages: messagesSummary,
+    test_send: testSendResult
   });
 };
