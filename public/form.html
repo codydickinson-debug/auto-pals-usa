@@ -2528,6 +2528,13 @@
       searchMode: r.search_mode, portalCode: r.portal_code,
       aiColor: r.ai_color, aiReason: r.ai_reason, aiRecs: r.ai_recs,
       depositPaid: r.deposit_paid, depositRef: r.deposit_ref, depositDate: r.deposit_date,
+      // Legacy aliases — some dashboard paths (day-counter pill, deposit-detail
+      // panel) read these directly. They're only ever set on the device that
+      // performed the local "mark deposit received" action, so they were missing
+      // on every other device. Mirror them from the Supabase fields so the
+      // dashboard renders identically across all devices.
+      depositReceived:   !!r.deposit_paid,
+      depositReceivedAt: r.deposit_date || null,
       clientRecs: r.client_recs, rejectionReason: r.rejection_reason,
       callCompletedAt: r.call_completed_at,
       bookingConfirmedAt: r.booking_confirmed_at,
@@ -3259,7 +3266,7 @@
   function depositDayNumber(r) {
     // Returns 1-based day count starting from when the deposit was confirmed.
     // null if no deposit yet.
-    const ts = r.depositReceivedAt || r.deposit_date;
+    const ts = r.depositReceivedAt || r.depositDate;
     if (!ts || !(r.depositReceived || r.depositPaid)) return null;
     const start = new Date(ts);
     if (isNaN(start.getTime())) return null;
@@ -3920,6 +3927,12 @@
     if (r.clientRecsAt) {
       const when = new Date(r.clientRecsAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       sentEl.textContent = `✓ Sent to client portal on ${when}`;
+      sentEl.style.display = 'block';
+    } else if (Array.isArray(r.clientRecs) && r.clientRecs.length) {
+      // clientRecsAt isn't persisted to Supabase yet, so devices that didn't
+      // perform the local "send recs" action don't know the date. The recs
+      // themselves *are* in Supabase, so still show the sent indicator.
+      sentEl.textContent = '✓ Sent to client portal';
       sentEl.style.display = 'block';
     } else {
       sentEl.style.display = 'none';
