@@ -137,20 +137,11 @@ module.exports = async function handler(req, res) {
       }))
     : brandsRaw;
 
+  // Dump the campaign object verbatim so any TCR-level feedback fields
+  // (errors, rejection_reason, mock, etc.) that Twilio adds during review
+  // come through without us having to know each field name up-front.
   const campaigns = Array.isArray(campaignsRaw.compliance) || Array.isArray(campaignsRaw.results)
-    ? (campaignsRaw.compliance || campaignsRaw.results).map(c => ({
-        sid: c.sid,
-        brand_registration_sid: c.brand_registration_sid,
-        campaign_status: c.campaign_status,
-        us_app_to_person_usecase: c.us_app_to_person_usecase,
-        description: c.description,
-        message_samples: c.message_samples,
-        has_embedded_links: c.has_embedded_links,
-        has_embedded_phone: c.has_embedded_phone,
-        rate_limits: c.rate_limits,
-        date_created: c.date_created,
-        date_updated: c.date_updated
-      }))
+    ? (campaignsRaw.compliance || campaignsRaw.results)
     : campaignsRaw;
 
   const allServices = Array.isArray(allServicesRaw.services)
