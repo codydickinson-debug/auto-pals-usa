@@ -202,6 +202,44 @@ module.exports = async function handler(req, res) {
     };
   }
 
+  // Action: update campaign's privacy_policy_url + terms_and_conditions_url
+  // to www variants and re-submit for TCR review. Only legal while the
+  // campaign is IN_PROGRESS (Twilio locks URL changes after TCR approval).
+  // POST as application/x-www-form-urlencoded per Twilio API conventions.
+  let fixResult = null;
+  if (req.query.fix === 'campaign_urls' && twilioHeaders && svcSid) {
+    const campaignSid = Array.isArray(campaigns) && campaigns[0] ? campaigns[0].sid : null;
+    if (!campaignSid) {
+      fixResult = { ok: false, error: 'no_campaign_found' };
+    } else {
+      const newPrivacy = req.query.privacy_url || 'https://www.autopalsusa.com/privacy.html';
+      const newTerms   = req.query.terms_url   || 'https://www.autopalsusa.com/terms.html';
+      const body = new URLSearchParams({
+        privacy_policy_url:       newPrivacy,
+        terms_and_conditions_url: newTerms
+      }).toString();
+
+      const r = await fetch(
+        `https://messaging.twilio.com/v1/Services/${svcSid}/Compliance/Usa2p/${campaignSid}`,
+        {
+          method: 'POST',
+          headers: { ...twilioHeaders, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body
+        }
+      );
+      let respBody = null;
+      try { respBody = await r.json(); } catch (_) { respBody = await r.text().catch(() => null); }
+      fixResult = {
+        ok: r.ok,
+        status: r.status,
+        campaign_sid: campaignSid,
+        new_privacy_policy_url: newPrivacy,
+        new_terms_and_conditions_url: newTerms,
+        twilio_response: respBody
+      };
+    }
+  }
+
   return res.status(200).json({
     timestamp: new Date().toISOString(),
     env_presence: envPresence,
@@ -212,6 +250,7 @@ module.exports = async function handler(req, res) {
     all_messaging_services: allServices,
     last_messages: messagesSummary,
     test_send: testSendResult,
-    trust_hub: trustHub
+    trust_hub: trustHub,
+    fix_result: fixResult
   });
 };
