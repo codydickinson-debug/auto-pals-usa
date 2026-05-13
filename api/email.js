@@ -546,6 +546,58 @@ ${d.portalCode ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Portal cod
 ${footer(d)}`)
   }),
 
+  // Staff fan-out the moment a client books an intro call. Pairs with the
+  // staff_booking_made SMS — and is the "always-arrives" half until A2P
+  // approval lets the SMS flow through carriers.
+  staffCallBooked: (d) => ({
+    subject: `📅 Call booked — ${d.clientName || 'client'} · ${d.dateLabel || d.date}`,
+    html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:8px;">Intro call booked</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 18px;">A client just booked their 30-minute intro call. Calendar invite + their confirmation email are out already.</p>
+</td></tr>
+<tr><td style="padding:0 40px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:18px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;">
+<tr><td style="padding:6px 0;color:${BRAND.muted};width:38%;">When</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.dateLabel || d.date || '—'} at ${d.time || '—'}</td></tr>
+<tr><td style="padding:6px 0;color:${BRAND.muted};">Client</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientName || '—'}</td></tr>
+${d.clientEmail ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Email</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientEmail}</td></tr>` : ''}
+${d.clientPhone ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Phone</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientPhone}</td></tr>` : ''}
+${d.vehicle ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Vehicle interest</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.vehicle}</td></tr>` : ''}
+${d.portalCode ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Portal code</td><td style="padding:6px 0;color:${BRAND.navy};font-weight:700;text-align:right;font-size:12px;">${d.portalCode}</td></tr>` : ''}
+</table>
+</td></tr></table>
+</td></tr>
+${footer(d)}`)
+  }),
+
+  // Staff fan-out when a CLIENT replies in their portal. Pairs with the
+  // staff_portal_message SMS.
+  staffPortalMessage: (d) => ({
+    subject: `💬 New portal message from ${d.clientName || 'a client'}`,
+    html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:8px;">New message in the portal</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 18px;">${d.clientName || 'A client'} just sent you a message. Open the dashboard to reply.</p>
+</td></tr>
+${d.messageText ? `<tr><td style="padding:0 40px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-left:3px solid ${BRAND.navy};border-radius:0 8px 8px 0;"><tr><td style="padding:16px 20px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.ink};line-height:1.65;white-space:pre-wrap;word-wrap:break-word;">${(d.messageText || '').slice(0, 1000)}</div>
+</td></tr></table>
+</td></tr>` : ''}
+<tr><td style="padding:0 40px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:14px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;">
+<tr><td style="padding:4px 0;color:${BRAND.muted};width:30%;">Client</td><td style="padding:4px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientName || '—'}</td></tr>
+${d.clientEmail ? `<tr><td style="padding:4px 0;color:${BRAND.muted};">Email</td><td style="padding:4px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientEmail}</td></tr>` : ''}
+${d.clientPhone ? `<tr><td style="padding:4px 0;color:${BRAND.muted};">Phone</td><td style="padding:4px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientPhone}</td></tr>` : ''}
+${d.portalCode ? `<tr><td style="padding:4px 0;color:${BRAND.muted};">Portal code</td><td style="padding:4px 0;color:${BRAND.navy};font-weight:700;text-align:right;font-size:12px;">${d.portalCode}</td></tr>` : ''}
+</table>
+</td></tr></table>
+</td></tr>
+${footer(d)}`)
+  }),
+
   // Sent to staff (fanned out via STAFF_NOTIFY_EMAIL comma-list) the moment
   // a client submits the request form. Pairs with the staff_new_request SMS.
   staffNewRequest: (d) => ({

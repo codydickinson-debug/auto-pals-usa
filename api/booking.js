@@ -7,12 +7,14 @@
 //   SENDGRID_API_KEY
 //   FROM_EMAIL
 
-const sms = require('./_sms.js');
+const sms   = require('./_sms.js');
+const email = require('./email.js');
 
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 
-// Awaitable — caller must Promise.allSettled / await before responding,
-// or Vercel terminates the lambda and kills the in-flight Twilio HTTP call.
+// Awaitable — callers must Promise.allSettled / await both promises before
+// responding, or Vercel terminates the lambda and kills the in-flight
+// outbound HTTP requests.
 function staffBookingSmsPromise(booking) {
   return sms.send('staff_booking_made', {
     firstName: booking.firstName,
@@ -23,6 +25,19 @@ function staffBookingSmsPromise(booking) {
     dateLabel: booking.dateLabel,
     time:      booking.time
   }).catch(err => console.error('[BOOKING→SMS]', err && err.message));
+}
+
+function staffBookingEmailPromise(booking) {
+  return email.sendTemplate('staffCallBooked', {
+    clientName:  `${booking.firstName || ''} ${booking.lastName || ''}`.trim(),
+    clientEmail: booking.email,
+    clientPhone: booking.phone,
+    vehicle:     booking.vehicle,
+    date:        booking.date,
+    dateLabel:   booking.dateLabel,
+    time:        booking.time,
+    portalCode:  booking.portalCode
+  }).catch(err => console.error('[BOOKING→EMAIL]', err && err.message));
 }
 
 async function getAccessToken() {
@@ -177,7 +192,10 @@ module.exports = async function handler(req, res) {
   if (demoMode) {
     console.log('[BOOKING DEMO]', `${firstName} ${lastName}`, date, time);
     try { await sendConfirmationEmail(booking); } catch(e) { console.log('[Email demo]', e.message); }
-    await staffBookingSmsPromise(booking);
+    await Promise.allSettled([
+      staffBookingSmsPromise(booking),
+      staffBookingEmailPromise(booking)
+    ]);
     return res.status(200).json({ ok: true, demo: true });
   }
 
@@ -185,7 +203,10 @@ module.exports = async function handler(req, res) {
     const token = await getAccessToken();
     const event = await createCalendarEvent(token, booking);
     await sendConfirmationEmail(booking);
-    await staffBookingSmsPromise(booking);
+    await Promise.allSettled([
+      staffBookingSmsPromise(booking),
+      staffBookingEmailPromise(booking)
+    ]);
     return res.status(200).json({ ok: true, eventId: event.id });
   } catch (err) {
     console.error('Booking error:', err.message);

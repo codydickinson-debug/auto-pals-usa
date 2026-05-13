@@ -415,18 +415,28 @@ module.exports = async function handler(req, res) {
           const reqRow = await query('requests', 'GET', null, `?id=eq.${row.request_id}&limit=1`);
           if (reqRow && reqRow.length) {
             const r0 = reqRow[0];
+            const msgFires = [];
             if (row.from_role === 'team' || row.from_role === 'staff') {
               if (r0.phone) {
-                await sms.send('client_portal_message', {
+                msgFires.push(sms.send('client_portal_message', {
                   phone: r0.phone,
                   staffName: body.staffName || 'Auto Pals USA'
-                });
+                }));
               }
             } else if (row.from_role === 'client') {
-              await sms.send('staff_portal_message', {
-                clientName: `${r0.first_name || ''} ${r0.last_name || ''}`.trim() || 'A client'
-              });
+              const clientName = `${r0.first_name || ''} ${r0.last_name || ''}`.trim() || 'A client';
+              msgFires.push(sms.send('staff_portal_message', { clientName }));
+              // Email is the always-arrives half — SMS is still blocked by
+              // Twilio A2P, so without this, staff get nothing on client replies.
+              msgFires.push(email.sendTemplate('staffPortalMessage', {
+                clientName,
+                clientEmail: r0.email,
+                clientPhone: r0.phone,
+                portalCode:  r0.portal_code,
+                messageText: row.text
+              }));
             }
+            if (msgFires.length) await Promise.allSettled(msgFires);
           }
         } catch (e) { /* best-effort, don't fail the message post */ }
 
