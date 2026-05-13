@@ -9,7 +9,6 @@
     { "source": "/api/cron",    "destination": "/api/cron.js" },
     { "source": "/api/portal-recover", "destination": "/api/portal-recover.js" },
     { "source": "/api/portal-sign",    "destination": "/api/portal-sign.js" },
-    { "source": "/api/sendgrid-diag", "destination": "/api/sendgrid-diag.js" },
     { "source": "/api/twilio-diag",   "destination": "/api/twilio-diag.js" },
     { "source": "/",            "destination": "/public/home.html" },
     { "source": "/home",        "destination": "/public/home.html" },
