@@ -164,11 +164,9 @@ module.exports = async function handler(req, res) {
   }
 
   // Trust Hub inspection — ?inspect=trusthub
-  // Dumps every customer profile, secondary profile, end-user resource,
-  // bundle item, and supporting document the account has, with full
-  // attributes. Used to find which item stores PRIVACY_POLICY_URL /
-  // TERMS_AND_CONDITIONS_URL so we can update them via API instead of
-  // chasing them through the Twilio Console UI.
+  // Pulls customer profiles AND trust products (where A2P bundle lives),
+  // with entity assignments so we can see which end-user resources hold
+  // the PRIVACY_POLICY_URL / TERMS_AND_CONDITIONS_URL attributes.
   let trustHub = null;
   if (req.query.inspect === 'trusthub' && twilioHeaders) {
     const trGet = (path) =>
@@ -176,26 +174,30 @@ module.exports = async function handler(req, res) {
         .then(r => r.json())
         .catch(e => ({ error: e.message, path }));
 
-    const [profiles, endUsers, docs] = await Promise.all([
+    const [profiles, trustProducts, endUsers, docs] = await Promise.all([
       trGet('/v1/CustomerProfiles?PageSize=50'),
+      trGet('/v1/TrustProducts?PageSize=50'),
       trGet('/v1/EndUsers?PageSize=50'),
       trGet('/v1/SupportingDocuments?PageSize=50')
     ]);
 
-    // For each customer profile, also pull its entity assignments + evaluations
-    // so we can see which end-user/doc resources are linked and what status
-    // the bundle is in.
+    const expand = async (kind, p) => ({
+      bundle: p,
+      assignments: await trGet(`/v1/${kind}/${p.sid}/EntityAssignments?PageSize=50`)
+    });
+
     const profileDetails = Array.isArray(profiles.results)
-      ? await Promise.all(profiles.results.map(async p => ({
-          profile: p,
-          assignments: await trGet(`/v1/CustomerProfiles/${p.sid}/CustomerProfilesEntityAssignments?PageSize=50`),
-          channelEndpoints: await trGet(`/v1/CustomerProfiles/${p.sid}/CustomerProfilesChannelEndpointAssignment?PageSize=50`)
-        })))
+      ? await Promise.all(profiles.results.map(p => expand('CustomerProfiles', p)))
+      : null;
+
+    const trustProductDetails = Array.isArray(trustProducts.results)
+      ? await Promise.all(trustProducts.results.map(p => expand('TrustProducts', p)))
       : null;
 
     trustHub = {
       customer_profiles: profileDetails || profiles,
-      end_users: endUsers,
+      trust_products:    trustProductDetails || trustProducts,
+      end_users:         endUsers,
       supporting_documents: docs
     };
   }
