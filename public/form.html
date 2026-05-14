@@ -1319,7 +1319,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v121 · 2026-05-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v122 · 2026-05-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3264,14 +3264,23 @@
 
   // ── DASHBOARD HELPERS: SLA + day counter + action queue ────────
   function depositDayNumber(r) {
-    // Returns 1-based day count starting from when the deposit was confirmed.
+    // Returns 1-based CALENDAR-day count starting from when the deposit was
+    // confirmed. Deposit day = Day 1, next calendar day = Day 2, etc.
+    // Previously used elapsed milliseconds, which meant a deposit at 11pm
+    // still read "Day 1" at 9am the next morning (only ~10h elapsed) — off
+    // by one for anyone glancing at the dashboard the day after a deposit.
     // null if no deposit yet.
     const ts = r.depositReceivedAt || r.depositDate;
     if (!ts || !(r.depositReceived || r.depositPaid)) return null;
     const start = new Date(ts);
     if (isNaN(start.getTime())) return null;
-    const ms = Date.now() - start.getTime();
-    return Math.max(1, Math.floor(ms / 86400000) + 1);
+    // Compare midnight-to-midnight in local time so the counter flips
+    // when the calendar day flips, not 24h after the deposit clock-time.
+    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const now = new Date();
+    const today    = new Date(now.getFullYear(),   now.getMonth(),   now.getDate());
+    const daysDiff = Math.round((today - startDay) / 86400000);
+    return Math.max(1, daysDiff + 1);
   }
   function depositDayPill(r) {
     const day = depositDayNumber(r);
