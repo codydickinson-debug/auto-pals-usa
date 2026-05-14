@@ -318,19 +318,48 @@ module.exports = async function handler(req, res) {
 
         await query('requests', 'PATCH', mapped, `?id=eq.${b.id}`);
 
-        // Deposit just flipped: notify staff + push contract-available SMS to client.
+        // Deposit just flipped: notify staff (email + SMS) and the client
+        // (email receipt + contract-available SMS). Email is the always-arrives
+        // half while Twilio A2P is still pending TCR approval — without it,
+        // nobody actually hears about a paid deposit.
         const wasPaid = !!(priorRow && priorRow.deposit_paid);
         const nowPaid = !!mapped.deposit_paid;
         if (!wasPaid && nowPaid && priorRow) {
+          const _name     = `${priorRow.first_name || ''} ${priorRow.last_name || ''}`.trim();
+          const _vehStr   = vehicleStr(priorRow);
+          const _budgStr  = budgetStr(priorRow);
+          const _depRef   = mapped.deposit_ref  || priorRow.deposit_ref  || '';
+          const _depDate  = mapped.deposit_date || priorRow.deposit_date || new Date().toISOString().slice(0, 10);
+
           const depositFires = [
             sms.send('staff_deposit_received', {
               firstName: priorRow.first_name, lastName: priorRow.last_name,
-              depositRef: mapped.deposit_ref || priorRow.deposit_ref || ''
+              depositRef: _depRef
+            }),
+            email.sendTemplate('staffDepositReceived', {
+              clientName:  _name,
+              clientEmail: priorRow.email,
+              vehicleStr:  _vehStr,
+              budgetStr:   _budgStr,
+              amount:      '750',
+              depositRef:  _depRef,
+              depositDate: _depDate,
+              portalCode:  priorRow.portal_code
             })
           ];
           if (priorRow.phone) {
             depositFires.push(sms.send('client_contract_available', {
               firstName: priorRow.first_name, phone: priorRow.phone
+            }));
+          }
+          if (priorRow.email) {
+            depositFires.push(email.sendTemplate('depositReceipt', {
+              firstName:   priorRow.first_name,
+              lastName:    priorRow.last_name,
+              email:       priorRow.email,
+              depositDate: _depDate,
+              depositRef:  _depRef,
+              portalUrl:   PORTAL_URL
             }));
           }
           await Promise.allSettled(depositFires);
@@ -421,6 +450,16 @@ module.exports = async function handler(req, res) {
                 msgFires.push(sms.send('client_portal_message', {
                   phone: r0.phone,
                   staffName: body.staffName || 'Auto Pals USA'
+                }));
+              }
+              if (r0.email) {
+                msgFires.push(email.sendTemplate('clientPortalMessage', {
+                  firstName:      r0.first_name,
+                  lastName:       r0.last_name,
+                  email:          r0.email,
+                  staffName:      body.staffName || '',
+                  messagePreview: row.text,
+                  portalUrl:      PORTAL_URL
                 }));
               }
             } else if (row.from_role === 'client') {

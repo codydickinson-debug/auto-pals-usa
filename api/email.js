@@ -598,6 +598,53 @@ ${d.portalCode ? `<tr><td style="padding:4px 0;color:${BRAND.muted};">Portal cod
 ${footer(d)}`)
   }),
 
+  // Sent to a client when STAFF replies in their portal. Email is the
+  // always-arrives half here too — SMS to client is blocked by A2P.
+  // Includes a short preview of the message to drive them back to the portal.
+  clientPortalMessage: (d) => ({
+    subject: `New message from Auto Pals USA`,
+    html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">You've got a message, ${d.firstName || 'there'}.</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 20px;">${d.staffName ? d.staffName + ' from Auto Pals USA' : 'Your Auto Pals USA team'} just sent you a message in your portal. Hop in to read it and reply when you're ready.</p>
+</td></tr>
+${d.messagePreview ? `<tr><td style="padding:0 40px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-left:3px solid ${BRAND.navy};border-radius:0 8px 8px 0;"><tr><td style="padding:16px 20px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.ink};line-height:1.65;white-space:pre-wrap;word-wrap:break-word;">${(d.messagePreview || '').slice(0, 400)}</div>
+</td></tr></table>
+</td></tr>` : ''}
+<tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'Read & reply →')}</td></tr>
+${footer(d)}`)
+  }),
+
+  // Client-side "you booked a call" confirmation. Replaces the old inline
+  // HTML in api/booking.js that was still branded Auto Motivation Enterprise.
+  bookingConfirmation: (d) => ({
+    subject: `Call confirmed — ${d.dateLabel || d.date} at ${d.time}`,
+    html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.greenSoft};border-radius:10px;margin-bottom:20px;"><tr><td style="padding:16px 20px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.green};margin-bottom:4px;">✓ Call Confirmed</div>
+<div style="font-family:Georgia,serif;font-size:15px;color:${BRAND.ink};font-weight:600;">You're on the calendar — we'll call you at the scheduled time.</div>
+</td></tr></table>
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:12px;">All set, ${d.firstName}.</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 20px;">A calendar invite is on its way — if you need to reschedule, just reply to this email and we'll sort it out.</p>
+</td></tr>
+<tr><td style="padding:0 40px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:22px 26px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:14px;">Your Appointment</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;">
+<tr><td style="padding:6px 0;color:${BRAND.muted};width:40%;">Date</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.dateLabel || d.date || '—'}</td></tr>
+<tr><td style="padding:6px 0;color:${BRAND.muted};">Time</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.time || '—'} Eastern Time</td></tr>
+<tr><td style="padding:6px 0;color:${BRAND.muted};">Duration</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">30 minutes</td></tr>
+<tr><td style="padding:6px 0;color:${BRAND.muted};">With</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">Alex or Josh</td></tr>
+</table>
+</td></tr></table>
+</td></tr>
+${d.portalUrl ? `<tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'View your portal →')}</td></tr>` : ''}
+${footer(d)}`)
+  }),
+
   // Sent to staff (fanned out via STAFF_NOTIFY_EMAIL comma-list) the moment
   // a client submits the request form. Pairs with the staff_new_request SMS.
   staffNewRequest: (d) => ({

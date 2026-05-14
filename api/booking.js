@@ -127,49 +127,14 @@ async function createCalendarEvent(token, booking) {
 }
 
 async function sendConfirmationEmail(booking) {
-  const apiKey = process.env.SENDGRID_API_KEY;
-  const fromEmail = process.env.FROM_EMAIL || 'noreply@automotivationenterprise.com';
-  if (!apiKey) return; // demo mode
-
-  const html = `
-    <div style="font-family:'DM Sans',system-ui,sans-serif;max-width:560px;margin:0 auto;background:#fffdf7;border-radius:12px;overflow:hidden;border:1px solid #ddd5c0;">
-      <div style="background:#0f2557;padding:28px 32px;">
-        <div style="font-size:20px;font-weight:700;color:#f5f0e8;">Auto Motivation</div>
-        <div style="font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:rgba(245,240,232,0.45);margin-top:2px;">Enterprise</div>
-      </div>
-      <div style="padding:32px;">
-        <div style="background:#e8f0e8;border-radius:10px;padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:12px;">
-          <div style="font-size:28px;">✓</div>
-          <div>
-            <div style="font-size:15px;font-weight:700;color:#1a5c32;">Call Confirmed!</div>
-            <div style="font-size:13px;color:#5a6480;">You're all set — we'll call you at the scheduled time.</div>
-          </div>
-        </div>
-        <h2 style="font-size:20px;font-weight:700;color:#0f2557;margin:0 0 20px;">Hi ${booking.firstName},</h2>
-        <div style="background:#f5f0e8;border-radius:10px;padding:20px;margin-bottom:24px;">
-          <div style="font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#5a6480;margin-bottom:14px;">Your Appointment</div>
-          <table style="width:100%;font-size:13px;border-collapse:collapse;">
-            <tr><td style="padding:6px 0;color:#5a6480;">Date</td><td style="padding:6px 0;font-weight:600;color:#1a1a2e;text-align:right;">${booking.dateLabel}</td></tr>
-            <tr><td style="padding:6px 0;color:#5a6480;">Time</td><td style="padding:6px 0;font-weight:600;color:#1a1a2e;text-align:right;">${booking.time} Eastern Time</td></tr>
-            <tr><td style="padding:6px 0;color:#5a6480;">Duration</td><td style="padding:6px 0;font-weight:600;color:#1a1a2e;text-align:right;">30 minutes</td></tr>
-            <tr><td style="padding:6px 0;color:#5a6480;">With</td><td style="padding:6px 0;font-weight:600;color:#1a1a2e;text-align:right;">Alex or Josh — Auto Motivation</td></tr>
-          </table>
-        </div>
-        <p style="font-size:14px;color:#5a6480;line-height:1.7;margin:0 0 24px;">A calendar invite has been added to your calendar. If you need to reschedule, just reply to this email and we'll sort it out.</p>
-        <p style="font-size:12px;color:#5a6480;margin:0;line-height:1.6;">— Alex & Josh, Auto Motivation Enterprise · Pompano Beach, FL</p>
-      </div>
-    </div>`;
-
-  await fetch('https://api.sendgrid.com/v3/mail/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      personalizations: [{ to: [{ email: booking.email, name: `${booking.firstName} ${booking.lastName}` }] }],
-      from: { email: fromEmail, name: 'Auto Motivation Enterprise' },
-      reply_to: { email: 'automotivationfl@gmail.com', name: 'Alex & Josh' },
-      subject: `Call confirmed — ${booking.dateLabel} at ${booking.time}`,
-      content: [{ type: 'text/html', value: html }]
-    })
+  return email.sendTemplate('bookingConfirmation', {
+    firstName: booking.firstName,
+    lastName:  booking.lastName,
+    email:     booking.email,
+    date:      booking.date,
+    dateLabel: booking.dateLabel,
+    time:      booking.time,
+    portalUrl: process.env.PORTAL_URL || 'https://autopalsusa.com/portal.html'
   });
 }
 
