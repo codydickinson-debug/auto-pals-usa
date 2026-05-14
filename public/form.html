@@ -1319,7 +1319,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v123 · 2026-05-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v124 · 2026-05-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3554,8 +3554,15 @@
       document.getElementById('dv-contract-signed').style.display = 'none';
     }
 
-    // Internal notes
-    document.getElementById('dv-internal-notes').value = r.internalNotes || '';
+    // Internal notes — DON'T overwrite while staff is actively editing this
+    // textarea (auto-refresh re-renders the detail view every 20s; without
+    // this guard, any in-progress typing gets wiped to the last-saved value).
+    {
+      const ta = document.getElementById('dv-internal-notes');
+      if (ta && document.activeElement !== ta) {
+        ta.value = r.internalNotes || '';
+      }
+    }
 
     // (Chat moved out of the detail panel — see Messages tab.)
     renderDetailDocs(r);
@@ -3643,16 +3650,13 @@
     populateDetailView(r);
   }
 
-  async function saveDetailNotes() {
-    const r = requests.find(x => x.id === activeRequestId);
-    if (!r) return;
-    const newVal = document.getElementById('dv-internal-notes').value;
-    r.internalNotes = newVal;
-    save();
-    // Send ONLY {id, internalNotes} — narrow PATCH avoids clobbering other
-    // fields if local state is stale, and avoids racing with auto-refresh
-    // which merges DB over local every 20s.
-    const btn = document.querySelector('#view-detail .save-notes-btn');
+  // Core internal-notes persist. Narrow PATCH (id + internalNotes only) so it
+  // can't accidentally clobber unrelated fields, awaited so we know whether
+  // it landed, and on success the in-memory `requests` ref is re-updated to
+  // shield against the auto-refresh race (during the awaited fetch, the
+  // 20s tick can replace `requests[id]` with a stale DB row that doesn't
+  // yet have the new note — without this re-write, the local cache reverts).
+  async function _persistInternalNotes(reqId, newVal, btn) {
     const orig = btn ? btn.textContent : 'Save Notes';
     if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
     let ok = isLocal;
@@ -3660,16 +3664,82 @@
       try {
         const res = await fetch(`${DB_BASE}?table=requests`, {
           method: 'PUT', headers: dbHeaders(),
-          body: JSON.stringify({ id: r.id, internalNotes: newVal })
+          body: JSON.stringify({ id: reqId, internalNotes: newVal })
         });
         if (res.status === 401) handleSessionExpired();
         ok = res.ok;
       } catch { ok = false; }
     }
+    if (ok) {
+      // Re-acquire the (possibly auto-refresh-replaced) in-memory ref and
+      // re-apply, then persist localStorage so cross-tab + reload both see it.
+      const fresh = requests.find(x => x.id === reqId);
+      if (fresh) fresh.internalNotes = newVal;
+      try { localStorage.setItem('am_requests', JSON.stringify(requests)); } catch {}
+    }
     if (btn) {
       btn.textContent = ok ? 'Saved ✓' : 'Save failed — retry';
       setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
     }
+    return ok;
+  }
+
+  async function saveDetailNotes() {
+    const r = requests.find(x => x.id === activeRequestId);
+    if (!r) return;
+    const newVal = document.getElementById('dv-internal-notes').value;
+    r.internalNotes = newVal;
+    save();
+    const btn = document.querySelector('#view-detail .save-notes-btn');
+    await _persistInternalNotes(r.id, newVal, btn);
+  }
+
+  // Debounced autosave on input so staff don't have to remember to click
+  // Save. ~1.2s of stillness after the last keystroke triggers a quiet save;
+  // the manual Save Notes button still works for impatient users.
+  let _notesAutosaveTimer = null;
+  function _scheduleNotesAutosave() {
+    if (!activeRequestId) return;
+    if (_notesAutosaveTimer) clearTimeout(_notesAutosaveTimer);
+    _notesAutosaveTimer = setTimeout(async () => {
+      const ta = document.getElementById('dv-internal-notes');
+      if (!ta) return;
+      const r = requests.find(x => x.id === activeRequestId);
+      if (!r) return;
+      const newVal = ta.value;
+      // Don't ping the DB on every keystroke if the value hasn't actually
+      // changed since the last persisted state.
+      if ((r.internalNotes || '') === newVal) return;
+      r.internalNotes = newVal;
+      save();
+      const btn = document.querySelector('#view-detail .save-notes-btn');
+      await _persistInternalNotes(r.id, newVal, btn);
+    }, 1200);
+  }
+  // Wire on first interaction with the textarea — added once, idempotent.
+  (function wireNotesAutosave() {
+    document.addEventListener('input', (e) => {
+      if (e.target && e.target.id === 'dv-internal-notes') _scheduleNotesAutosave();
+    });
+    document.addEventListener('focusout', (e) => {
+      if (e.target && e.target.id === 'dv-internal-notes') {
+        // Flush immediately on blur so leaving the field commits.
+        if (_notesAutosaveTimer) { clearTimeout(_notesAutosaveTimer); _notesAutosaveTimer = null; }
+        _scheduleNotesAutosaveImmediate();
+      }
+    });
+  })();
+  async function _scheduleNotesAutosaveImmediate() {
+    const ta = document.getElementById('dv-internal-notes');
+    if (!ta || !activeRequestId) return;
+    const r = requests.find(x => x.id === activeRequestId);
+    if (!r) return;
+    const newVal = ta.value;
+    if ((r.internalNotes || '') === newVal) return;
+    r.internalNotes = newVal;
+    save();
+    const btn = document.querySelector('#view-detail .save-notes-btn');
+    await _persistInternalNotes(r.id, newVal, btn);
   }
 
   // ─── CONTEXT MENU ──────────────────────────────────────────
@@ -4162,6 +4232,9 @@
     document.getElementById('dp-call-date').textContent = '· ' + when;
   }
 
+  // Legacy detail-panel notes save — same persistence logic as
+  // saveDetailNotes, kept because the old #detail-panel overlay may still
+  // be reachable from some code paths.
   async function saveNotes() {
     if (!activeRequestId) return;
     const r = requests.find(req => req.id === activeRequestId);
@@ -4169,28 +4242,9 @@
     const newVal = document.getElementById('dp-internal-notes').value;
     r.internalNotes = newVal;
     save();
-    // Scoped to the legacy detail-panel overlay (where dp-internal-notes
-    // lives) so the v120-era Save Notes button in the new detail view
-    // (#view-detail) doesn't get hijacked into "Saving…" state.
     const btn = document.querySelector('#detail-panel .save-notes-btn')
              || document.querySelector('.save-notes-btn');
-    const orig = btn ? btn.textContent : 'Save Notes';
-    if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
-    let ok = isLocal;
-    if (!isLocal) {
-      try {
-        const res = await fetch(`${DB_BASE}?table=requests`, {
-          method: 'PUT', headers: dbHeaders(),
-          body: JSON.stringify({ id: r.id, internalNotes: newVal })
-        });
-        if (res.status === 401) handleSessionExpired();
-        ok = res.ok;
-      } catch { ok = false; }
-    }
-    if (btn) {
-      btn.textContent = ok ? 'Saved ✓' : 'Save failed — retry';
-      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
-    }
+    await _persistInternalNotes(r.id, newVal, btn);
   }
 
   // ─── IN REPAIR ────────────────────────────────────────────────
