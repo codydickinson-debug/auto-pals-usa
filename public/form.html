@@ -1319,7 +1319,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v122 · 2026-05-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v123 · 2026-05-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3264,22 +3264,25 @@
 
   // ── DASHBOARD HELPERS: SLA + day counter + action queue ────────
   function depositDayNumber(r) {
-    // Returns 1-based CALENDAR-day count starting from when the deposit was
-    // confirmed. Deposit day = Day 1, next calendar day = Day 2, etc.
-    // Previously used elapsed milliseconds, which meant a deposit at 11pm
-    // still read "Day 1" at 9am the next morning (only ~10h elapsed) — off
-    // by one for anyone glancing at the dashboard the day after a deposit.
-    // null if no deposit yet.
+    // Returns 1-based CALENDAR-day count from deposit day in America/New_York
+    // (Auto Pals operates in ET). Deposit day = Day 1, next calendar day = Day 2.
+    // Pinning to ET means the count is the same regardless of which timezone
+    // a staff member's device happens to be set to — so day 30 looks like
+    // day 30 to everyone, even if someone's on a flight or VPN.
     const ts = r.depositReceivedAt || r.depositDate;
     if (!ts || !(r.depositReceived || r.depositPaid)) return null;
     const start = new Date(ts);
     if (isNaN(start.getTime())) return null;
-    // Compare midnight-to-midnight in local time so the counter flips
-    // when the calendar day flips, not 24h after the deposit clock-time.
-    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-    const now = new Date();
-    const today    = new Date(now.getFullYear(),   now.getMonth(),   now.getDate());
-    const daysDiff = Math.round((today - startDay) / 86400000);
+    const etYMD = (d) => {
+      const fmt = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric', month: '2-digit', day: '2-digit'
+      });
+      const parts = Object.fromEntries(fmt.formatToParts(d).map(p => [p.type, p.value]));
+      // Use UTC midnight of the ET calendar date so subtraction is timezone-stable
+      return Date.UTC(+parts.year, +parts.month - 1, +parts.day);
+    };
+    const daysDiff = Math.round((etYMD(new Date()) - etYMD(start)) / 86400000);
     return Math.max(1, daysDiff + 1);
   }
   function depositDayPill(r) {
@@ -3640,12 +3643,33 @@
     populateDetailView(r);
   }
 
-  function saveDetailNotes() {
+  async function saveDetailNotes() {
     const r = requests.find(x => x.id === activeRequestId);
     if (!r) return;
-    r.internalNotes = document.getElementById('dv-internal-notes').value;
+    const newVal = document.getElementById('dv-internal-notes').value;
+    r.internalNotes = newVal;
     save();
-    if (typeof syncRequest === 'function') syncRequest(r);
+    // Send ONLY {id, internalNotes} — narrow PATCH avoids clobbering other
+    // fields if local state is stale, and avoids racing with auto-refresh
+    // which merges DB over local every 20s.
+    const btn = document.querySelector('#view-detail .save-notes-btn');
+    const orig = btn ? btn.textContent : 'Save Notes';
+    if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+    let ok = isLocal;
+    if (!isLocal) {
+      try {
+        const res = await fetch(`${DB_BASE}?table=requests`, {
+          method: 'PUT', headers: dbHeaders(),
+          body: JSON.stringify({ id: r.id, internalNotes: newVal })
+        });
+        if (res.status === 401) handleSessionExpired();
+        ok = res.ok;
+      } catch { ok = false; }
+    }
+    if (btn) {
+      btn.textContent = ok ? 'Saved ✓' : 'Save failed — retry';
+      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
+    }
   }
 
   // ─── CONTEXT MENU ──────────────────────────────────────────
@@ -4138,16 +4162,34 @@
     document.getElementById('dp-call-date').textContent = '· ' + when;
   }
 
-  function saveNotes() {
+  async function saveNotes() {
     if (!activeRequestId) return;
     const r = requests.find(req => req.id === activeRequestId);
-    if (r) {
-      r.internalNotes = document.getElementById('dp-internal-notes').value;
-      save();
-      if (typeof syncRequest === 'function') syncRequest(r);
-      const btn = document.querySelector('.save-notes-btn');
-      btn.textContent = 'Saved ✓';
-      setTimeout(() => btn.textContent = 'Save Notes', 1500);
+    if (!r) return;
+    const newVal = document.getElementById('dp-internal-notes').value;
+    r.internalNotes = newVal;
+    save();
+    // Scoped to the legacy detail-panel overlay (where dp-internal-notes
+    // lives) so the v120-era Save Notes button in the new detail view
+    // (#view-detail) doesn't get hijacked into "Saving…" state.
+    const btn = document.querySelector('#detail-panel .save-notes-btn')
+             || document.querySelector('.save-notes-btn');
+    const orig = btn ? btn.textContent : 'Save Notes';
+    if (btn) { btn.textContent = 'Saving…'; btn.disabled = true; }
+    let ok = isLocal;
+    if (!isLocal) {
+      try {
+        const res = await fetch(`${DB_BASE}?table=requests`, {
+          method: 'PUT', headers: dbHeaders(),
+          body: JSON.stringify({ id: r.id, internalNotes: newVal })
+        });
+        if (res.status === 401) handleSessionExpired();
+        ok = res.ok;
+      } catch { ok = false; }
+    }
+    if (btn) {
+      btn.textContent = ok ? 'Saved ✓' : 'Save failed — retry';
+      setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1800);
     }
   }
 
