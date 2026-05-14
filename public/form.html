@@ -1319,7 +1319,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v120 · 2026-05-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v121 · 2026-05-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3304,6 +3304,20 @@
                 : `<24h in this status`;
     return `<span class="${cls}" title="${label}"></span>`;
   }
+  // Tiny phone badge next to a client name when they've either booked or
+  // completed an intro call. Helps staff scan the request list and instantly
+  // see who's already past the call stage without reading the status pill.
+  function callBadge(r) {
+    if (r && r.callCompletedAt) {
+      const d = new Date(r.callCompletedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `<span title="Called on ${d}" style="margin-left:6px;font-size:12px;opacity:0.85;">📞</span>`;
+    }
+    if (r && r.bookingConfirmedAt) {
+      const d = new Date(r.bookingConfirmedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `<span title="Call booked ${d}" style="margin-left:6px;font-size:12px;opacity:0.85;">📞</span>`;
+    }
+    return '';
+  }
   function clearDashSearch() {
     const input = document.getElementById('dash-search-input');
     if (input) { input.value = ''; renderTable(); }
@@ -3384,7 +3398,7 @@
       const dayPill = depositDayPill(r);
       const sla = slaDot(r);
       return `<tr draggable="true" data-id="${r.id}" onclick="rowClick(event,${r.id})">
-        <td><strong>${r.firstName} ${r.lastName}</strong>${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
+        <td><strong>${r.firstName} ${r.lastName}</strong>${callBadge(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
         <td data-label="Vehicle">${vehicle}</td>
         <td data-label="Budget">${budget}</td>
         <td data-label="Years">${years}</td>
@@ -3448,7 +3462,7 @@
 
     // Top
     const skipBadge = r.skipTheLine ? ' <span class="skip-badge">⚡ SKIP THE LINE</span>' : '';
-    document.getElementById('dv-name').innerHTML = `${escapeHtml(r.firstName + ' ' + r.lastName)}${skipBadge}`;
+    document.getElementById('dv-name').innerHTML = `${escapeHtml(r.firstName + ' ' + r.lastName)}${callBadge(r)}${skipBadge}`;
     document.getElementById('dv-sub').textContent = `Submitted ${new Date(r.submitted).toLocaleDateString()} · Status: ${r.status || 'new'}`;
 
     // Highlight the active status button
@@ -3789,7 +3803,7 @@
     if (!r) return;
     activeRequestId = id;
 
-    document.getElementById('dp-name').textContent = r.firstName + ' ' + r.lastName;
+    document.getElementById('dp-name').innerHTML = escapeHtml(r.firstName + ' ' + r.lastName) + callBadge(r);
     document.getElementById('dp-sub').textContent = r.email + ' · ' + r.phone;
     document.getElementById('dp-email').textContent = r.email;
     document.getElementById('dp-phone').textContent = r.phone;
