@@ -864,7 +864,11 @@ async function sendTemplate(type, data) {
   return { ok: false, status: lastStatus, error: 'sendgrid_failed', attempts: MAX_ATTEMPTS };
 }
 
-module.exports = async function handler(req, res) {
+// Note: properties MUST be attached to the function before assigning to
+// module.exports — Vercel's @vercel/node bundler drops post-assignment
+// properties on some builds, which previously broke db.js with
+// "email.sendTemplate is not a function".
+async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Staff-Token');
@@ -882,7 +886,10 @@ module.exports = async function handler(req, res) {
 
   const result = await sendTemplate(type, data || {});
   return res.status(result.ok ? 200 : (result.error === 'unknown_type' ? 400 : 500)).json(result);
-};
+}
 
+handler.sendTemplate = sendTemplate;
+handler.sendEmail    = sendTemplate;   // alias for prod naming convention
+module.exports = handler;
 module.exports.sendTemplate = sendTemplate;
-module.exports.sendEmail    = sendTemplate;   // alias for prod naming convention
+module.exports.sendEmail    = sendTemplate;
