@@ -672,32 +672,133 @@ ${footer(d)}`)
 
 const { verifyToken } = require('./auth.js');
 
+// ─── send pipeline ──────────────────────────────────────────────────
+// Rewritten 2026-05-14 after a staff email went missing on a real form
+// submission. The old pipeline silently returned ok:false on missing
+// STAFF_NOTIFY_EMAIL and never retried SendGrid blips. This version:
+//   1. Routes staff templates to env var, falls back to FROM_EMAIL so
+//      a staff alert is *never* silently dropped on a missing env var.
+//   2. Retries transient SendGrid failures (5xx, 429, fetch errors) up
+//      to 3 attempts with backoff. Skips retry on 4xx (permanent).
+//   3. Per-attempt 10s timeout so a hung socket can't kill the lambda.
+//   4. Writes every attempt to public.email_log in Supabase if the
+//      table exists — silent no-op if it doesn't, so this code can ship
+//      before the migration is applied.
+//   5. Structured [EMAIL] logging at every decision point.
+
+const STAFF_TEMPLATES = new Set([
+  'staffNewRequest',
+  'staffCallBooked',
+  'staffDepositReceived',
+  'staffPortalMessage',
+  'staffContractSigned'
+]);
+
+// Recipient resolution for staff templates. Anything that lands here is
+// guaranteed to have AT LEAST one recipient, because we fall back to
+// FROM_EMAIL when STAFF_NOTIFY_EMAIL is missing/empty. That mailbox is
+// already verified in SendGrid, so we know mail to it works.
+function resolveStaffRecipients() {
+  const env = (process.env.STAFF_NOTIFY_EMAIL || '').trim();
+  if (env) return env;
+  const fromAddr = (process.env.FROM_EMAIL || '').trim();
+  if (fromAddr) {
+    console.warn('[EMAIL] STAFF_NOTIFY_EMAIL not set — falling back to FROM_EMAIL');
+    return fromAddr;
+  }
+  console.warn('[EMAIL] STAFF_NOTIFY_EMAIL and FROM_EMAIL both unset — using hard fallback');
+  return 'codydickinson@autopalsusa.com';
+}
+
+// fetch with hard timeout. AbortController works in the Node 24 runtime.
+async function fetchWithTimeout(url, opts, ms) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Fire-and-forget log to email_log. Never throws, never delays the caller
+// meaningfully (Promise floats independent of the send response).
+function logAttempt(row) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+           || process.env.SUPABASE_KEY
+           || process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) return;
+  fetchWithTimeout(`${url}/rest/v1/email_log`, {
+    method: 'POST',
+    headers: {
+      'apikey': key,
+      'Authorization': `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify(row)
+  }, 5000).catch(err => {
+    // Table might not exist yet (migration not applied) — that's fine.
+    const msg = err && err.message;
+    if (msg && !/relation .* does not exist|404/i.test(msg)) {
+      console.error('[EMAIL] log write failed:', msg);
+    }
+  });
+}
+
+async function sendOnce({ apiKey, fromEmail, replyTo, subject, html, plainText, personalizations }) {
+  const r = await fetchWithTimeout('https://api.sendgrid.com/v3/mail/send', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      personalizations,
+      from:     { email: fromEmail, name: 'Alex & Josh — Auto Pals USA' },
+      reply_to: { email: replyTo,   name: 'Alex & Josh — Auto Pals USA' },
+      subject,
+      content: [
+        { type: 'text/plain', value: plainText },
+        { type: 'text/html',  value: html }
+      ]
+    })
+  }, 10000);
+  if (r.ok) return { ok: true, status: r.status };
+  const body = await r.text().catch(() => '');
+  return { ok: false, status: r.status, body: body.slice(0, 400) };
+}
+
 // In-process sender — used by db.js, booking.js, cron.js to skip the HTTP hop.
 async function sendTemplate(type, data) {
-  const apiKey = process.env.SENDGRID_API_KEY;
+  const apiKey    = process.env.SENDGRID_API_KEY;
   const fromEmail = process.env.FROM_EMAIL || 'info@autopalsusa.com';
   const replyTo   = process.env.FROM_EMAIL || 'info@autopalsusa.com';
-
-  if (!apiKey) {
-    console.log('[EMAIL DEMO]', type, '→', data && data.email);
-    return { ok: true, demo: true };
-  }
+  const isStaff   = STAFF_TEMPLATES.has(type);
 
   const template = TEMPLATES[type];
-  if (!template) return { ok: false, error: 'unknown_type', type };
-
-  const payload = { ...(data || {}) };
-  const staffOverride = process.env.STAFF_NOTIFY_EMAIL;
-  if (staffOverride && /^staff/i.test(type)) {
-    payload.email = staffOverride;
+  if (!template) {
+    console.error('[EMAIL] unknown template type:', type);
+    return { ok: false, error: 'unknown_type', type };
   }
-  if (!payload.email) return { ok: false, error: 'no_recipient' };
 
-  // Comma-separated addresses fan out as one personalization per recipient,
-  // so each staff member sees the email "To" themselves (not as a CC dump).
-  const recipients = String(payload.email)
+  // Recipient resolution — staff templates ALWAYS get a recipient (fallback
+  // chain). Client templates require data.email.
+  const payload = { ...(data || {}) };
+  if (isStaff) {
+    payload.email = resolveStaffRecipients();
+  }
+  const recipients = String(payload.email || '')
     .split(',').map(s => s.trim()).filter(Boolean);
-  if (!recipients.length) return { ok: false, error: 'no_recipient' };
+  if (!recipients.length) {
+    console.error('[EMAIL] no recipient for', type, '— payload had no email');
+    logAttempt({
+      template: type, recipients: '', subject: null,
+      ok: false, error: 'no_recipient', is_staff: isStaff,
+      request_id: payload.requestId || null
+    });
+    return { ok: false, error: 'no_recipient' };
+  }
 
   const { subject, html } = template(payload);
   const plainText = html
@@ -705,36 +806,62 @@ async function sendTemplate(type, data) {
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-
   const personalizations = recipients.map(addr => ({
     to: [{ email: addr, name: `${payload.firstName || ''} ${payload.lastName || ''}`.trim() }]
   }));
 
-  try {
-    const r = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        personalizations,
-        from: { email: fromEmail, name: 'Alex & Josh — Auto Pals USA' },
-        reply_to: { email: replyTo, name: 'Alex & Josh — Auto Pals USA' },
-        subject,
-        content: [
-          { type: 'text/plain', value: plainText },
-          { type: 'text/html',  value: html }
-        ]
-      })
+  if (!apiKey) {
+    console.log('[EMAIL DEMO]', type, '→', recipients.join(','));
+    logAttempt({
+      template: type, recipients: recipients.join(','), subject,
+      ok: true, is_staff: isStaff,
+      request_id: payload.requestId || null
     });
-    if (!r.ok) {
-      const err = await r.text();
-      console.error('[EMAIL] SendGrid error', r.status, err.slice(0, 200));
-      return { ok: false, status: r.status, error: 'sendgrid_failed' };
-    }
-    return { ok: true, recipients: recipients.length };
-  } catch (err) {
-    console.error('[EMAIL] fetch failed', err && err.message);
-    return { ok: false, error: err && err.message };
+    return { ok: true, demo: true };
   }
+
+  // Retry loop. Transient: network errors, 5xx, 429. Permanent: other 4xx.
+  const MAX_ATTEMPTS = 3;
+  let lastStatus = null;
+  let lastErr    = null;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    let result;
+    try {
+      result = await sendOnce({ apiKey, fromEmail, replyTo, subject, html, plainText, personalizations });
+    } catch (err) {
+      lastErr = (err && err.message) || String(err);
+      console.error(`[EMAIL] attempt ${attempt}/${MAX_ATTEMPTS} fetch failed for ${type}:`, lastErr);
+      if (attempt < MAX_ATTEMPTS) { await sleep(500 * attempt); continue; }
+      break;
+    }
+    if (result.ok) {
+      console.log(`[EMAIL] ok ${type} → ${recipients.length} recipient(s) (attempt ${attempt})`);
+      logAttempt({
+        template: type, recipients: recipients.join(','), subject,
+        ok: true, attempts: attempt, sg_status: result.status,
+        is_staff: isStaff, request_id: payload.requestId || null
+      });
+      return { ok: true, recipients: recipients.length, attempts: attempt };
+    }
+    lastStatus = result.status;
+    lastErr    = result.body;
+    const transient = result.status >= 500 || result.status === 429;
+    console.error(`[EMAIL] attempt ${attempt}/${MAX_ATTEMPTS} ${type} → ${result.status}: ${(result.body||'').slice(0,200)}`);
+    if (!transient || attempt === MAX_ATTEMPTS) break;
+    await sleep(500 * attempt);
+  }
+
+  // Total failure — log loudly. Staff misses are critical because the team
+  // has no other signal that a client just came in.
+  const tag = isStaff ? '[EMAIL CRITICAL] STAFF MISS' : '[EMAIL FAIL]';
+  console.error(`${tag} ${type} → ${recipients.join(',')} status=${lastStatus} err=${(lastErr||'').slice(0,200)}`);
+  logAttempt({
+    template: type, recipients: recipients.join(','), subject,
+    ok: false, attempts: MAX_ATTEMPTS, sg_status: lastStatus,
+    error: (lastErr || 'unknown').slice(0, 500),
+    is_staff: isStaff, request_id: payload.requestId || null
+  });
+  return { ok: false, status: lastStatus, error: 'sendgrid_failed', attempts: MAX_ATTEMPTS };
 }
 
 module.exports = async function handler(req, res) {
