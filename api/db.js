@@ -31,10 +31,61 @@ async function query(table, method = 'GET', body = null, params = '') {
 
 const { verifyToken } = require('./auth.js');
 const sms = require('./_sms.js');
-const email = require('./email.js');
+const emailModule = require('./email.js');
 
 const PORTAL_URL  = process.env.PORTAL_URL  || 'https://autopalsusa.com/portal.html';
 const BOOKING_URL = process.env.BOOKING_URL || 'https://autopalsusa.com/booking.html';
+
+// ── safeSendEmail ───────────────────────────────────────────────
+// Root cause of the 2026-05-14 outage was variable shadowing: the POST
+// /requests handler declares `const email = String(body.email...)`,
+// which shadows the module-level `email = require('./email.js')` inside
+// that block. Every `email.sendTemplate(...)` call was calling
+// `.sendTemplate` on a string, throwing TypeError and 500ing every
+// form submit. The module import is now named `emailModule`, and call
+// sites go through this helper — no shadow is possible.
+//
+// Belt-and-suspenders: if the in-process call ever fails (e.g. the
+// bundler one day really does drop .sendTemplate, or it throws), fall
+// back to POST /api/email so the notification still goes out. Always
+// resolves — never throws — so callers can use Promise.allSettled
+// without the lambda response getting tied to notification health.
+async function safeSendEmail(type, data) {
+  try {
+    const fn = typeof emailModule.sendTemplate === 'function' ? emailModule.sendTemplate : null;
+    if (fn) {
+      try {
+        return await fn(type, data);
+      } catch (err) {
+        console.error('[DB→EMAIL inproc]', type, err && err.message);
+        // fall through to HTTP fallback
+      }
+    } else {
+      console.warn('[DB→EMAIL] inproc sendTemplate missing — using HTTP fallback');
+    }
+    // HTTP fallback. Signs a staff token the same way api/auth.js does;
+    // STAFF_SECRET stays server-side, never exposed to the client.
+    const crypto = require('crypto');
+    const secret = process.env.STAFF_SECRET || 'CHANGE_ME_IN_VERCEL_ENV';
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const token = crypto.createHmac('sha256', secret).update('staff:' + todayKey).digest('hex');
+    const base  = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.autopalsusa.com';
+    const r = await fetch(`${base}/api/email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Staff-Token': token },
+      body: JSON.stringify({ type, data })
+    });
+    if (!r.ok) {
+      const body = await r.text().catch(() => '');
+      console.error('[DB→EMAIL http]', type, r.status, body.slice(0, 200));
+      return { ok: false, status: r.status, error: 'http_fallback_failed' };
+    }
+    return await r.json().catch(() => ({ ok: true }));
+  } catch (err) {
+    console.error('[DB→EMAIL] hard fail', type, err && err.message);
+    return { ok: false, error: err && err.message };
+  }
+}
 
 // Fire-and-forget SMS — never block the DB response on Twilio.
 function fireSms(type, data) {
@@ -49,13 +100,8 @@ function fireSms(type, data) {
 
 // Fire-and-forget email — never block the DB response on SendGrid.
 function fireEmail(type, data) {
-  try {
-    Promise.resolve(email.sendTemplate(type, data)).catch(err =>
-      console.error('[DB→EMAIL]', type, err && err.message)
-    );
-  } catch (err) {
-    console.error('[DB→EMAIL sync]', type, err && err.message);
-  }
+  // Always resolves (safeSendEmail catches everything).
+  return safeSendEmail(type, data);
 }
 
 // Build the human-readable vehicle/budget/year strings used in notifications.
@@ -191,7 +237,7 @@ module.exports = async function handler(req, res) {
             make: row.make, model: row.model,
             budgetMin: row.budget_min, budgetMax: row.budget_max
           }));
-          fires.push(email.sendTemplate('staffNewRequest', {
+          fires.push(safeSendEmail('staffNewRequest', {
             clientName:  _name,
             clientEmail: row.email,
             clientPhone: row.phone,
@@ -205,7 +251,7 @@ module.exports = async function handler(req, res) {
             }));
           }
           if (row.email) {
-            fires.push(email.sendTemplate('confirmation', {
+            fires.push(safeSendEmail('confirmation', {
               firstName:  row.first_name,
               lastName:   row.last_name,
               email:      row.email,
@@ -226,7 +272,7 @@ module.exports = async function handler(req, res) {
             budgetMax: row.budget_max
           }));
           if (row.email) {
-            fires.push(email.sendTemplate('rejected', {
+            fires.push(safeSendEmail('rejected', {
               firstName: row.first_name,
               lastName:  row.last_name,
               email:     row.email,
@@ -336,7 +382,7 @@ module.exports = async function handler(req, res) {
               firstName: priorRow.first_name, lastName: priorRow.last_name,
               depositRef: _depRef
             }),
-            email.sendTemplate('staffDepositReceived', {
+            safeSendEmail('staffDepositReceived', {
               clientName:  _name,
               clientEmail: priorRow.email,
               vehicleStr:  _vehStr,
@@ -353,7 +399,7 @@ module.exports = async function handler(req, res) {
             }));
           }
           if (priorRow.email) {
-            depositFires.push(email.sendTemplate('depositReceipt', {
+            depositFires.push(safeSendEmail('depositReceipt', {
               firstName:   priorRow.first_name,
               lastName:    priorRow.last_name,
               email:       priorRow.email,
@@ -453,7 +499,7 @@ module.exports = async function handler(req, res) {
                 }));
               }
               if (r0.email) {
-                msgFires.push(email.sendTemplate('clientPortalMessage', {
+                msgFires.push(safeSendEmail('clientPortalMessage', {
                   firstName:      r0.first_name,
                   lastName:       r0.last_name,
                   email:          r0.email,
@@ -467,7 +513,7 @@ module.exports = async function handler(req, res) {
               msgFires.push(sms.send('staff_portal_message', { clientName }));
               // Email is the always-arrives half — SMS is still blocked by
               // Twilio A2P, so without this, staff get nothing on client replies.
-              msgFires.push(email.sendTemplate('staffPortalMessage', {
+              msgFires.push(safeSendEmail('staffPortalMessage', {
                 clientName,
                 clientEmail: r0.email,
                 clientPhone: r0.phone,
