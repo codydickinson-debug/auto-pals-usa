@@ -1319,7 +1319,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v128 · 2026-05-15</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v129 · 2026-05-15</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3757,6 +3757,7 @@
     <button class="ctx-item" onclick="ctxSetStatus('called')"><span class="ctx-dot" style="background:#6d28d9"></span>Called</button>
     <button class="ctx-item" onclick="ctxSetStatus('searching')"><span class="ctx-dot" style="background:var(--accent-bright)"></span>Actively Searching</button>
     <button class="ctx-item" onclick="ctxSetStatus('rejected')"><span class="ctx-dot" style="background:var(--red)"></span>Rejected</button>
+    <button class="ctx-item" onclick="ctxSetStatus('dormant')"><span class="ctx-dot" style="background:#6b7280"></span>Dormant</button>
     <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
     <button class="ctx-item" onclick="ctxMoveToRepair()" style="color:var(--amber);font-weight:600;"><span class="ctx-dot" style="background:var(--amber)"></span>Send to Repair</button>
     <button class="ctx-item" onclick="ctxSendToOpenSearch()" style="color:#5b21b6;font-weight:600;"><span class="ctx-dot" style="background:#5b21b6"></span>Open Search</button>
