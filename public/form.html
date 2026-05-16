@@ -1319,7 +1319,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v124 · 2026-05-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v128 · 2026-05-15</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2034,6 +2034,7 @@
           <button class="filter-btn" onclick="updateStatusFromDetail('repair')">Repair</button>
           <button class="filter-btn" onclick="updateStatusFromDetail('sold')">Sold</button>
           <button class="filter-btn" onclick="updateStatusFromDetail('rejected')">Rejected</button>
+          <button class="filter-btn" onclick="updateStatusFromDetail('dormant')">Dormant</button>
         </div>
       </div>
 
@@ -2308,6 +2309,7 @@
         <button class="filter-btn" onclick="updateStatus('qualified')">Qualified</button>
         <button class="filter-btn" onclick="updateStatus('called')">Called</button>
         <button class="filter-btn" onclick="updateStatus('rejected')">Rejected</button>
+        <button class="filter-btn" onclick="updateStatus('dormant')">Dormant</button>
       </div>
     </div>
 
@@ -3216,10 +3218,12 @@
     setText('aq-search', inSearch);
   }
 
-  // Derived "dormant" — request is >= 14 days old, deposit not paid,
-  // and not yet sold or rejected. Computed view, not a stored status.
+  // "Dormant" is either MANUALLY set (status === 'dormant', from the dashboard
+  // button) or DERIVED (>= 14 days old, deposit not paid, not sold/rejected).
+  // Manual override short-circuits so staff can mark a client dormant on day 1.
   function isDormantRequest(r) {
     if (!r) return false;
+    if (r.status === 'dormant') return true;
     if (r.status === 'sold' || r.status === 'rejected') return false;
     if (r.depositPaid || r.deposit_paid) return false;
     if (!r.submitted) return false;
@@ -4116,7 +4120,8 @@
     qualified: 'Qualified — your request looks great, we\'re getting started',
     called: 'Call Scheduled — your sales call is booked',
     rejected: 'Request Closed',
-    searching: 'Actively Searching — we\'re searching our auctions now'
+    searching: 'Actively Searching — we\'re searching our auctions now',
+    dormant: 'Dormant'
   };
 
   const STATUS_NOTES = {
@@ -4135,8 +4140,10 @@
     save();
     syncRequest(r);
     renderDashboard();
-    // Send status update email (skip if same status or rejected — rejection handled on submit)
-    if (newStatus !== prevStatus && newStatus !== 'rejected' && r.email && r.email !== '—') {
+    // Send status update email (skip if same status, rejected, or dormant —
+    // rejection is handled at submit time, and we don't notify clients that
+    // they've been parked as dormant for re-engagement).
+    if (newStatus !== prevStatus && newStatus !== 'rejected' && newStatus !== 'dormant' && r.email && r.email !== '—') {
       sendEmail('statusUpdate', {
         firstName: r.firstName, lastName: r.lastName, email: r.email,
         make: r.make || 'your vehicle', model: r.model,
