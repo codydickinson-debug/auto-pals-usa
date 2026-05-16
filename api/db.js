@@ -117,6 +117,14 @@ function budgetStr(row) {
   if (!row.budget_min && !row.budget_max) return '';
   return `$${Number(row.budget_min || 0).toLocaleString()}–$${Number(row.budget_max || 0).toLocaleString()}`;
 }
+function paymentStr(row) {
+  if (!row.payment_method) return '';
+  if (row.payment_method === 'cash') return 'Cash on delivery';
+  const dp = Number.isFinite(Number(row.down_payment))    && row.down_payment    !== null ? `$${Number(row.down_payment).toLocaleString()} down`    : '';
+  const mp = Number.isFinite(Number(row.monthly_payment)) && row.monthly_payment !== null ? `$${Number(row.monthly_payment).toLocaleString()}/mo target` : '';
+  const detail = [dp, mp].filter(Boolean).join(' · ');
+  return detail ? `Financing — ${detail}` : 'Financing';
+}
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -199,6 +207,9 @@ module.exports = async function handler(req, res) {
           year_to: body.yearTo || '',
           budget_min: body.budgetMin || 0,
           budget_max: body.budgetMax || 0,
+          payment_method:  body.paymentMethod  || null,
+          down_payment:    Number.isFinite(body.downPayment)    ? body.downPayment    : null,
+          monthly_payment: Number.isFinite(body.monthlyPayment) ? body.monthlyPayment : null,
           body: body.body || '',
           mileage: body.mileage || '',
           transmission: body.transmission || '',
@@ -222,6 +233,7 @@ module.exports = async function handler(req, res) {
         // Build common notification payload bits
         const _vehStr   = vehicleStr(row);
         const _budgStr  = budgetStr(row);
+        const _payStr   = paymentStr(row);
         const _name     = `${row.first_name || ''} ${row.last_name || ''}`.trim();
 
         // Build notification fires. Await ALL of them (Promise.allSettled)
@@ -243,6 +255,7 @@ module.exports = async function handler(req, res) {
             clientPhone: row.phone,
             vehicleStr:  _vehStr,
             budgetStr:   _budgStr,
+            paymentStr:  _payStr,
             portalCode:  row.portal_code
           }));
           if (row.phone) {
@@ -307,6 +320,9 @@ module.exports = async function handler(req, res) {
           year_to:           b.yearTo,
           budget_min:        b.budgetMin,
           budget_max:        b.budgetMax,
+          payment_method:    b.paymentMethod,
+          down_payment:      b.downPayment,
+          monthly_payment:   b.monthlyPayment,
           body:              b.body,
           mileage:           b.mileage,
           transmission:      b.transmission,

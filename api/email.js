@@ -662,6 +662,7 @@ ${d.clientEmail ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Email</td
 ${d.clientPhone ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Phone</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientPhone}</td></tr>` : ''}
 <tr><td style="padding:6px 0;color:${BRAND.muted};">Vehicle</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.vehicleStr || 'Open Search'}</td></tr>
 ${d.budgetStr ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Budget</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.budgetStr}</td></tr>` : ''}
+${d.paymentStr ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Payment</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.paymentStr}</td></tr>` : ''}
 ${d.portalCode ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Portal code</td><td style="padding:6px 0;color:${BRAND.navy};font-weight:700;text-align:right;font-size:12px;">${d.portalCode}</td></tr>` : ''}
 </table>
 </td></tr></table>

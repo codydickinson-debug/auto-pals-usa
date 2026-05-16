@@ -266,6 +266,45 @@
     accent-color: var(--accent);
   }
 
+  /* Payment method radio cards */
+  .payment-method-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .payment-method-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    background: #fff;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .payment-method-card:hover { border-color: var(--accent); }
+  .payment-method-card input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+  .payment-method-card input[type="radio"]:checked + .payment-method-label { color: var(--accent); }
+  .payment-method-card:has(input[type="radio"]:checked) {
+    border-color: var(--accent);
+    background: rgba(15, 37, 87, 0.04);
+  }
+  .payment-method-label-sub { display: block; font-size: 12px; font-weight: 400; color: var(--text-muted); margin-top: 2px; }
+  .finance-fields { display: none; margin-top: 14px; }
+  .finance-fields.show { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .finance-hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; font-family: system-ui, sans-serif; line-height: 1.5; }
+
   .form-divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 
   .submit-btn {
@@ -1520,6 +1559,39 @@
 
         <hr class="form-divider">
 
+        <!-- Payment Method -->
+        <div class="form-section-title">How will you pay? <span class="req">*</span></div>
+        <div class="payment-method-row">
+          <label class="payment-method-card">
+            <input type="radio" name="paymentMethod" value="cash" id="f-pay-cash">
+            <span>
+              <span class="payment-method-label">Pay cash</span>
+              <span class="payment-method-label-sub">Full payment on delivery</span>
+            </span>
+          </label>
+          <label class="payment-method-card">
+            <input type="radio" name="paymentMethod" value="financing" id="f-pay-finance">
+            <span>
+              <span class="payment-method-label">Finance</span>
+              <span class="payment-method-label-sub">Through Westlake Financial</span>
+            </span>
+          </label>
+        </div>
+
+        <div class="finance-fields" id="finance-fields">
+          <div>
+            <label>Down Payment ($) <span class="req">*</span></label>
+            <input type="number" id="f-down-payment" placeholder="e.g. 3000" autocomplete="off" inputmode="numeric" min="0" step="1">
+          </div>
+          <div>
+            <label>Preferred Monthly Payment ($) <span class="req">*</span></label>
+            <input type="number" id="f-monthly-payment" placeholder="e.g. 450" autocomplete="off" inputmode="numeric" min="0" step="1">
+          </div>
+        </div>
+        <div class="finance-hint" id="finance-hint" style="display:none;">We finance through Westlake Financial and match rates from tier-1 banks. Your numbers above help us structure the deal , final terms depend on credit and the vehicle. We'll confirm everything before you commit.</div>
+
+        <hr class="form-divider">
+
         <!-- Preferences -->
         <div class="form-section-title">Preferences</div>
         <div class="form-group">
@@ -1950,6 +2022,12 @@
 
       <div style="margin-bottom:14px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Budget</div>
         <div class="detail-row"><span class="lbl">Range</span><span class="val" id="dv-budget"></span></div>
+      </div>
+
+      <div style="margin-bottom:14px;" id="dv-payment-section"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Payment</div>
+        <div class="detail-row"><span class="lbl">Method</span><span class="val" id="dv-pay-method"></span></div>
+        <div class="detail-row" id="dv-pay-down-row"><span class="lbl">Down Payment</span><span class="val" id="dv-pay-down"></span></div>
+        <div class="detail-row" id="dv-pay-monthly-row"><span class="lbl">Target Monthly</span><span class="val" id="dv-pay-monthly"></span></div>
       </div>
 
       <div style="margin-bottom:14px;" id="dv-features-section"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Features</div>
@@ -2525,6 +2603,9 @@
       make: r.make, model: r.model,
       yearFrom: r.year_from, yearTo: r.year_to,
       budgetMin: r.budget_min, budgetMax: r.budget_max,
+      paymentMethod:   r.payment_method  || null,
+      downPayment:     r.down_payment    != null ? Number(r.down_payment)    : null,
+      monthlyPayment:  r.monthly_payment != null ? Number(r.monthly_payment) : null,
       body: r.body, mileage: r.mileage, transmission: r.transmission, color: r.color,
       features: r.features || [], notes: r.notes, internalNotes: r.internal_notes,
       searchMode: r.search_mode, portalCode: r.portal_code,
@@ -2994,6 +3075,23 @@
     document.getElementById('specific-fields').style.display = mode === 'specific' ? 'block' : 'none';
   }
 
+  // Show/hide the down-payment + monthly-payment inputs based on the selected
+  // payment method. Wired on DOMContentLoaded below.
+  function syncPaymentFields() {
+    const finance = document.getElementById('f-pay-finance');
+    const fields = document.getElementById('finance-fields');
+    const hint   = document.getElementById('finance-hint');
+    const show = finance && finance.checked;
+    fields.classList.toggle('show', !!show);
+    hint.style.display = show ? 'block' : 'none';
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const cash = document.getElementById('f-pay-cash');
+    const fin  = document.getElementById('f-pay-finance');
+    if (cash) cash.addEventListener('change', syncPaymentFields);
+    if (fin)  fin.addEventListener('change', syncPaymentFields);
+  });
+
   let _submitting = false;
   // Captured the first time the form is interacted with — used as a soft
   // bot signal (humans take time, drive-by bots submit instantly).
@@ -3034,6 +3132,42 @@
         ? 'Please fill in all required fields, including Make and Model.'
         : 'Please fill in all required fields.');
       return;
+    }
+
+    // Payment method is required — radios aren't covered by the generic
+    // "value.trim()" check above so handle them separately.
+    const payCash    = document.getElementById('f-pay-cash');
+    const payFinance = document.getElementById('f-pay-finance');
+    const paymentMethod = payCash && payCash.checked ? 'cash'
+                       : (payFinance && payFinance.checked ? 'financing' : '');
+    if (!paymentMethod) {
+      alert('Please select how you plan to pay (cash or financing).');
+      const row = document.querySelector('.payment-method-row');
+      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    // If financing, down payment + preferred monthly are required.
+    let downPayment = null, monthlyPayment = null;
+    if (paymentMethod === 'financing') {
+      const dpEl = document.getElementById('f-down-payment');
+      const mpEl = document.getElementById('f-monthly-payment');
+      downPayment = parseInt(dpEl.value, 10);
+      monthlyPayment = parseInt(mpEl.value, 10);
+      if (!Number.isFinite(downPayment) || downPayment < 0) {
+        dpEl.style.borderColor = 'var(--red)';
+        alert('Please enter a valid down payment amount (a non-negative number).');
+        dpEl.focus();
+        return;
+      }
+      if (!Number.isFinite(monthlyPayment) || monthlyPayment <= 0) {
+        mpEl.style.borderColor = 'var(--red)';
+        alert('Please enter a valid preferred monthly payment.');
+        mpEl.focus();
+        return;
+      }
+      dpEl.style.borderColor = '';
+      mpEl.style.borderColor = '';
     }
 
     // Email format validation
@@ -3085,6 +3219,9 @@
       mileage: document.getElementById('f-mileage').value || 'No limit',
       budgetMin: parseInt(document.getElementById('f-budget-min').value),
       budgetMax: parseInt(document.getElementById('f-budget-max').value),
+      paymentMethod: paymentMethod,            // 'cash' | 'financing'
+      downPayment: downPayment,                // null when cash
+      monthlyPayment: monthlyPayment,          // null when cash
       color: document.getElementById('f-color').value.trim() || 'No preference',
       transmission: document.getElementById('f-transmission').value || 'No preference',
       fuel: document.getElementById('f-fuel').value || 'No preference',
@@ -3189,8 +3326,10 @@
   function resetForm() {
     document.getElementById('form-content').style.display = 'block';
     document.getElementById('success-msg').style.display = 'none';
-    document.querySelectorAll('input:not([type=checkbox]), select, textarea').forEach(el => el.value = '');
+    document.querySelectorAll('input:not([type=checkbox]):not([type=radio]), select, textarea').forEach(el => el.value = '');
     document.querySelectorAll('.checkbox-group input').forEach(cb => cb.checked = false);
+    document.querySelectorAll('input[name="paymentMethod"]').forEach(r => r.checked = false);
+    syncPaymentFields();
     setSearchMode('specific');
   }
 
@@ -3505,6 +3644,26 @@
 
     // Budget
     set('dv-budget', r.budgetMin && r.budgetMax ? `$${Number(r.budgetMin).toLocaleString()} – $${Number(r.budgetMax).toLocaleString()}` : '—');
+
+    // Payment method — hide entire section for legacy rows with no paymentMethod set
+    const paySection = document.getElementById('dv-payment-section');
+    if (paySection) {
+      if (!r.paymentMethod) {
+        paySection.style.display = 'none';
+      } else {
+        paySection.style.display = '';
+        const isFinance = r.paymentMethod === 'financing';
+        set('dv-pay-method', isFinance ? 'Financing (Westlake / tier-1 match)' : 'Cash on delivery');
+        const dpRow = document.getElementById('dv-pay-down-row');
+        const mpRow = document.getElementById('dv-pay-monthly-row');
+        if (dpRow) dpRow.style.display = isFinance ? '' : 'none';
+        if (mpRow) mpRow.style.display = isFinance ? '' : 'none';
+        if (isFinance) {
+          set('dv-pay-down',    Number.isFinite(r.downPayment)    ? `$${Number(r.downPayment).toLocaleString()}`    : '—');
+          set('dv-pay-monthly', Number.isFinite(r.monthlyPayment) ? `$${Number(r.monthlyPayment).toLocaleString()}/mo` : '—');
+        }
+      }
+    }
 
     // Features
     const featEl = document.getElementById('dv-features');
