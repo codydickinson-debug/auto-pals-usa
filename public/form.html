@@ -874,6 +874,22 @@
     font-family: system-ui, sans-serif;
     vertical-align: middle;
   }
+  /* Payment method badge in table */
+  .pay-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 7px;
+    margin-left: 6px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: system-ui, sans-serif;
+    vertical-align: middle;
+    letter-spacing: 0.02em;
+  }
+  .pay-badge.cash    { background: #dcfce7; color: #166534; }
+  .pay-badge.finance { background: #dbeafe; color: #1e40af; }
   /* AI Assessment */
 
   .tl-badge {
@@ -3473,6 +3489,21 @@
     }
     return '';
   }
+  // Small pill next to budget — instant cash-vs-finance scan. Empty string
+  // for legacy rows so the column doesn't look noisy mid-migration.
+  function paymentBadge(r) {
+    if (!r || !r.paymentMethod) return '';
+    if (r.paymentMethod === 'cash') {
+      return `<span class="pay-badge cash" title="Paying cash on delivery">💵 CASH</span>`;
+    }
+    if (r.paymentMethod === 'financing') {
+      const dp = Number.isFinite(r.downPayment)    ? `$${Number(r.downPayment).toLocaleString()} down`    : '';
+      const mp = Number.isFinite(r.monthlyPayment) ? `$${Number(r.monthlyPayment).toLocaleString()}/mo`   : '';
+      const tip = ['Financing (Westlake / tier-1 match)', dp, mp].filter(Boolean).join(' · ');
+      return `<span class="pay-badge finance" title="${tip}">💳 FINANCE</span>`;
+    }
+    return '';
+  }
   function clearDashSearch() {
     const input = document.getElementById('dash-search-input');
     if (input) { input.value = ''; renderTable(); }
@@ -3555,7 +3586,7 @@
       return `<tr draggable="true" data-id="${r.id}" onclick="rowClick(event,${r.id})">
         <td><strong>${r.firstName} ${r.lastName}</strong>${callBadge(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
         <td data-label="Vehicle">${vehicle}</td>
-        <td data-label="Budget">${budget}</td>
+        <td data-label="Budget">${budget}${paymentBadge(r)}</td>
         <td data-label="Years">${years}</td>
         <td data-label="AI">${tlCell}</td>
         <td data-label="Status">${sla}<span class="status-pill ${statusClass}"><span class="dot ${dotClass}"></span>${statusLabel}</span></td>
