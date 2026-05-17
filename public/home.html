@@ -432,11 +432,10 @@
   }
   .steps-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
-  }
-  @media (max-width: 1100px) {
-    .steps-grid { grid-template-columns: repeat(2, 1fr); }
+    /* FINANCING HIDDEN: was repeat(4,1fr) with a 1100px 2-col fallback while
+       the "Pay Cash or Finance" card was shown. Revert when un-hiding. */
+    grid-template-columns: repeat(3, 1fr);
+    gap: 28px;
   }
   .step-card {
     background: var(--white);
@@ -912,15 +911,19 @@
       <div class="step-card-title">We Search for You</div>
       <div class="step-card-desc">Our team sources vehicles through exclusive dealer-only auction networks , inventory that simply isn't available to the public. We find the best match for your needs.</div>
     </div>
+    <!-- FINANCING HIDDEN: un-comment to restore the "Pay Cash or Finance" step.
+         When restoring, also flip the next card's number back to 04 and revert
+         the .steps-grid CSS to 4 columns (see the rule near line 433).
     <div class="step-card reveal">
       <div class="step-card-accent"></div>
       <div class="step-card-num">03</div>
       <div class="step-card-title">Pay Cash or Finance</div>
       <div class="step-card-desc">Pay in full on delivery, or finance through Westlake Financial , we also match rates from tier-1 banks. Tell us your preferred down payment and monthly target and we'll structure it around your budget.</div>
     </div>
+    -->
     <div class="step-card reveal">
       <div class="step-card-accent"></div>
-      <div class="step-card-num">04</div>
+      <div class="step-card-num">03</div>
       <div class="step-card-title">Drive Your Car</div>
       <div class="step-card-desc">We handle transport, paperwork, and delivery. You approve the vehicle, we take care of everything else. Your car arrives at your door.</div>
     </div>
@@ -1101,6 +1104,7 @@
         <div class="faq-a">Submitting a request is completely free. Once we've spoken and you're happy to proceed, we require a $750 deposit to begin the sourcing process. This covers our time searching the auctions on your behalf. We'll always be transparent about costs before anything moves forward.</div>
       </div>
 
+      <!-- FINANCING HIDDEN: un-comment to restore the financing FAQ.
       <div class="faq-item reveal">
         <button class="faq-q" onclick="toggleFaq(this)">
           Do you offer financing, or do I have to pay cash?
@@ -1108,6 +1112,7 @@
         </button>
         <div class="faq-a">Both. You can pay cash on delivery or finance through Westlake Financial , and we match rates from tier-1 banks so you're not stuck with a worse rate just because you went through us. Tell us your preferred down payment and target monthly payment on the request form and we'll structure the deal around your budget before you commit.</div>
       </div>
+      -->
 
       <div class="faq-item reveal">
         <button class="faq-q" onclick="toggleFaq(this)">

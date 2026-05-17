@@ -1575,38 +1575,43 @@
 
         <hr class="form-divider">
 
-        <!-- Payment Method -->
-        <div class="form-section-title">How will you pay? <span class="req">*</span></div>
-        <div class="payment-method-row">
-          <label class="payment-method-card">
-            <input type="radio" name="paymentMethod" value="cash" id="f-pay-cash">
-            <span>
-              <span class="payment-method-label">Pay cash</span>
-              <span class="payment-method-label-sub">Full payment on delivery</span>
-            </span>
-          </label>
-          <label class="payment-method-card">
-            <input type="radio" name="paymentMethod" value="financing" id="f-pay-finance">
-            <span>
-              <span class="payment-method-label">Finance</span>
-              <span class="payment-method-label-sub">Through Westlake Financial</span>
-            </span>
-          </label>
-        </div>
-
-        <div class="finance-fields" id="finance-fields">
-          <div>
-            <label>Down Payment ($) <span class="req">*</span></label>
-            <input type="number" id="f-down-payment" placeholder="e.g. 3000" autocomplete="off" inputmode="numeric" min="0" step="1">
+        <!-- FINANCING HIDDEN: whole block kept in DOM (so the JS still finds
+             its IDs) but invisible. Remove the wrapping div + flip
+             SHOW_FINANCING to true to restore. -->
+        <div id="financing-section" style="display:none;">
+          <!-- Payment Method -->
+          <div class="form-section-title">How will you pay? <span class="req">*</span></div>
+          <div class="payment-method-row">
+            <label class="payment-method-card">
+              <input type="radio" name="paymentMethod" value="cash" id="f-pay-cash">
+              <span>
+                <span class="payment-method-label">Pay cash</span>
+                <span class="payment-method-label-sub">Full payment on delivery</span>
+              </span>
+            </label>
+            <label class="payment-method-card">
+              <input type="radio" name="paymentMethod" value="financing" id="f-pay-finance">
+              <span>
+                <span class="payment-method-label">Finance</span>
+                <span class="payment-method-label-sub">Through Westlake Financial</span>
+              </span>
+            </label>
           </div>
-          <div>
-            <label>Preferred Monthly Payment ($) <span class="req">*</span></label>
-            <input type="number" id="f-monthly-payment" placeholder="e.g. 450" autocomplete="off" inputmode="numeric" min="0" step="1">
-          </div>
-        </div>
-        <div class="finance-hint" id="finance-hint" style="display:none;">We finance through Westlake Financial and match rates from tier-1 banks. Your numbers above help us structure the deal , final terms depend on credit and the vehicle. We'll confirm everything before you commit.</div>
 
-        <hr class="form-divider">
+          <div class="finance-fields" id="finance-fields">
+            <div>
+              <label>Down Payment ($) <span class="req">*</span></label>
+              <input type="number" id="f-down-payment" placeholder="e.g. 3000" autocomplete="off" inputmode="numeric" min="0" step="1">
+            </div>
+            <div>
+              <label>Preferred Monthly Payment ($) <span class="req">*</span></label>
+              <input type="number" id="f-monthly-payment" placeholder="e.g. 450" autocomplete="off" inputmode="numeric" min="0" step="1">
+            </div>
+          </div>
+          <div class="finance-hint" id="finance-hint" style="display:none;">We finance through Westlake Financial and match rates from tier-1 banks. Your numbers above help us structure the deal , final terms depend on credit and the vehicle. We'll confirm everything before you commit.</div>
+
+          <hr class="form-divider">
+        </div>
 
         <!-- Preferences -->
         <div class="form-section-title">Preferences</div>
@@ -2431,6 +2436,13 @@
 </div>
 
 <script>
+  // ─── FINANCING FEATURE FLAG ───────────────────────────────────
+  // Flip back to true to restore: the form Payment section, dashboard
+  // cash/finance badge, detail-view Payment block, and submit-time
+  // payment-method validation. Backend (db.js, email.js) is always on
+  // and stays no-op when paymentMethod is absent.
+  const SHOW_FINANCING = false;
+
   // ─── STAFF PASSWORD GATE ──────────────────────────────────────
   // Password is validated server-side via /api/auth. Never stored in client code.
 
@@ -3156,7 +3168,10 @@
     const payFinance = document.getElementById('f-pay-finance');
     const paymentMethod = payCash && payCash.checked ? 'cash'
                        : (payFinance && payFinance.checked ? 'financing' : '');
-    if (!paymentMethod) {
+    // FINANCING HIDDEN: skip the "must pick a method" gate while the section
+    // is invisible — radios stay unchecked, paymentMethod stays ''. Backend
+    // treats empty as null so nothing downstream breaks.
+    if (SHOW_FINANCING && !paymentMethod) {
       alert('Please select how you plan to pay (cash or financing).');
       const row = document.querySelector('.payment-method-row');
       if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -3165,7 +3180,7 @@
 
     // If financing, down payment + preferred monthly are required.
     let downPayment = null, monthlyPayment = null;
-    if (paymentMethod === 'financing') {
+    if (SHOW_FINANCING && paymentMethod === 'financing') {
       const dpEl = document.getElementById('f-down-payment');
       const mpEl = document.getElementById('f-monthly-payment');
       downPayment = parseInt(dpEl.value, 10);
@@ -3492,6 +3507,7 @@
   // Small pill next to budget — instant cash-vs-finance scan. Empty string
   // for legacy rows so the column doesn't look noisy mid-migration.
   function paymentBadge(r) {
+    if (!SHOW_FINANCING) return ''; // FINANCING HIDDEN
     if (!r || !r.paymentMethod) return '';
     if (r.paymentMethod === 'cash') {
       return `<span class="pay-badge cash" title="Paying cash on delivery">💵 CASH</span>`;
@@ -3679,7 +3695,7 @@
     // Payment method — hide entire section for legacy rows with no paymentMethod set
     const paySection = document.getElementById('dv-payment-section');
     if (paySection) {
-      if (!r.paymentMethod) {
+      if (!SHOW_FINANCING || !r.paymentMethod) { // FINANCING HIDDEN: force-hide
         paySection.style.display = 'none';
       } else {
         paySection.style.display = '';
