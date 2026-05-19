@@ -12,6 +12,7 @@
 <meta name="theme-color" content="#0f2557">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tokens.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -568,34 +569,8 @@
   /* SECTION DIVIDER */
   .portal-section { margin-bottom: 24px; }
 
-  /* Empty-state block used in the Messages / Documents / Recommendations
-     panels when there's nothing to show yet. Centered iconified card —
-     a deliberate "not unfinished, just empty" presentation. */
-  .portal-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 32px 24px;
-    gap: 4px;
-  }
-  .portal-empty-icon {
-    width: 44px; height: 44px;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--cream);
-    border: 1px solid var(--border-subtle);
-    border-radius: 12px;
-    color: var(--navy);
-    margin-bottom: 12px;
-  }
-  .portal-empty-title {
-    font-size: 14px; font-weight: 700; color: var(--text);
-    margin-bottom: 4px;
-  }
-  .portal-empty-desc {
-    font-size: 13px; color: var(--text-muted);
-    line-height: 1.6; max-width: 320px;
-  }
+  /* Empty-state in panels now lives in /css/tokens.css as .u-empty —
+     keep this block free for any portal-specific overrides if they come up. */
 
   /* Unified card look applied to every content card under the hero */
   .progress-card,
@@ -911,14 +886,14 @@
     <div class="portal-section-title">Messages</div>
     <div class="progress-card" style="margin-bottom:0;">
       <div class="messages" id="messages-list">
-        <div id="portal-no-messages" class="portal-empty">
-          <div class="portal-empty-icon">
+        <div id="portal-no-messages" class="u-empty">
+          <div class="u-empty-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
             </svg>
           </div>
-          <div class="portal-empty-title">No messages yet</div>
-          <div class="portal-empty-desc">Send the team a note below — quickest way to ask anything or share an update on what you're looking for.</div>
+          <div class="u-empty-title">No messages yet</div>
+          <div class="u-empty-desc">Send the team a note below — quickest way to ask anything or share an update on what you're looking for.</div>
         </div>
       </div>
       <div id="portal-image-preview" style="display:none;margin-top:10px;">
