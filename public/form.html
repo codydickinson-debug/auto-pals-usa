@@ -35,6 +35,17 @@
     --radius: 8px;
     --shadow: 0 1px 4px rgba(15,37,87,0.10);
     --shadow-md: 0 4px 16px rgba(15,37,87,0.12);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   body {
@@ -102,7 +113,7 @@
     font-size: 14px;
     cursor: pointer;
     color: rgba(255,255,255,0.6);
-    transition: all 0.15s;
+    transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out), transform 150ms var(--ease-out);
     font-weight: 500;
   }
   .nav-tab.active {
@@ -110,7 +121,10 @@
     color: #f5f0e8;
     border: 1px solid rgba(245,240,232,0.2);
   }
-  .nav-tab:hover:not(.active) { background: rgba(255,255,255,0.08); color: #fff; }
+  @media (hover: hover) and (pointer: fine) {
+    .nav-tab:hover:not(.active) { background: rgba(255,255,255,0.08); color: #fff; }
+  }
+  .nav-tab:active { transform: scale(0.97); }
   .nav-tab-badge {
     background: rgba(255,255,255,0.15);
     color: #fff;
@@ -318,11 +332,14 @@
     font-size: 15px;
     font-weight: 700;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background-color 150ms var(--ease-out), transform 150ms var(--ease-out);
     margin-top: 8px;
     letter-spacing: 0.01em;
   }
-  .submit-btn:hover { background: var(--accent-mid); }
+  @media (hover: hover) and (pointer: fine) {
+    .submit-btn:hover { background: var(--accent-mid); }
+  }
+  .submit-btn:active { transform: scale(0.98); }
 
   /* Success state */
   .success-msg {
@@ -464,10 +481,13 @@
     font-size: 12px;
     cursor: pointer;
     color: var(--text-muted);
-    transition: all 0.12s;
+    transition: background-color 120ms var(--ease-out), border-color 120ms var(--ease-out), color 120ms var(--ease-out), transform 120ms var(--ease-out);
   }
   .filter-btn.active { background: var(--accent-bright); color: #fff; border-color: var(--accent-bright); }
-  .filter-btn:hover:not(.active) { background: var(--accent-light); color: var(--text); }
+  @media (hover: hover) and (pointer: fine) {
+    .filter-btn:hover:not(.active) { background: var(--accent-light); color: var(--text); }
+  }
+  .filter-btn:active { transform: scale(0.95); }
 
   .requests-table {
     background: var(--surface);
@@ -539,7 +559,15 @@
     border-left: 1px solid var(--border);
     overflow-y: auto;
     padding: 28px;
-    animation: slideIn 0.2s ease;
+    transform: translateX(0);
+    opacity: 1;
+    transition: transform 220ms var(--ease-out), opacity 200ms var(--ease-out);
+  }
+  @starting-style {
+    .detail-overlay.open .detail-panel {
+      transform: translateX(24px);
+      opacity: 0;
+    }
   }
   /* Repair + Sale modals need extra room for the wholesale/charge fields */
   #repair-modal .detail-panel,
@@ -692,15 +720,18 @@
     font-size: 13px;
     font-weight: bold;
     cursor: pointer;
-    transition: all 0.12s;
+    transition: background-color 120ms var(--ease-out), border-color 120ms var(--ease-out), color 120ms var(--ease-out), opacity 120ms var(--ease-out), transform 120ms var(--ease-out);
     text-align: center;
   }
+  .action-btn:active { transform: scale(0.97); }
   .action-btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
-  .action-btn.primary:hover { opacity: 0.85; }
   .action-btn.danger { color: var(--red); }
-  .action-btn.danger:hover { background: var(--red-light); border-color: var(--red); }
   .action-btn.success { color: var(--green); }
-  .action-btn.success:hover { background: var(--green-light); border-color: var(--green); }
+  @media (hover: hover) and (pointer: fine) {
+    .action-btn.primary:hover { opacity: 0.85; }
+    .action-btn.danger:hover { background: var(--red-light); border-color: var(--red); }
+    .action-btn.success:hover { background: var(--green-light); border-color: var(--green); }
+  }
   .notes-area {
     width: 100%;
     padding: 10px;
@@ -737,9 +768,12 @@
     color: var(--text-muted);
     font-size: 16px;
     line-height: 1;
-    transition: background 0.12s, color 0.12s;
+    transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out), transform 120ms var(--ease-out);
   }
-  .dots-btn:hover { background: var(--border); color: var(--text); }
+  @media (hover: hover) and (pointer: fine) {
+    .dots-btn:hover { background: var(--border); color: var(--text); }
+  }
+  .dots-btn:active { transform: scale(0.92); }
   .context-menu {
     display: none;
     position: fixed;
@@ -769,13 +803,16 @@
     font-size: 13px;
     cursor: pointer;
     color: var(--text);
-    transition: background 0.1s;
+    transition: background-color 100ms var(--ease-out);
     border: none;
     background: none;
     width: 100%;
     text-align: left;
   }
-  .ctx-item:hover { background: var(--accent-light); }
+  @media (hover: hover) and (pointer: fine) {
+    .ctx-item:hover { background: var(--accent-light); }
+  }
+  .ctx-item:active { background: var(--accent-light); }
   .ctx-item .ctx-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
   /* Drag and drop */
   tr[draggable="true"] { cursor: grab; }
@@ -852,14 +889,17 @@
     font-weight: 600;
     cursor: pointer;
     color: var(--text-muted);
-    transition: all 0.15s;
+    transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out), transform 150ms var(--ease-out);
     text-align: center;
   }
   .search-toggle-btn.active {
     background: var(--navy);
     color: #f5f0e8;
   }
-  .search-toggle-btn:hover:not(.active) { background: var(--accent-light); color: var(--text); }
+  @media (hover: hover) and (pointer: fine) {
+    .search-toggle-btn:hover:not(.active) { background: var(--accent-light); color: var(--text); }
+  }
+  .search-toggle-btn:active { transform: scale(0.97); }
   /* Open search badge in table */
   .open-search-badge {
     display: inline-flex;
@@ -890,6 +930,24 @@
   }
   .pay-badge.cash    { background: #dcfce7; color: #166534; }
   .pay-badge.finance { background: #dbeafe; color: #1e40af; }
+  /* Booked-call pill (date + time pulled from Google Calendar) */
+  .call-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: system-ui, sans-serif;
+    vertical-align: middle;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .call-pill.upcoming { background: #dbeafe; color: #1e40af; }
+  .call-pill.today    { background: #fef3c7; color: #92400e; }
+  .call-pill.done     { background: #f3f4f6; color: #4b5563; }
   /* AI Assessment */
 
   .tl-badge {
@@ -990,9 +1048,12 @@
     background: transparent;
     color: var(--text-muted);
     font-family: system-ui, sans-serif; font-size: 11px; font-weight: 700;
-    cursor: pointer; transition: all 0.12s;
+    cursor: pointer; transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out), border-color 120ms var(--ease-out), transform 120ms var(--ease-out);
   }
-  .msg-filter-btn:hover { background: var(--bg); color: var(--text); }
+  @media (hover: hover) and (pointer: fine) {
+    .msg-filter-btn:hover { background: var(--bg); color: var(--text); }
+  }
+  .msg-filter-btn:active { transform: scale(0.95); }
   .msg-filter-btn.active {
     background: var(--accent); color: var(--surface); border-color: var(--accent);
   }
@@ -1057,12 +1118,15 @@
     background: var(--surface);
     color: var(--text-muted);
     font-family: system-ui, sans-serif; font-size: 12px; font-weight: 600;
-    cursor: pointer; transition: all 0.12s;
+    cursor: pointer; transition: background-color 120ms var(--ease-out), border-color 120ms var(--ease-out), color 120ms var(--ease-out), transform 120ms var(--ease-out);
   }
-  .msg-view-request-btn:hover {
-    border-color: var(--accent); color: var(--accent);
-    background: var(--accent-light);
+  @media (hover: hover) and (pointer: fine) {
+    .msg-view-request-btn:hover {
+      border-color: var(--accent); color: var(--accent);
+      background: var(--accent-light);
+    }
   }
+  .msg-view-request-btn:active { transform: scale(0.97); }
 
   .msg-thread {
     flex: 1; overflow-y: auto;
@@ -1112,11 +1176,14 @@
     border: 1px solid var(--border);
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
-    transition: all 0.12s;
+    transition: background-color 120ms var(--ease-out), border-color 120ms var(--ease-out), transform 120ms var(--ease-out);
   }
-  .msg-attach-btn:hover { background: var(--accent-light); border-color: var(--accent); }
-  .msg-attach-btn svg { stroke: var(--text-muted); }
-  .msg-attach-btn:hover svg { stroke: var(--accent); }
+  @media (hover: hover) and (pointer: fine) {
+    .msg-attach-btn:hover { background: var(--accent-light); border-color: var(--accent); }
+    .msg-attach-btn:hover svg { stroke: var(--accent); }
+  }
+  .msg-attach-btn:active { transform: scale(0.92); }
+  .msg-attach-btn svg { stroke: var(--text-muted); transition: stroke 120ms var(--ease-out); }
   .msg-reply-input {
     flex: 1;
     min-width: 0;
@@ -1142,13 +1209,15 @@
     border: none; border-radius: var(--radius);
     font-family: system-ui, sans-serif; font-size: 13px; font-weight: 700;
     cursor: pointer;
-    transition: opacity 0.15s, transform 0.06s;
+    transition: opacity 150ms var(--ease-out), transform 120ms var(--ease-out);
     white-space: nowrap;
     flex-shrink: 0;
     height: 40px;
   }
-  .msg-send-btn:hover  { opacity: 0.9; }
-  .msg-send-btn:active { transform: translateY(1px); }
+  @media (hover: hover) and (pointer: fine) {
+    .msg-send-btn:hover  { opacity: 0.9; }
+  }
+  .msg-send-btn:active { transform: scale(0.97); }
   .msg-image-preview-bar {
     padding: 8px 20px 0;
     background: var(--surface);
@@ -1333,8 +1402,11 @@
   }
 
   /* Action queue cards — clickable, hover/active states */
-  .action-card { cursor: pointer; transition: all 0.15s; border: 2px solid transparent; }
-  .action-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,37,87,0.10); }
+  .action-card { cursor: pointer; transition: transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out), background-color 150ms var(--ease-out), border-color 150ms var(--ease-out); border: 2px solid transparent; }
+  @media (hover: hover) and (pointer: fine) {
+    .action-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,37,87,0.10); }
+  }
+  .action-card:active { transform: scale(0.99); }
   .action-card.active { border-color: var(--navy); background: var(--navy-light); }
   .action-card .stat-label { display: flex; align-items: center; gap: 4px; }
 
@@ -1374,7 +1446,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v129 · 2026-05-15</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v133 · 2026-05-18</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2487,6 +2559,7 @@
     document.getElementById('nav-requests').classList.add('active');
     showDashboard();
     loadFromDB();
+    fetchCallTimes();
     startPolling();
     startAutoRefresh();
   }
@@ -2529,6 +2602,7 @@
     showDashboard();
     // Supabase is source of truth; loadFromDB filters out tombstoned (deleted) ids
     loadFromDB();
+    fetchCallTimes();
     startPolling();
     startAutoRefresh();
   } else {
@@ -2672,6 +2746,45 @@
   }
   function isDeleted(id) { return tombstones.has(id); }
 
+  // ─── BOOKED-CALL TIMES (Google Calendar pull) ─────────────────────
+  // Map of lowercase client email → { dateLabel, timeLabel, startIso }.
+  // Populated by fetchCallTimes() on dashboard load and every auto-refresh
+  // tick. callBadge() reads from here so each row shows the actual call
+  // time straight from the team calendar (not the booking-submission ts).
+  let CALL_TIMES = {};
+
+  async function fetchCallTimes() {
+    if (isLocal) return;
+    if (!sessionStorage.getItem('staff_token')) return; // staff-only endpoint
+    try {
+      const res = await fetch('/api/booking', { method: 'GET', headers: dbHeaders() });
+      if (!res.ok) return;
+      const data = await res.json();
+      const next = {};
+      const now = Date.now();
+      for (const ev of (data.events || [])) {
+        if (!ev.email || !ev.startIso) continue;
+        const ts = new Date(ev.startIso).getTime();
+        if (!Number.isFinite(ts) || ts < now - 60 * 60 * 1000) continue; // skip events >1h in the past
+        const prev = next[ev.email];
+        // Keep the soonest upcoming event per email (calendar returns sorted,
+        // but a client could have a stale + a current event — first one wins).
+        if (!prev || ts < new Date(prev.startIso).getTime()) {
+          next[ev.email] = {
+            startIso:  ev.startIso,
+            dateLabel: ev.dateLabel,
+            timeLabel: ev.timeLabel
+          };
+        }
+      }
+      CALL_TIMES = next;
+    } catch (e) {
+      // Calendar pull is best-effort — failure just means the dashboard
+      // falls back to the legacy "booked" emoji (no inline time).
+      console.warn('[fetchCallTimes] failed:', e && e.message);
+    }
+  }
+
   async function loadFromDB() {
     // Pull requests from Supabase (source of truth), but filter out tombstoned ids.
     // This lets deletes sync across devices and lets new submissions appear on refresh.
@@ -2742,7 +2855,9 @@
     _autoRefreshInFlight = true;
     try {
       const prevIds = new Set(requests.map(r => r.id));
-      await loadFromDB();
+      // Fire both in parallel — calendar pull is independent of Supabase
+      // and shouldn't gate the row refresh.
+      await Promise.all([ loadFromDB(), fetchCallTimes() ]);
       const newOnes = requests.filter(r => !prevIds.has(r.id));
       if (newOnes.length) {
         console.log('[auto-refresh] new requests:', newOnes.map(r => r.firstName + ' ' + r.lastName).join(', '));
@@ -3494,13 +3609,30 @@
   // completed an intro call. Helps staff scan the request list and instantly
   // see who's already past the call stage without reading the status pill.
   function callBadge(r) {
-    if (r && r.callCompletedAt) {
+    if (!r) return '';
+    if (r.callCompletedAt) {
       const d = new Date(r.callCompletedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return `<span title="Called on ${d}" style="margin-left:6px;font-size:12px;opacity:0.85;">📞</span>`;
+      return `<span class="call-pill done" title="Call completed ${d}">📞 ${escapeHtml(d)}</span>`;
     }
-    if (r && r.bookingConfirmedAt) {
+    // Prefer Google Calendar data when present — that's the authoritative
+    // call time, and stays in sync if the event gets rescheduled.
+    const email = r.email ? String(r.email).toLowerCase() : '';
+    const cal = email ? CALL_TIMES[email] : null;
+    if (cal && cal.startIso) {
+      const ts = new Date(cal.startIso).getTime();
+      const now = Date.now();
+      const dayMs = 24 * 60 * 60 * 1000;
+      const isToday = ts >= now - dayMs && ts < now + dayMs &&
+                      new Date(ts).toDateString() === new Date(now).toDateString();
+      const cls = isToday ? 'today' : 'upcoming';
+      const tip = `Sales call · ${cal.dateLabel} at ${cal.timeLabel}`;
+      return `<span class="call-pill ${cls}" title="${escapeHtml(tip)}">📞 ${escapeHtml(cal.dateLabel)} · ${escapeHtml(cal.timeLabel)}</span>`;
+    }
+    // Legacy fallback: row says a booking exists but we couldn't match a
+    // calendar event (event deleted, email mismatch, calendar offline).
+    if (r.bookingConfirmedAt) {
       const d = new Date(r.bookingConfirmedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return `<span title="Call booked ${d}" style="margin-left:6px;font-size:12px;opacity:0.85;">📞</span>`;
+      return `<span class="call-pill upcoming" title="Booked ${d} — call time pending calendar sync">📞 booked</span>`;
     }
     return '';
   }

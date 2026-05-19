@@ -9,6 +9,7 @@
 
 const sms   = require('./_sms.js');
 const email = require('./email.js');
+const { verifyToken } = require('./auth.js');
 
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 
@@ -138,13 +139,133 @@ async function sendConfirmationEmail(booking) {
   });
 }
 
+// Lists "Sales Call —" events from the team calendar between now and `days`
+// out. Used by the staff dashboard to surface the booked call time next to
+// each client's name. The booking flow creates events as
+// `Sales Call — {firstName} {lastName}` with the client as attendee, so we
+// match dashboard rows by attendee email (case-insensitive).
+async function listUpcomingSalesCalls(token, days = 60) {
+  const timeMin = new Date().toISOString();
+  const timeMax = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  const params = new URLSearchParams({
+    timeMin, timeMax,
+    singleEvents: 'true',
+    orderBy: 'startTime',
+    q: 'Sales Call',
+    maxResults: '250'
+  });
+  const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(process.env.GOOGLE_CALENDAR_ID)}/events?${params}`;
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Calendar list failed: ${res.status} ${err}`);
+  }
+  const data = await res.json();
+  return (data.items || [])
+    .filter(e => e.status !== 'cancelled' && /^Sales Call/i.test(e.summary || ''));
+}
+
+// Pulls the client email/name out of a calendar event. The booking flow
+// adds the client as a non-organizer attendee, so prefer that. Falls back
+// to parsing the description ("Email: foo@bar.com") if attendees are empty
+// (e.g. an event hand-edited in Calendar without a guest list).
+function extractClient(event) {
+  const att = (event.attendees || []).find(a => a && a.email && !a.self && !a.organizer && !a.resource);
+  if (att) {
+    return {
+      email: String(att.email).toLowerCase(),
+      name:  att.displayName || ''
+    };
+  }
+  const desc = event.description || '';
+  const m = desc.match(/Email:\s*([^\s<>]+@[^\s<>]+)/i);
+  return m ? { email: m[1].toLowerCase(), name: '' } : { email: '', name: '' };
+}
+
+function formatEventTime(isoStr) {
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return { dateLabel: '', timeLabel: '' };
+  const dateLabel = d.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+    timeZone: 'America/New_York'
+  });
+  const timeLabel = d.toLocaleTimeString('en-US', {
+    hour: 'numeric', minute: '2-digit',
+    timeZone: 'America/New_York'
+  });
+  return { dateLabel, timeLabel };
+}
+
+async function handleListCalls(req, res) {
+  // Staff-gated — the calendar is internal and shouldn't be enumerable by
+  // anonymous traffic.
+  const token = req.headers['x-staff-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  if (!verifyToken(token)) return res.status(401).json({ error: 'unauthorized' });
+
+  // Demo / unconfigured environments: return an empty list so the dashboard
+  // simply doesn't render call pills, instead of throwing 500.
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_REFRESH_TOKEN || !process.env.GOOGLE_CALENDAR_ID) {
+    return res.status(200).json({ events: [], demo: true });
+  }
+
+  try {
+    const access = await getAccessToken();
+    const items = await listUpcomingSalesCalls(access, 60);
+    const events = items.map(ev => {
+      const startIso = (ev.start && (ev.start.dateTime || ev.start.date)) || '';
+      const { dateLabel, timeLabel } = formatEventTime(startIso);
+      const { email, name } = extractClient(ev);
+      return {
+        eventId:   ev.id,
+        summary:   ev.summary || '',
+        email,
+        name,
+        startIso,
+        dateLabel,
+        timeLabel
+      };
+    });
+    // Cache for a minute on the CDN so rapid dashboard refreshes don't
+    // re-hit Calendar; the auto-refresh ticker still drives fresh pulls.
+    res.setHeader('Cache-Control', 'private, max-age=60');
+    return res.status(200).json({ events });
+  } catch (err) {
+    console.error('[BOOKING GET] calendar list error:', err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+// Returns today's YYYY-MM-DD in Eastern time. Used to enforce the no-
+// same-day-bookings rule server-side regardless of where the lambda runs
+// (Vercel containers default to UTC, so a naive `new Date()` comparison
+// would let a late-evening ET booking slip through as "tomorrow UTC").
+function todayET() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(new Date());
+  const y = parts.find(p => p.type === 'year').value;
+  const m = parts.find(p => p.type === 'month').value;
+  const d = parts.find(p => p.type === 'day').value;
+  return `${y}-${m}-${d}`;
+}
+
 module.exports = async function handler(req, res) {
+  if (req.method === 'GET') return handleListCalls(req, res);
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const booking = req.body;
   const { firstName, lastName, email, date, time } = booking;
   if (!firstName || !lastName || !email || !date || !time) {
     return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  // Block same-day (and earlier) bookings. UI already greys today out, but
+  // we also enforce server-side so a direct POST can't bypass the rule.
+  if (typeof date === 'string' && date <= todayET()) {
+    return res.status(400).json({
+      error: 'Same-day calls aren’t available — please pick tomorrow or later.'
+    });
   }
 
   const demoMode = !process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_REFRESH_TOKEN;
