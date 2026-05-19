@@ -48,11 +48,27 @@
     }
   }
 
+  html { scroll-padding-top: 80px; }
+  ::selection { background: var(--navy); color: #f5f0e8; }
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid var(--accent-bright);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
   body {
     font-family: system-ui, -apple-system, sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'kern', 'liga', 'calt';
+  }
+  table, td, th,
+  input[type="number"], input[type="tel"] {
+    font-variant-numeric: tabular-nums;
   }
 
   /* NAV */

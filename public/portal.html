@@ -46,12 +46,27 @@
     }
   }
 
+  html { scroll-padding-top: 80px; }
+  ::selection { background: var(--navy); color: var(--cream); }
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid var(--navy);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
   body {
     font-family: 'DM Sans', system-ui, sans-serif;
     background: var(--cream);
     color: var(--text);
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'kern', 'liga', 'calt';
   }
+  h1, h2, h3, .hero-greeting h1 { text-wrap: balance; }
+  p, .hero-status-desc, .hero-sub { text-wrap: pretty; }
+  .hero-step-circle, .receipt-amount, .step-circle { font-variant-numeric: tabular-nums; }
 
   /* NAV */
   nav {
@@ -159,7 +174,16 @@
     margin-bottom: 26px;
     position: relative;
   }
-  .hero-status-icon { font-size: 26px; flex-shrink: 0; line-height: 1; }
+  .hero-status-icon {
+    width: 42px; height: 42px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--navy);
+  }
+  .hero-status-icon svg { width: 22px; height: 22px; }
   .hero-status-text { min-width: 0; }
   .hero-status-title {
     font-size: 15px; font-weight: 700; color: var(--navy);
@@ -727,12 +751,20 @@
           <h1 id="greeting-name">Welcome back.</h1>
           <div class="hero-sub">Live updates on your vehicle search. We'll message you here as things progress.</div>
         </div>
-        <a href="booking.html" class="hero-cta">📅 Schedule a Call →</a>
+        <a href="booking.html" class="hero-cta">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Schedule a Call
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-left:-2px;">
+            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </a>
       </div>
 
       <!-- Status -->
       <div class="hero-status" id="status-banner">
-        <div class="hero-status-icon" id="status-icon">📋</div>
+        <div class="hero-status-icon" id="status-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2h6a2 2 0 0 1 2 2v2H7V4a2 2 0 0 1 2-2z"/><rect x="5" y="6" width="14" height="16" rx="2"/></svg></div>
         <div class="hero-status-text">
           <div class="hero-status-title" id="status-title">Request Received</div>
           <div class="hero-status-desc" id="status-desc">We've got your request and our team is reviewing it. You'll hear from us within 24–48 hours to schedule a quick call.</div>
@@ -744,7 +776,7 @@
         <div class="hero-progress-track"><div class="hero-progress-fill" id="hero-progress-fill"></div></div>
         <div class="hero-progress-steps">
           <div class="hero-step done" id="step-1">
-            <div class="hero-step-circle">✓</div>
+            <div class="hero-step-circle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17.5 19 7.5"/></svg></div>
             <div class="hero-step-label">Submitted</div>
           </div>
           <div class="hero-step" id="step-2">
@@ -814,7 +846,7 @@
       <div class="receipt-row"><span style="color:var(--text-muted);">Reference</span><span style="font-weight:600;font-size:12px;" id="deposit-ref">—</span></div>
       <div class="receipt-row"><span style="color:var(--text-muted);">Search Window</span><span style="font-weight:600;" id="deposit-window">—</span></div>
       <div class="receipt-total"><span>Total</span><span>$750.00</span></div>
-      <div id="deposit-badge" class="receipt-badge">✓ Deposit Confirmed</div>
+      <div id="deposit-badge" class="receipt-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17.5 19 7.5"/></svg> Deposit Confirmed</div>
 
       <!-- Pay button — hidden once deposit is confirmed -->
       <div id="deposit-pay-wrap" style="margin-top:16px;">
@@ -1181,7 +1213,7 @@
       const banner = document.getElementById('status-banner');
       if (banner && s) {
         banner.className = 'hero-status status-banner ' + s.bannerClass;
-        document.getElementById('status-icon').textContent = s.icon;
+        document.getElementById('status-icon').innerHTML = s.icon;
         document.getElementById('status-title').textContent = s.title;
         document.getElementById('status-desc').textContent = s.desc;
       }
@@ -1379,7 +1411,7 @@
       el.classList.remove('done', 'active');
       if (i < activeStep) {
         el.classList.add('done');
-        if (circle) circle.textContent = '✓';
+        if (circle) circle.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17.5 19 7.5"/></svg>';
       } else if (i === activeStep) {
         el.classList.add('active');
         if (circle) circle.textContent = String(i);
@@ -1529,10 +1561,19 @@
   // (function initPortalGate() { ... })();
 
   // ── DEMO STAGE SWITCHER ──────────────────────────────────────────
+  // Lucide-style inline SVGs for each stage. Using a shared <svg> template
+  // keeps the markup terse; each stage just supplies the inner shapes.
+  const _ico = (inner) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+  const ICONS = {
+    clipboard: _ico('<path d="M9 2h6a2 2 0 0 1 2 2v2H7V4a2 2 0 0 1 2-2z"/><rect x="5" y="6" width="14" height="16" rx="2"/>'),
+    search:    _ico('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'),
+    flag:      _ico('<path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/>'),
+    car:       _ico('<path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>')
+  };
   const stages = {
     new: {
       bannerClass: 'new',
-      icon: '📋',
+      icon: ICONS.clipboard,
       title: 'Request Received',
       desc: 'We\'ve got your request and our team is reviewing it. You\'ll hear from us within 24–48 hours to schedule a quick call.',
       steps: [1],
@@ -1541,7 +1582,7 @@
     },
     review: {
       bannerClass: 'review',
-      icon: '🔍',
+      icon: ICONS.search,
       title: 'Under Review',
       desc: 'Your request is being reviewed by our team. We\'re confirming availability and realistic options for your budget.',
       steps: [1, 2],
@@ -1550,7 +1591,7 @@
     },
     searching: {
       bannerClass: 'searching',
-      icon: '🏁',
+      icon: ICONS.flag,
       title: 'Actively Searching',
       desc: 'We\'re actively searching our 3 South Florida dealer auctions for vehicles that match your request. We\'ll message you the moment we find a strong match — feel free to send us a note any time.',
       steps: [1, 2, 3],
@@ -1559,7 +1600,7 @@
     },
     found: {
       bannerClass: 'found',
-      icon: '🚗',
+      icon: ICONS.car,
       title: 'Vehicle Found!',
       desc: 'Great news — we\'ve found a vehicle that matches your request. We\'ll be in touch shortly to confirm details and next steps.',
       steps: [1, 2, 3, 4],
@@ -1575,7 +1616,7 @@
     // Banner
     const banner = document.getElementById('status-banner');
     banner.className = 'hero-status status-banner ' + s.bannerClass;
-    document.getElementById('status-icon').textContent = s.icon;
+    document.getElementById('status-icon').innerHTML = s.icon;
     document.getElementById('status-title').textContent = s.title;
     document.getElementById('status-desc').textContent = s.desc;
 
@@ -1588,7 +1629,7 @@
       const circle = el.querySelector('.hero-step-circle') || el.querySelector('.step-circle');
       if (s.steps.includes(i) && i !== s.activeStep) {
         el.classList.add('done');
-        if (circle) circle.textContent = '✓';
+        if (circle) circle.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17.5 19 7.5"/></svg>';
       } else if (i === s.activeStep) {
         el.classList.add('active');
         if (circle) circle.textContent = i;
@@ -1616,7 +1657,7 @@
     const windowEl = document.getElementById('deposit-window');
     const payWrap = document.getElementById('deposit-pay-wrap');
     if (depositPaid) {
-      badge.textContent = '✓ Deposit Confirmed';
+      badge.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12.5 10 17.5 19 7.5"/></svg> Deposit Confirmed';
       badge.style.background = 'var(--green-light)';
       badge.style.color = 'var(--green)';
       // Use the REAL deposit details from the live client record. The previous

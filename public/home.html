@@ -88,15 +88,42 @@
     }
   }
 
-  html { scroll-behavior: smooth; }
+  html {
+    scroll-behavior: smooth;
+    /* Anchor links (e.g. #how-it-works) land below the fixed nav, not under it. */
+    scroll-padding-top: 96px;
+  }
 
+  ::selection { background: var(--navy); color: var(--cream); }
+
+  /* Keyboard focus stays visible; mouse clicks don't get a ring (it'd look noisy). */
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid var(--navy);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
 
   body {
     font-family: 'DM Sans', system-ui, sans-serif;
     background: var(--cream);
     color: var(--text);
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'kern', 'liga', 'calt';
   }
+
+  /* Display copy reads tighter; the browser also avoids orphans in headlines. */
+  h1, h2, h3, h4, .hero-title, .section-title, .confirmed-title {
+    text-wrap: balance;
+  }
+  p, .hero-sub, .section-sub { text-wrap: pretty; }
+
+  /* All numeric stats and table figures should line up vertically. */
+  .why-stat-val, .hero-card-stat-val, .step-card-num,
+  .confirmed-detail strong { font-variant-numeric: tabular-nums; }
 
   /* ── NAV ── */
   nav {
@@ -560,10 +587,18 @@
     border: 1px solid rgba(245,240,232,0.1);
     border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 20px; flex-shrink: 0;
-    transition: background 0.2s;
+    color: #a7c4b0;
+    flex-shrink: 0;
+    transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out), border-color 200ms var(--ease-out);
   }
-  .why-item:hover .why-icon { background: rgba(245,240,232,0.12); }
+  .why-icon svg { width: 20px; height: 20px; }
+  @media (hover: hover) and (pointer: fine) {
+    .why-item:hover .why-icon {
+      background: rgba(245,240,232,0.12);
+      color: #c4dbcb;
+      border-color: rgba(245,240,232,0.18);
+    }
+  }
   .why-item-title { font-size: 15px; font-weight: 600; color: var(--cream); margin-bottom: 4px; }
   .why-item-desc { font-size: 13px; color: rgba(245,240,232,0.6); line-height: 1.6; }
   .why-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -685,6 +720,16 @@
     transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out);
   }
   .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* Filled-star row used for review ratings. SVGs render sharper than the
+     Unicode ★ glyph and let us control kerning. */
+  .review-stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    color: #f59e0b;
+  }
+  .review-stars svg { width: 16px; height: 16px; }
 
   @media (max-width: 768px) {
     /* Stacked nav: logo centered on top, links underneath */
@@ -985,28 +1030,44 @@
       <p class="section-sub why-sub reveal">Dealer-only auctions have better inventory at better prices. We bring that access directly to you.</p>
       <div class="why-list">
         <div class="why-item reveal">
-          <div class="why-icon">🔍</div>
+          <div class="why-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+            </svg>
+          </div>
           <div>
             <div class="why-item-title">Dealer-only inventory</div>
-            <div class="why-item-desc">Access to auctions that are closed to the public , with thousands more vehicles than any lot.</div>
+            <div class="why-item-desc">Access to auctions that are closed to the public, with thousands more vehicles than any lot.</div>
           </div>
         </div>
         <div class="why-item reveal">
-          <div class="why-icon">💰</div>
+          <div class="why-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M16 7H8a4 4 0 0 0 0 8h8a4 4 0 0 1 0 8H6"/><path d="M12 3v18"/>
+            </svg>
+          </div>
           <div>
             <div class="why-item-title">Better pricing</div>
             <div class="why-item-desc">Auction prices are typically lower than retail. We pass those savings on to you.</div>
           </div>
         </div>
         <div class="why-item reveal">
-          <div class="why-icon">🤝</div>
+          <div class="why-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M11 17a1 1 0 0 1-2 0"/><path d="m14 14-2-2-2 2"/><path d="m8 18 4-4 4 4"/><path d="M3 12a4 4 0 0 1 4-4h2.5"/><path d="M21 12a4 4 0 0 0-4-4h-2.5"/><path d="M9 22h6"/>
+            </svg>
+          </div>
           <div>
             <div class="why-item-title">No pressure, ever</div>
-            <div class="why-item-desc">We work for you, not a dealership. No pushy sales tactics . If we can't find the right car at the right price, we'll tell you straight.</div>
+            <div class="why-item-desc">We work for you, not a dealership. No pushy sales tactics. If we can't find the right car at the right price, we'll tell you straight.</div>
           </div>
         </div>
         <div class="why-item reveal">
-          <div class="why-icon">🚗</div>
+          <div class="why-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>
+            </svg>
+          </div>
           <div>
             <div class="why-item-title">Delivered to your door</div>
             <div class="why-item-desc">We handle transport so you never have to step foot in a lot if you don't want to.</div>
@@ -1040,8 +1101,12 @@
 
       <!-- Review 1 -->
       <div class="step-card review-card reveal" style="border-top:3px solid var(--navy);padding:32px 28px;display:flex;flex-direction:column;gap:16px;">
-        <div style="display:flex;gap:4px;">
-          <span style="color:#f59e0b;font-size:16px;">★★★★★</span>
+        <div class="review-stars" aria-label="5 out of 5 stars">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
         </div>
         <p class="review-quote" style="font-size:15px;color:#4a4a4a;line-height:1.75;flex:1;">"Great experience with Auto Pals USA in Pompano, FL! Alex and Josh were super helpful, honest, and made the car-buying process smooth and stress-free. Clean vehicles, fair pricing, and great customer service. Super satisfied with the overall experience!"</p>
         <button class="read-more-toggle" onclick="toggleReadMore(this)">Read more</button>
@@ -1056,8 +1121,12 @@
 
       <!-- Review 2 -->
       <div class="step-card review-card reveal" style="border-top:3px solid var(--navy);padding:32px 28px;display:flex;flex-direction:column;gap:16px;">
-        <div style="display:flex;gap:4px;">
-          <span style="color:#f59e0b;font-size:16px;">★★★★★</span>
+        <div class="review-stars" aria-label="5 out of 5 stars">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
         </div>
         <p class="review-quote" style="font-size:15px;color:#4a4a4a;line-height:1.75;flex:1;">"I had an unbelievable experience in Pompano Beach. They went above and beyond helping me purchase directly from the auction . I got a 2020 Nissan Rogue valued at $21,000 for just $12,000. 10 out of 10, hands down the best experience!"</p>
         <button class="read-more-toggle" onclick="toggleReadMore(this)">Read more</button>
@@ -1072,8 +1141,12 @@
 
       <!-- Review 3 -->
       <div class="step-card review-card reveal" style="border-top:3px solid var(--navy);padding:32px 28px;display:flex;flex-direction:column;gap:16px;">
-        <div style="display:flex;gap:4px;">
-          <span style="color:#f59e0b;font-size:16px;">★★★★★</span>
+        <div class="review-stars" aria-label="5 out of 5 stars">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
         </div>
         <p class="review-quote" style="font-size:15px;color:#4a4a4a;line-height:1.75;flex:1;">"I recently purchased a vehicle from Auto Pals USA and had an excellent experience. The team was professional, knowledgeable, and transparent throughout. High-quality car at a very fair price, and the process was smooth and straightforward. Highly recommend to anyone looking for a trustworthy dealership and great value."</p>
         <button class="read-more-toggle" onclick="toggleReadMore(this)">Read more</button>
@@ -1365,8 +1438,10 @@
     width: 34px; height: 34px; border-radius: 50%;
     background: rgba(245,240,232,0.15);
     display: flex; align-items: center; justify-content: center;
-    font-size: 16px; flex-shrink: 0;
+    color: var(--cream);
+    flex-shrink: 0;
   }
+  .ai-widget-avatar svg { width: 18px; height: 18px; }
   .ai-widget-title { font-size: 14px; font-weight: 700; color: var(--cream); }
   .ai-widget-sub { font-size: 11px; color: rgba(245,240,232,0.5); margin-top:1px; }
   .ai-close-btn {
@@ -1454,7 +1529,11 @@
 <!-- Chat panel -->
 <div class="ai-widget-panel" id="ai-widget-panel">
   <div class="ai-widget-header">
-    <div class="ai-widget-avatar">🚗</div>
+    <div class="ai-widget-avatar">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/>
+      </svg>
+    </div>
     <div>
       <div class="ai-widget-title">Auto Pals</div>
       <div class="ai-widget-sub">USA</div>
@@ -1551,7 +1630,7 @@ WHAT NOT TO DO:
         showTyping();
         setTimeout(() => {
           removeTyping();
-          addAIMessage('ai', "Hey! I'm the Auto Pals USA assistant. Ask me anything about how our vehicle sourcing service works, what it costs, or how to get started. 🚗");
+          addAIMessage('ai', "Hey! I'm the Auto Pals USA assistant. Ask me anything about how our vehicle sourcing service works, what it costs, or how to get started.");
         }, 1800);
       }, 400);
     }
