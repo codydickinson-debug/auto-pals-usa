@@ -212,86 +212,25 @@
     min-height: 100vh;
     display: flex;
     align-items: center;
-    padding: 150px 48px 100px;
+    padding: 150px 48px 140px;
     position: relative;
     overflow: hidden;
-    background: var(--navy);
+    background:
+      radial-gradient(ellipse 80% 60% at 25% 35%, rgba(26,52,112,0.55) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 80% 70%, rgba(26,92,50,0.16) 0%, transparent 55%),
+      var(--navy);
   }
-  /* Radial glow blobs */
-  .hero::before {
-    content: '';
-    position: absolute;
-    top: -20%;  left: -10%;
-    width: 700px; height: 700px;
-    background: radial-gradient(circle, rgba(26,52,112,0.8) 0%, transparent 70%);
-    pointer-events: none;
-  }
-  .hero-glow-1 {
-    position: absolute;
-    top: 10%; right: 5%;
-    width: 500px; height: 500px;
-    background: radial-gradient(circle, rgba(26,92,50,0.25) 0%, transparent 65%);
-    pointer-events: none;
-    z-index: 0;
-  }
-  .hero-glow-2 {
-    position: absolute;
-    bottom: 0; left: 30%;
-    width: 600px; height: 300px;
-    background: radial-gradient(ellipse, rgba(26,52,112,0.5) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
-  }
-  /* Floating geometric shapes */
-  .hero-shape-1 {
-    position: absolute;
-    top: 15%; right: 8%;
-    width: 180px; height: 180px;
-    border: 1px solid rgba(245,240,232,0.06);
-    border-radius: 24px;
-    transform: rotate(15deg);
-    pointer-events: none;
-    animation: float-a 14s ease-in-out infinite;
-  }
-  .hero-shape-2 {
-    position: absolute;
-    bottom: 20%; left: 5%;
-    width: 100px; height: 100px;
-    border: 1px solid rgba(245,240,232,0.05);
-    border-radius: 50%;
-    pointer-events: none;
-    animation: float-b 18s ease-in-out infinite;
-  }
-  .hero-shape-3 {
-    position: absolute;
-    top: 55%; right: 15%;
-    width: 60px; height: 60px;
-    background: rgba(26,92,50,0.15);
-    border-radius: 12px;
-    transform: rotate(30deg);
-    pointer-events: none;
-    animation: float-c 11s ease-in-out infinite;
-  }
-  @keyframes float-a {
-    0%, 100% { transform: rotate(15deg) translateY(0); }
-    50%      { transform: rotate(18deg) translateY(-14px); }
-  }
-  @keyframes float-b {
-    0%, 100% { transform: translateY(0) translateX(0); }
-    50%      { transform: translateY(10px) translateX(8px); }
-  }
-  @keyframes float-c {
-    0%, 100% { transform: rotate(30deg) translateY(0); }
-    50%      { transform: rotate(36deg) translateY(-8px); }
-  }
-  /* Wave bottom */
+  /* Subtle gradient fade out of the hero into the cream section below.
+     Replaces the old polygon wave — a clean fade reads as more refined
+     and lets the eye flow downward without a hard cut. */
   .hero::after {
     content: '';
     position: absolute;
-    bottom: -1px; left: 0; right: 0;
-    height: 100px;
-    background: var(--cream);
-    clip-path: polygon(0 60%, 15% 40%, 30% 55%, 50% 30%, 70% 50%, 85% 35%, 100% 55%, 100% 100%, 0 100%);
+    bottom: 0; left: 0; right: 0;
+    height: 120px;
+    background: linear-gradient(to bottom, transparent 0%, var(--cream) 100%);
+    pointer-events: none;
+    z-index: 0;
   }
   .hero-inner {
     max-width: 1100px;
@@ -353,8 +292,6 @@
   }
 
   /* Parallax layers */
-  .parallax-slow { will-change: transform; }
-  .parallax-mid  { will-change: transform; }
   .hero-title em { font-style: italic; color: #7dd4a8; }
   .hero-sub {
     font-size: 17px;
@@ -914,11 +851,6 @@
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-glow-1 parallax-slow"></div>
-  <div class="hero-glow-2 parallax-slow"></div>
-  <div class="hero-shape-1 parallax-mid"></div>
-  <div class="hero-shape-2 parallax-mid"></div>
-  <div class="hero-shape-3 parallax-mid"></div>
   <div class="hero-inner">
     <div class="hero-content">
       <div class="hero-tag">
@@ -1265,7 +1197,7 @@
     <!-- Featured team photo -->
     <figure class="reveal" style="margin:8px auto 48px;max-width:440px;">
       <div style="border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-lg);background:var(--navy);">
-        <img src="images/team-barrett-jackson.jpeg" alt="The Auto Pals USA team at the Barrett-Jackson opening party" style="display:block;width:100%;height:auto;">
+        <img src="images/team-barrett-jackson.jpeg" alt="The Auto Pals USA team at the Barrett-Jackson opening party" width="1200" height="1600" loading="lazy" decoding="async" style="display:block;width:100%;height:auto;aspect-ratio:1200/1600;">
       </div>
       <figcaption style="margin-top:16px;text-align:center;">
         <div style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--navy);background:var(--navy-light);padding:5px 12px;border-radius:4px;margin-bottom:10px;">Barrett-Jackson Opening Party</div>
@@ -1278,7 +1210,7 @@
       <!-- Alex -->
       <div class="step-card team-card reveal" style="padding:36px 32px;text-align:center;">
         <div style="width:120px;height:120px;border-radius:50%;background:var(--navy-light);border:3px solid var(--border);margin:0 auto 20px;overflow:hidden;" id="alex-photo">
-          <img src="images/alex.png" alt="Alex, co-founder of Auto Pals USA" style="width:100%;height:100%;object-fit:cover;display:block;">
+          <img src="images/alex.png" alt="Alex, co-founder of Auto Pals USA" width="400" height="400" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">
         </div>
         <div class="team-card-content">
           <div class="team-name-row" style="display:block;">
@@ -1294,7 +1226,7 @@
       <!-- Josh -->
       <div class="step-card team-card reveal" style="padding:36px 32px;text-align:center;">
         <div style="width:120px;height:120px;border-radius:50%;background:var(--navy-light);border:3px solid var(--border);margin:0 auto 20px;overflow:hidden;" id="josh-photo">
-          <img src="images/josh.png" alt="Josh, co-founder of Auto Pals USA" style="width:100%;height:100%;object-fit:cover;display:block;">
+          <img src="images/josh.png" alt="Josh, co-founder of Auto Pals USA" width="400" height="400" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;">
         </div>
         <div class="team-card-content">
           <div class="team-name-row" style="display:block;">
@@ -1396,19 +1328,6 @@
   }, { threshold: 0.6 });
   document.querySelectorAll('.why-stat-val').forEach(el => statObserver.observe(el));
 
-  // Parallax on scroll
-  const slowEls = document.querySelectorAll('.parallax-slow');
-  const midEls  = document.querySelectorAll('.parallax-mid');
-  const heroSection = document.querySelector('.hero');
-
-  window.addEventListener('scroll', () => {
-    const scrollY = window.scrollY;
-    const heroH   = heroSection ? heroSection.offsetHeight : 600;
-    if (scrollY > heroH) return;
-    const pct = scrollY / heroH;
-    slowEls.forEach(el => el.style.transform = `translateY(${scrollY * 0.25}px)`);
-    midEls.forEach(el  => el.style.transform = `translateY(${scrollY * 0.45}px)`);
-  }, { passive: true });
 </script>
 
 <!-- ── AI ASSISTANT WIDGET ── -->

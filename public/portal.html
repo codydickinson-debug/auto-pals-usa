@@ -568,6 +568,35 @@
   /* SECTION DIVIDER */
   .portal-section { margin-bottom: 24px; }
 
+  /* Empty-state block used in the Messages / Documents / Recommendations
+     panels when there's nothing to show yet. Centered iconified card —
+     a deliberate "not unfinished, just empty" presentation. */
+  .portal-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 32px 24px;
+    gap: 4px;
+  }
+  .portal-empty-icon {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--cream);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    color: var(--navy);
+    margin-bottom: 12px;
+  }
+  .portal-empty-title {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    margin-bottom: 4px;
+  }
+  .portal-empty-desc {
+    font-size: 13px; color: var(--text-muted);
+    line-height: 1.6; max-width: 320px;
+  }
+
   /* Unified card look applied to every content card under the hero */
   .progress-card,
   .deposit-receipt,
@@ -882,7 +911,15 @@
     <div class="portal-section-title">Messages</div>
     <div class="progress-card" style="margin-bottom:0;">
       <div class="messages" id="messages-list">
-        <div id="portal-no-messages" style="font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-muted);text-align:center;padding:24px;">No messages yet. Send one below to get started.</div>
+        <div id="portal-no-messages" class="portal-empty">
+          <div class="portal-empty-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </div>
+          <div class="portal-empty-title">No messages yet</div>
+          <div class="portal-empty-desc">Send the team a note below — quickest way to ask anything or share an update on what you're looking for.</div>
+        </div>
       </div>
       <div id="portal-image-preview" style="display:none;margin-top:10px;">
         <div style="position:relative;display:inline-block;">
@@ -914,7 +951,7 @@
       <div id="doc-license-wrap" style="margin-bottom:16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;background:var(--navy-light);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;">🪪</div>
+            <div style="width:36px;height:36px;background:var(--navy-light);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--navy);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2.5"/><line x1="14" y1="10" x2="19" y2="10"/><line x1="14" y1="14" x2="17" y2="14"/></svg></div>
             <div>
               <div style="font-size:14px;font-weight:600;color:var(--text);">Driver's License</div>
               <div style="font-size:12px;color:var(--text-muted);">Front and back — JPG, PNG, or PDF</div>
@@ -924,7 +961,8 @@
         </div>
         <div id="doc-license-preview" style="display:none;margin-bottom:8px;"></div>
         <label style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1.5px dashed var(--border);border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text-muted);transition:all 0.15s;background:var(--cream);" onmouseover="this.style.borderColor='var(--navy)';this.style.color='var(--navy)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
-          ↑ Upload File
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload File
           <input type="file" accept="image/*,.pdf" style="display:none;" onchange="handleDocUpload('license', this)">
         </label>
       </div>
@@ -935,7 +973,7 @@
       <div id="doc-insurance-wrap">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;background:var(--navy-light);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;">📋</div>
+            <div style="width:36px;height:36px;background:var(--navy-light);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--navy);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
             <div>
               <div style="font-size:14px;font-weight:600;color:var(--text);">Insurance Card</div>
               <div style="font-size:12px;color:var(--text-muted);">Current coverage card — JPG, PNG, or PDF</div>
@@ -945,7 +983,8 @@
         </div>
         <div id="doc-insurance-preview" style="display:none;margin-bottom:8px;"></div>
         <label style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1.5px dashed var(--border);border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text-muted);transition:all 0.15s;background:var(--cream);" onmouseover="this.style.borderColor='var(--navy)';this.style.color='var(--navy)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
-          ↑ Upload File
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload File
           <input type="file" accept="image/*,.pdf" style="display:none;" onchange="handleDocUpload('insurance', this)">
         </label>
       </div>
