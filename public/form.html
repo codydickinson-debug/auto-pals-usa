@@ -930,6 +930,24 @@
   }
   .pay-badge.cash    { background: #dcfce7; color: #166534; }
   .pay-badge.finance { background: #dbeafe; color: #1e40af; }
+  /* Call-time pill (date + time pulled from Google Calendar) */
+  .call-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    margin-left: 6px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: system-ui, sans-serif;
+    vertical-align: middle;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  .call-pill.upcoming { background: #e0f2fe; color: #075985; }
+  .call-pill.today    { background: #fef3c7; color: #92400e; }
+  .call-pill.done     { background: #f1f5f9; color: #475569; }
   /* AI Assessment */
 
   .tl-badge {
@@ -2497,6 +2515,32 @@
   // and stays no-op when paymentMethod is absent.
   const SHOW_FINANCING = false;
 
+  // ─── GOOGLE CALENDAR CALL TIMES ───────────────────────────────
+  // Cache of upcoming Sales Call events keyed by attendee email
+  // (lowercased). Populated by fetchCallTimes() on staff login and on
+  // every auto-refresh tick — keeps the call date+time pill next to
+  // each client's name in sync if an event gets rescheduled.
+  let CALL_TIMES = {};
+  let _callTimesInFlight = false;
+  async function fetchCallTimes() {
+    if (_callTimesInFlight) return;
+    if (!sessionStorage.getItem('staff_token')) return;
+    _callTimesInFlight = true;
+    try {
+      const res = await fetch('/api/booking', { headers: dbHeaders() });
+      if (res.status === 401) { handleSessionExpired(); return; }
+      if (!res.ok) return;
+      const data = await res.json();
+      CALL_TIMES = (data && data.calls) || {};
+      // Re-render so existing pills update immediately
+      if (typeof renderDashboard === 'function') renderDashboard();
+    } catch (e) {
+      console.warn('[call-times] fetch failed:', e && e.message);
+    } finally {
+      _callTimesInFlight = false;
+    }
+  }
+
   // ─── STAFF PASSWORD GATE ──────────────────────────────────────
   // Password is validated server-side via /api/auth. Never stored in client code.
 
@@ -2541,6 +2585,7 @@
     document.getElementById('nav-requests').classList.add('active');
     showDashboard();
     loadFromDB();
+    fetchCallTimes();
     startPolling();
     startAutoRefresh();
   }
@@ -2583,6 +2628,7 @@
     showDashboard();
     // Supabase is source of truth; loadFromDB filters out tombstoned (deleted) ids
     loadFromDB();
+    fetchCallTimes();
     startPolling();
     startAutoRefresh();
   } else {
@@ -2797,6 +2843,10 @@
     try {
       const prevIds = new Set(requests.map(r => r.id));
       await loadFromDB();
+      // Refresh call times alongside requests so reschedules + new bookings
+      // (made from other devices) show up without a manual reload. Runs in
+      // parallel — failures are swallowed inside fetchCallTimes().
+      fetchCallTimes();
       const newOnes = requests.filter(r => !prevIds.has(r.id));
       if (newOnes.length) {
         console.log('[auto-refresh] new requests:', newOnes.map(r => r.firstName + ' ' + r.lastName).join(', '));
@@ -3548,13 +3598,28 @@
   // completed an intro call. Helps staff scan the request list and instantly
   // see who's already past the call stage without reading the status pill.
   function callBadge(r) {
-    if (r && r.callCompletedAt) {
+    if (!r) return '';
+    if (r.callCompletedAt) {
       const d = new Date(r.callCompletedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return `<span title="Called on ${d}" style="margin-left:6px;font-size:12px;opacity:0.85;">📞</span>`;
+      return `<span class="call-pill done" title="Call completed ${escapeHtml(d)}">📞 ${escapeHtml(d)}</span>`;
     }
-    if (r && r.bookingConfirmedAt) {
+    // Authoritative call time = Google Calendar (matched by attendee email).
+    // Stays in sync if staff reschedule the event on their phone.
+    const emailKey = r.email ? String(r.email).toLowerCase() : '';
+    const cal = emailKey ? CALL_TIMES[emailKey] : null;
+    if (cal && cal.startIso) {
+      const start = new Date(cal.startIso);
+      const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const eventET = start.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const cls = (eventET === todayET) ? 'today' : 'upcoming';
+      const tip = `Sales call · ${cal.dateLabel} at ${cal.timeLabel}`;
+      return `<span class="call-pill ${cls}" title="${escapeHtml(tip)}">📞 ${escapeHtml(cal.dateLabel)} · ${escapeHtml(cal.timeLabel)}</span>`;
+    }
+    // Legacy fallback — booking row exists but the calendar didn't return a
+    // match (event deleted, attendee email differs, calendar fetch failed).
+    if (r.bookingConfirmedAt) {
       const d = new Date(r.bookingConfirmedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      return `<span title="Call booked ${d}" style="margin-left:6px;font-size:12px;opacity:0.85;">📞</span>`;
+      return `<span class="call-pill upcoming" title="Booked ${escapeHtml(d)} — call time pending calendar sync">📞 booked</span>`;
     }
     return '';
   }

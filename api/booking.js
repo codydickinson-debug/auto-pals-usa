@@ -9,8 +9,84 @@
 
 const sms   = require('./_sms.js');
 const email = require('./email.js');
+const { verifyToken } = require('./auth.js');
 
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
+
+// Today's date in Eastern time, YYYY-MM-DD. Used to enforce the no-same-day
+// booking rule server-side — a naked `new Date()` on Vercel's UTC runtime
+// would let a 9 PM ET booking slip through as "tomorrow UTC".
+function todayET() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(new Date());
+  const y = parts.find(p => p.type === 'year').value;
+  const m = parts.find(p => p.type === 'month').value;
+  const d = parts.find(p => p.type === 'day').value;
+  return `${y}-${m}-${d}`;
+}
+
+// GET — list upcoming "Sales Call" events from the shared Google Calendar,
+// indexed by attendee email (lowercased) so the staff dashboard can render
+// the actual call date+time next to each client's name. Staff-gated.
+async function handleListCalls(req, res) {
+  const token = req.headers['x-staff-token']
+    || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  if (!verifyToken(token)) return res.status(401).json({ error: 'unauthorized' });
+
+  try {
+    const access = await getAccessToken();
+    const timeMin = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(); // include yesterday so just-finished calls still pin
+    const timeMax = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(process.env.GOOGLE_CALENDAR_ID)}/events`
+      + `?singleEvents=true&orderBy=startTime`
+      + `&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`
+      + `&q=${encodeURIComponent('Sales Call')}&maxResults=250`;
+
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${access}` } });
+    if (!r.ok) {
+      const txt = await r.text();
+      console.error('[booking GET] calendar error:', txt);
+      return res.status(502).json({ error: 'calendar_fetch_failed' });
+    }
+    const data = await r.json();
+
+    // Index by attendee email. Keep the EARLIEST upcoming event per email so
+    // a re-booked client shows their next call, not a stale older one.
+    const calls = {};
+    for (const ev of (data.items || [])) {
+      if (ev.status === 'cancelled') continue;
+      const summary = (ev.summary || '').toLowerCase();
+      if (!summary.includes('sales call')) continue;
+      const startRaw = ev.start && (ev.start.dateTime || ev.start.date);
+      if (!startRaw) continue;
+      const start = new Date(startRaw);
+      const startIso = start.toISOString();
+      const dateLabel = start.toLocaleDateString('en-US', {
+        timeZone: 'America/New_York', month: 'short', day: 'numeric'
+      });
+      const timeLabel = start.toLocaleTimeString('en-US', {
+        timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit'
+      });
+
+      for (const a of (ev.attendees || [])) {
+        if (!a.email) continue;
+        if (a.organizer) continue;            // skip the calendar owner
+        if (a.responseStatus === 'declined') continue;
+        const key = String(a.email).toLowerCase();
+        const prior = calls[key];
+        if (!prior || new Date(prior.startIso) > start) {
+          calls[key] = { startIso, dateLabel, timeLabel };
+        }
+      }
+    }
+    return res.status(200).json({ calls, fetchedAt: new Date().toISOString() });
+  } catch (err) {
+    console.error('[booking GET]', err && err.message);
+    return res.status(500).json({ error: err.message || 'internal_error' });
+  }
+}
 
 // Awaitable — callers must Promise.allSettled / await both promises before
 // responding, or Vercel terminates the lambda and kills the in-flight
@@ -139,12 +215,23 @@ async function sendConfirmationEmail(booking) {
 }
 
 module.exports = async function handler(req, res) {
+  if (req.method === 'GET')  return handleListCalls(req, res);
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const booking = req.body;
   const { firstName, lastName, email, date, time } = booking;
   if (!firstName || !lastName || !email || !date || !time) {
     return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  // No same-day bookings. UI already greys today out, but we enforce
+  // server-side too so a direct POST can't slip past. `date` is a
+  // YYYY-MM-DD string from the booking form, so a string compare against
+  // today-in-ET is sufficient.
+  if (typeof date === 'string' && date <= todayET()) {
+    return res.status(400).json({
+      error: "Same-day calls aren't available — please pick tomorrow or later."
+    });
   }
 
   const demoMode = !process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_REFRESH_TOKEN;

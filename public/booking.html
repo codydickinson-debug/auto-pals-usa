@@ -509,6 +509,20 @@
 <script>
   // ── CALENDAR STATE ──────────────────────────────────────────────
   const today = new Date();
+  // Earliest bookable day = tomorrow. Same-day sales calls are blocked so
+  // the team has at least overnight to prep before any new call lands.
+  const earliestBookable = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+  // First bookable WEEKDAY — skips Saturday/Sunday so the calendar can
+  // auto-select a clickable cell on load. (If tomorrow is Sat, jump to Mon;
+  // if Sun, jump to Mon.) Used as the default selection so every visitor —
+  // new or returning — sees "next day" pre-selected as the first option.
+  function firstBookableWeekday() {
+    const d = new Date(earliestBookable.getTime());
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+    return d;
+  }
+
   let viewYear = today.getFullYear();
   let viewMonth = today.getMonth();
   let selectedDate = null;
@@ -549,7 +563,7 @@
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(viewYear, viewMonth, d);
       if (date.getDay() === 0 || date.getDay() === 6) continue;
-      if (date < new Date(today.getFullYear(), today.getMonth(), today.getDate())) continue;
+      if (date < earliestBookable) continue;
       const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       promises.push(loadBookingsForDate(dateStr));
     }
@@ -578,7 +592,8 @@
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(viewYear, viewMonth, d);
       const dow = date.getDay();
-      const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      // Same-day calls are blocked — earliest bookable date is tomorrow.
+      const isBeforeEarliest = date < earliestBookable;
       const isWeekend = dow === 0 || dow === 6;
       const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const isSelected = selectedDate === dateStr;
@@ -589,13 +604,14 @@
       const el = document.createElement('div');
       el.textContent = d;
       el.className = 'cal-day' +
-        (isPast || isWeekend || isFull ? ' disabled' : ' has-slots') +
+        (isBeforeEarliest || isWeekend || isFull ? ' disabled' : ' has-slots') +
         (isSelected ? ' selected' : '') +
         (isToday && !isSelected ? ' today' : '');
 
       if (isFull) el.title = 'Fully booked — choose another day';
+      else if (isToday) el.title = "Same-day calls aren't available — please pick tomorrow or later.";
 
-      if (!isPast && !isWeekend && !isFull) {
+      if (!isBeforeEarliest && !isWeekend && !isFull) {
         el.onclick = () => selectDate(dateStr, date);
       }
       grid.appendChild(el);
@@ -773,10 +789,29 @@
 
   function goBack() { showStep(1); }
 
+  // Auto-pick the first bookable weekday so every visitor lands with a
+  // selected date + visible time slots — no extra click required. Runs once
+  // after preloadMonthBookings resolves so the booked-slot data is ready.
+  // If the first bookable day falls in a later month than today (e.g. last
+  // day of the month, weekend), advance viewMonth so the cell is visible.
+  async function autoSelectFirstBookable() {
+    const d = firstBookableWeekday();
+    if (d.getFullYear() !== viewYear || d.getMonth() !== viewMonth) {
+      viewYear = d.getFullYear();
+      viewMonth = d.getMonth();
+      await preloadMonthBookings();
+    }
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    // Skip auto-select if that day is already fully booked — let the user
+    // pick another visible day rather than land on a useless selection.
+    if ((DAY_COUNTS[dateStr] || 0) >= MAX_PER_DAY) return;
+    await selectDate(dateStr, d);
+  }
+
   // Init — gate the booking calendar on the presence of a portal code.
   // Anyone hitting /booking.html directly (Google, deep link, etc.) without
   // having come through the form/portal flow will see the gate UI instead.
-  (function gateOrInit() {
+  (async function gateOrInit() {
     const portalCode = (sessionStorage.getItem('portal_code') || '').trim();
     const gate = document.getElementById('booking-gate');
     const content = document.getElementById('booking-content');
@@ -788,7 +823,8 @@
     if (gate) gate.style.display = 'none';
     if (content) content.style.display = '';  // clears inline none; CSS class restores grid layout
     renderCalendar();
-    preloadMonthBookings();
+    await preloadMonthBookings();
+    await autoSelectFirstBookable();
   })();
 </script>
 </body>
