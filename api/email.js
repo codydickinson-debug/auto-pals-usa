@@ -546,6 +546,32 @@ ${d.portalCode ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Portal cod
 ${footer(d)}`)
   }),
 
+  // Staff fan-out the moment a client uploads a document (driver's license,
+  // insurance, etc.) in their portal. The file rides along as a SendGrid
+  // attachment — caller supplies `data.attachments` with the base64 blob.
+  staffClientDocumentUploaded: (d) => ({
+    subject: `📎 ${d.docLabel || 'Document'} uploaded — ${d.clientName || 'client'}`,
+    html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:8px;">${d.docLabel || 'Document'} uploaded</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 18px;">${d.clientName || 'A client'} just uploaded their ${(d.docLabel || 'document').toLowerCase()} in the portal. The file is attached to this email.</p>
+</td></tr>
+<tr><td style="padding:0 40px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:18px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;">
+<tr><td style="padding:6px 0;color:${BRAND.muted};width:38%;">Client</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientName || '—'}</td></tr>
+${d.clientEmail ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Email</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientEmail}</td></tr>` : ''}
+${d.clientPhone ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Phone</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientPhone}</td></tr>` : ''}
+<tr><td style="padding:6px 0;color:${BRAND.muted};">Document</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.docLabel || 'Document'}</td></tr>
+${d.filename ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">File</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;font-size:12px;">${d.filename}</td></tr>` : ''}
+${d.fileSizeKb ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Size</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.fileSizeKb} KB</td></tr>` : ''}
+${d.portalCode ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Portal code</td><td style="padding:6px 0;color:${BRAND.navy};font-weight:700;text-align:right;font-size:12px;">${d.portalCode}</td></tr>` : ''}
+</table>
+</td></tr></table>
+</td></tr>
+${footer(d)}`)
+  }),
+
   // Staff fan-out the moment a client books an intro call. Pairs with the
   // staff_booking_made SMS — and is the "always-arrives" half until A2P
   // approval lets the SMS flow through carriers.
@@ -692,7 +718,8 @@ const STAFF_TEMPLATES = new Set([
   'staffCallBooked',
   'staffDepositReceived',
   'staffPortalMessage',
-  'staffContractSigned'
+  'staffContractSigned',
+  'staffClientDocumentUploaded'
 ]);
 
 // Recipient resolution for staff templates. Anything that lands here is
@@ -750,21 +777,32 @@ function logAttempt(row) {
   });
 }
 
-async function sendOnce({ apiKey, fromEmail, replyTo, subject, html, plainText, personalizations }) {
+async function sendOnce({ apiKey, fromEmail, replyTo, subject, html, plainText, personalizations, attachments }) {
+  const payload = {
+    personalizations,
+    from:     { email: fromEmail, name: 'Alex & Josh — Auto Pals USA' },
+    reply_to: { email: replyTo,   name: 'Alex & Josh — Auto Pals USA' },
+    subject,
+    content: [
+      { type: 'text/plain', value: plainText },
+      { type: 'text/html',  value: html }
+    ]
+  };
+  // SendGrid attachments: { content (base64), filename, type, disposition }.
+  // Only attach when we actually have data — empty array confuses the API.
+  if (Array.isArray(attachments) && attachments.length) {
+    payload.attachments = attachments.map(a => ({
+      content:     a.content,
+      filename:    a.filename || 'attachment',
+      type:        a.type || 'application/octet-stream',
+      disposition: a.disposition || 'attachment'
+    }));
+  }
   const r = await fetchWithTimeout('https://api.sendgrid.com/v3/mail/send', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      personalizations,
-      from:     { email: fromEmail, name: 'Alex & Josh — Auto Pals USA' },
-      reply_to: { email: replyTo,   name: 'Alex & Josh — Auto Pals USA' },
-      subject,
-      content: [
-        { type: 'text/plain', value: plainText },
-        { type: 'text/html',  value: html }
-      ]
-    })
-  }, 10000);
+    body: JSON.stringify(payload)
+  }, 15000);  // bumped from 10s — base64 attachments make the body larger
   if (r.ok) return { ok: true, status: r.status };
   const body = await r.text().catch(() => '');
   return { ok: false, status: r.status, body: body.slice(0, 400) };
@@ -828,7 +866,7 @@ async function sendTemplate(type, data) {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     let result;
     try {
-      result = await sendOnce({ apiKey, fromEmail, replyTo, subject, html, plainText, personalizations });
+      result = await sendOnce({ apiKey, fromEmail, replyTo, subject, html, plainText, personalizations, attachments: payload.attachments });
     } catch (err) {
       lastErr = (err && err.message) || String(err);
       console.error(`[EMAIL] attempt ${attempt}/${MAX_ATTEMPTS} fetch failed for ${type}:`, lastErr);

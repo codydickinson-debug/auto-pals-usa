@@ -2104,20 +2104,108 @@
   }
 
   // ── DOCUMENTS ───────────────────────────────────────────────────
-  const docUploads = {};
+  // Client uploads (driver's license, insurance proof, ...) get POSTed to
+  // /api/portal-sign with action='upload-document'. The server validates the
+  // portal code, fans the file out to staff as an email attachment via
+  // SendGrid, and returns success. Nothing is stored long-term client-side
+  // — the email IS the delivery mechanism.
 
-  function handleDocUpload(key, input) {
+  const MAX_DOC_BYTES = 3 * 1024 * 1024;  // mirrors api/portal-sign MAX_UPLOAD_BYTES
+  const ALLOWED_DOC_MIME = new Set([
+    'image/jpeg', 'image/jpg', 'image/png', 'image/heic', 'image/heif',
+    'image/webp', 'application/pdf'
+  ]);
+
+  // Read a File as a base64 string (no data:-URL prefix).
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const r = String(reader.result || '');
+        const comma = r.indexOf(',');
+        resolve(comma >= 0 ? r.slice(comma + 1) : r);
+      };
+      reader.onerror = () => reject(reader.error || new Error('read_failed'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handleDocUpload(key, input) {
     const file = input.files[0];
     if (!file) return;
-    const statusEl = document.getElementById('doc-' + key + '-status');
+    const statusEl  = document.getElementById('doc-' + key + '-status');
     const previewEl = document.getElementById('doc-' + key + '-preview');
-    // Store file name
-    docUploads[key] = { name: file.name, size: file.size, type: file.type };
-    // Update status badge
-    statusEl.textContent = '✓ Uploaded';
-    statusEl.style.color = 'var(--green)';
-    // Show preview
-    if (file.type.startsWith('image/')) {
+    const setStatus = (text, color) => {
+      if (!statusEl) return;
+      statusEl.textContent = text;
+      statusEl.style.color = color || 'var(--text-muted)';
+    };
+
+    // Client-side validation mirrors the server allowlist so a bad file
+    // fails fast without round-tripping 3MB of base64.
+    const mime = (file.type || '').toLowerCase();
+    if (!ALLOWED_DOC_MIME.has(mime)) {
+      setStatus('Unsupported file type', 'var(--red)');
+      input.value = '';
+      return;
+    }
+    if (file.size > MAX_DOC_BYTES) {
+      setStatus(`File too large (max ${(MAX_DOC_BYTES/1024/1024).toFixed(0)} MB)`, 'var(--red)');
+      input.value = '';
+      return;
+    }
+
+    const portalCode = (sessionStorage.getItem('portal_code') || '').trim().toUpperCase();
+    if (!portalCode) {
+      setStatus('Please log in again', 'var(--red)');
+      return;
+    }
+
+    setStatus('Uploading…', 'var(--text-muted)');
+
+    let fileB64;
+    try {
+      fileB64 = await fileToBase64(file);
+    } catch (err) {
+      console.error('[doc-upload] read error', err);
+      setStatus('Could not read file', 'var(--red)');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/portal-sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'upload-document',
+          portalCode,
+          docKey: key,
+          filename: file.name,
+          mimeType: mime,
+          fileBase64: fileB64
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        const reason = data && data.error;
+        const msg = reason === 'file_too_large' ? 'File too large'
+                  : reason === 'invalid_file_type' ? 'Unsupported file type'
+                  : reason === 'not_found' ? 'Portal session expired'
+                  : 'Upload failed';
+        setStatus(msg, 'var(--red)');
+        return;
+      }
+    } catch (err) {
+      console.error('[doc-upload] fetch error', err);
+      setStatus('Upload failed — check connection', 'var(--red)');
+      return;
+    }
+
+    // Success — update UI to mirror the previous look (preview pill).
+    setStatus('✓ Sent to our team', 'var(--green)');
+    const sizeKb = (file.size / 1024).toFixed(1);
+    if (mime.startsWith('image/')) {
+      // For local preview only; we don't keep this anywhere off-screen.
       const reader = new FileReader();
       reader.onload = e => {
         previewEl.innerHTML = `
@@ -2125,9 +2213,8 @@
             <img src="${e.target.result}" style="width:48px;height:32px;object-fit:cover;border-radius:4px;border:1px solid var(--border);">
             <div>
               <div style="font-size:12px;font-weight:600;color:var(--green);">${file.name}</div>
-              <div style="font-size:11px;color:var(--text-muted);">${(file.size/1024).toFixed(1)} KB</div>
+              <div style="font-size:11px;color:var(--text-muted);">${sizeKb} KB · sent to our team</div>
             </div>
-            <button onclick="removeDoc('${key}')" style="margin-left:auto;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;line-height:1;" title="Remove">✕</button>
           </div>`;
         previewEl.style.display = 'block';
       };
@@ -2138,16 +2225,18 @@
           <div style="font-size:20px;">📄</div>
           <div>
             <div style="font-size:12px;font-weight:600;color:var(--green);">${file.name}</div>
-            <div style="font-size:11px;color:var(--text-muted);">${(file.size/1024).toFixed(1)} KB</div>
+            <div style="font-size:11px;color:var(--text-muted);">${sizeKb} KB · sent to our team</div>
           </div>
-          <button onclick="removeDoc('${key}')" style="margin-left:auto;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;line-height:1;" title="Remove">✕</button>
         </div>`;
       previewEl.style.display = 'block';
     }
+    // Allow re-uploads (e.g. user wants to send a clearer photo) by clearing
+    // the input value so onchange fires again for the same filename.
+    input.value = '';
   }
 
   function removeDoc(key) {
-    delete docUploads[key];
+    // Visual-only reset — server-side, the staff already received the email.
     const status = document.getElementById('doc-' + key + '-status');
     if (status) {
       status.textContent = 'Not uploaded';

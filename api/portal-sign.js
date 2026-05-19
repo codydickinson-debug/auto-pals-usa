@@ -43,6 +43,110 @@ async function sb(method, path, body) {
   return { status: res.status, ok: res.ok, body: text ? (() => { try { return JSON.parse(text); } catch { return text; } })() : null };
 }
 
+// File-size ceiling for client-uploaded documents. Two binding limits:
+//   • Vercel Hobby caps each function request body at ~4.5MB.
+//   • base64 inflates the file ~33% on the wire.
+// So 3MB of raw file ≈ 4MB base64 + JSON overhead, comfortably under the
+// platform ceiling. Plenty for a phone-snapped driver's license photo.
+const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
+
+// Friendly labels for the doc keys the portal can send. New keys can be added
+// here without touching portal.html or the email template.
+const DOC_LABELS = {
+  license:   "Driver's License",
+  insurance: 'Proof of Insurance'
+};
+
+// MIME allowlist — anything outside this gets rejected. PDF + common image
+// formats covers everything Apple/Android photo libraries produce.
+const ALLOWED_MIME = new Set([
+  'image/jpeg', 'image/jpg', 'image/png', 'image/heic', 'image/heif',
+  'image/webp', 'application/pdf'
+]);
+
+async function handleDocumentUpload(req, res, body) {
+  const portalCode = String(body.portalCode || '').trim().toUpperCase();
+  const docKey     = String(body.docKey || '').trim().toLowerCase();
+  const filename   = String(body.filename || '').trim().slice(0, 200);
+  const mimeType   = String(body.mimeType || '').trim().toLowerCase();
+  const fileB64    = String(body.fileBase64 || '');
+
+  if (!portalCode) return res.status(400).json({ error: 'missing_portal_code' });
+  if (!DOC_LABELS[docKey]) return res.status(400).json({ error: 'invalid_doc_key' });
+  if (!filename) return res.status(400).json({ error: 'missing_filename' });
+  if (!ALLOWED_MIME.has(mimeType)) return res.status(400).json({ error: 'invalid_file_type' });
+  if (!fileB64) return res.status(400).json({ error: 'missing_file' });
+
+  // base64 length × 3/4 ≈ raw byte count (close enough for size gating).
+  const approxBytes = Math.floor(fileB64.length * 3 / 4);
+  if (approxBytes > MAX_UPLOAD_BYTES) {
+    return res.status(413).json({ error: 'file_too_large', maxBytes: MAX_UPLOAD_BYTES });
+  }
+
+  // Look up the request by portal_code. Same auth model as the sign action —
+  // no portal code, no upload.
+  let row;
+  try {
+    const lookup = await sb('GET',
+      `requests?portal_code=eq.${encodeURIComponent(portalCode)}`
+      + `&select=id,first_name,last_name,email,phone,make,model,year_from,year_to,status`
+      + `&limit=1`);
+    if (!lookup.ok || !Array.isArray(lookup.body) || !lookup.body.length) {
+      return res.status(404).json({ error: 'not_found' });
+    }
+    row = lookup.body[0];
+  } catch (err) {
+    console.error('[portal-upload] lookup error', err && err.message);
+    return res.status(500).json({ error: 'lookup_failed' });
+  }
+
+  const docLabel = DOC_LABELS[docKey];
+  const clientName = `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'A client';
+
+  // Fire the staff email with the file as an attachment. sendTemplate is
+  // synchronous-ish (single attempt + retries inside) and we await it so the
+  // portal sees a real success/failure response.
+  try {
+    const result = await email.sendTemplate('staffClientDocumentUploaded', {
+      clientName,
+      clientEmail: row.email,
+      clientPhone: row.phone,
+      portalCode,
+      docKey,
+      docLabel,
+      filename,
+      fileSizeKb: Math.max(1, Math.round(approxBytes / 1024)),
+      requestId: row.id,
+      attachments: [{
+        content:  fileB64,
+        filename, // SendGrid uses this as the visible attachment name
+        type:     mimeType,
+        disposition: 'attachment'
+      }]
+    });
+    if (!result || !result.ok) {
+      console.error('[portal-upload] email send failed', result);
+      return res.status(502).json({ error: 'email_send_failed' });
+    }
+  } catch (err) {
+    console.error('[portal-upload] email error', err && err.message);
+    return res.status(500).json({ error: 'email_error' });
+  }
+
+  // Best-effort staff SMS — same pattern as portal messages. Failure here
+  // doesn't block the success response; the email is the always-arrives half.
+  try {
+    await sms.send('staff_portal_message', { clientName: `${clientName} — uploaded ${docLabel.toLowerCase()}` });
+  } catch (e) { /* swallow */ }
+
+  return res.status(200).json({
+    ok: true,
+    docLabel,
+    filename,
+    fileSizeKb: Math.max(1, Math.round(approxBytes / 1024))
+  });
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -51,6 +155,15 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const body = req.body || {};
+
+  // Action dispatch — keeps the route name backward-compatible while letting
+  // the portal use this endpoint for multiple portal-code-authed operations
+  // (contract sign, document upload, …). Default 'sign' so older callers that
+  // don't set `action` keep working unchanged.
+  const action = String(body.action || 'sign').trim();
+  if (action === 'upload-document') return handleDocumentUpload(req, res, body);
+  if (action !== 'sign') return res.status(400).json({ error: 'unknown_action' });
+
   const portalCode  = String(body.portalCode || '').trim().toUpperCase();
   const sigName     = String(body.signatureName || '').trim();
   const sigIp       = String(body.signatureIp || 'unknown').slice(0, 64);
