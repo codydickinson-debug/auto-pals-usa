@@ -23,6 +23,15 @@
     --radius: 10px;
     --shadow: 0 2px 16px rgba(15,37,87,0.10);
     --shadow-lg: 0 8px 40px rgba(15,37,87,0.14);
+    --border-subtle: rgba(15,37,87,0.08);
+    --shadow-card:
+      0 1px 1px rgba(15,37,87,0.04),
+      0 2px 4px rgba(15,37,87,0.04),
+      0 8px 24px rgba(15,37,87,0.06);
+    --shadow-card-hover:
+      0 1px 1px rgba(15,37,87,0.05),
+      0 4px 8px rgba(15,37,87,0.05),
+      0 14px 32px rgba(15,37,87,0.10);
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   }
@@ -146,9 +155,9 @@
   /* RIGHT — booking panel */
   .booking-panel {
     background: var(--white);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-subtle);
     border-radius: 20px;
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-card);
     overflow: hidden;
   }
   /* Steps cross-fade with a small slide as the user advances. transition-behavior:
@@ -273,7 +282,7 @@
   .confirm-subtitle { font-size: 13px; color: var(--text-muted); }
   .selected-slot-card {
     background: var(--navy-light);
-    border: 1px solid var(--border);
+    border: 1px solid rgba(15,37,87,0.10);
     border-radius: var(--radius);
     padding: 16px 20px;
     margin-bottom: 24px;
@@ -399,7 +408,7 @@
   }
   .confirmed-desc { font-size: 14px; color: var(--text-muted); line-height: 1.7; max-width: 380px; margin: 0 auto 28px; }
   .confirmed-card {
-    background: var(--cream); border: 1px solid var(--border);
+    background: var(--cream); border: 1px solid var(--border-subtle);
     border-radius: var(--radius); padding: 20px 24px;
     display: inline-block; text-align: left; margin-bottom: 24px;
   }

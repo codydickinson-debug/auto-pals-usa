@@ -6,3 +6,7 @@ node_modules
 .env.*
 !.env.example
 .env*.local
+
+# Claude Code session metadata — local per-machine state, not for git
+.claude/
+.tmp-*

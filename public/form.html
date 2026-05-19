@@ -35,6 +35,11 @@
     --radius: 8px;
     --shadow: 0 1px 4px rgba(15,37,87,0.10);
     --shadow-md: 0 4px 16px rgba(15,37,87,0.12);
+    --border-subtle: rgba(15,37,87,0.08);
+    --shadow-card:
+      0 1px 1px rgba(15,37,87,0.04),
+      0 2px 4px rgba(15,37,87,0.04),
+      0 8px 24px rgba(15,37,87,0.05);
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   }
@@ -165,11 +170,11 @@
 
   .form-card {
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-subtle);
     border-top: 3px solid var(--accent-bright);
     border-radius: var(--radius);
     padding: 32px;
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-card);
   }
 
   .form-section-title {
@@ -507,9 +512,9 @@
 
   .requests-table {
     background: var(--surface);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-subtle);
     border-radius: var(--radius);
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow-card);
     overflow: hidden;
   }
   table { width: 100%; border-collapse: collapse; font-family: system-ui, sans-serif; }

@@ -75,6 +75,19 @@
     --radius: 10px;
     --shadow: 0 2px 16px rgba(15,37,87,0.10);
     --shadow-lg: 0 8px 40px rgba(15,37,87,0.14);
+    /* Subtle navy-tinted border for cards — much less aggressive than the
+       cream --border (which now stays reserved for actual dividers / table
+       rows / inputs where the line needs to read). Pairs with --shadow-card
+       for "elevation over outline" — shadows do the lifting now. */
+    --border-subtle: rgba(15,37,87,0.08);
+    --shadow-card:
+      0 1px 1px rgba(15,37,87,0.04),
+      0 2px 4px rgba(15,37,87,0.04),
+      0 8px 24px rgba(15,37,87,0.06);
+    --shadow-card-hover:
+      0 1px 1px rgba(15,37,87,0.05),
+      0 4px 8px rgba(15,37,87,0.05),
+      0 14px 32px rgba(15,37,87,0.10);
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   }
@@ -504,10 +517,10 @@
   }
   .step-card {
     background: var(--white);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-subtle);
     border-radius: 16px;
     padding: 36px 28px;
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow-card);
     position: relative;
     transition: transform 250ms var(--ease-out), box-shadow 250ms var(--ease-out);
     overflow: hidden;
@@ -523,7 +536,7 @@
     transition: transform 300ms var(--ease-out);
   }
   @media (hover: hover) and (pointer: fine) {
-    .step-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); }
+    .step-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-card-hover); }
     .step-card:hover::after { transform: scaleX(1); }
   }
   .step-card-num {
@@ -630,10 +643,10 @@
   .cta-section .section-sub { margin: 0 auto 40px; }
   .cta-card {
     background: var(--white);
-    border: 1px solid var(--border);
+    border: 1px solid var(--border-subtle);
     border-top: 4px solid var(--navy);
     border-radius: 20px; padding: 48px 40px;
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-card);
     position: relative; overflow: hidden;
   }
   .cta-card::before {
