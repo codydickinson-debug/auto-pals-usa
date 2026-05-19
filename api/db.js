@@ -342,6 +342,7 @@ module.exports = async function handler(req, res) {
           rejection_reason:  b.rejectionReason || '',
           call_completed_at:       b.callCompletedAt,
           booking_confirmed_at:    b.bookingConfirmedAt,
+          dormant_at:              b.dormantAt,
           booking_reminders_sent:  b.bookingRemindersSent,
           deposit_reminders_sent:  b.depositRemindersSent,
           contract_signed_at:         b.contractSignedAt,

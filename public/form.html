@@ -2749,6 +2749,10 @@
       clientRecs: r.client_recs, rejectionReason: r.rejection_reason,
       callCompletedAt: r.call_completed_at,
       bookingConfirmedAt: r.booking_confirmed_at,
+      // When the request was last flipped to status='dormant'. Used by the
+      // Messages tab to hide stale dormant threads until either side sends
+      // a new message (msg.ts > dormantAt → thread re-appears).
+      dormantAt: r.dormant_at || null,
       bookingRemindersSent: r.booking_reminders_sent || [],
       depositRemindersSent: r.deposit_reminders_sent || [],
       contractSignedAt: r.contract_signed_at,
@@ -2900,6 +2904,19 @@
     if (!isLocal) dbPut('requests', { id: r.id, ...r });
   }
 
+  // Stamp / clear r.dormantAt on the status transition. Called from each
+  // place a request's status can change so the Messages-tab filter has a
+  // reliable "went dormant on" timestamp. Setting dormantAt = null on the
+  // way out ensures a future re-dormant gets a fresh stamp.
+  function stampDormantTransition(r, newStatus, prevStatus) {
+    if (newStatus === prevStatus) return;
+    if (newStatus === 'dormant') {
+      r.dormantAt = new Date().toISOString();
+    } else if (prevStatus === 'dormant') {
+      r.dormantAt = null;
+    }
+  }
+
   async function hardDelete(id) {
     deletedIds.add(id);
     requests = requests.filter(r => r.id !== id);
@@ -2981,6 +2998,18 @@
     if (msgFilter === 'archived') eligible = requests.filter(r => doneStatuses.includes(r.status));
     if (msgFilter === 'unread')   eligible = requests.filter(r => getMessages(r.id).some(m => m.from === 'client' && !m.read));
     if (msgFilter === 'all')      eligible = requests.filter(r => !doneStatuses.includes(r.status));
+
+    // Hide dormant threads from every Messages tab UNTIL either side sends a
+    // new message. Re-appears the moment a message lands with ts > dormantAt
+    // (client reply OR staff outreach — both unhide). Threads with status =
+    // dormant but no dormantAt timestamp (legacy / pre-v136) stay visible so
+    // we don't accidentally bury anything mid-migration.
+    eligible = eligible.filter(r => {
+      if (r.status !== 'dormant') return true;
+      if (!r.dormantAt) return true;
+      const msgs = getMessages(r.id);
+      return msgs.some(m => m && m.ts && m.ts > r.dormantAt);
+    });
 
     // Search filter
     const filtered = search
@@ -3967,6 +3996,7 @@
     }
 
     r.status = newStatus;
+    stampDormantTransition(r, newStatus, prevStatus);
     save();
     if (typeof syncRequest === 'function') syncRequest(r);
 
@@ -4105,6 +4135,7 @@
     if (r) {
       const prevStatus = r.status;
       r.status = status;
+      stampDormantTransition(r, status, prevStatus);
       save();
       dbPut('requests', { id: r.id, ...r });
       renderDashboard();
@@ -4463,6 +4494,7 @@
     if (!r) return;
     const prevStatus = r.status;
     r.status = newStatus;
+    stampDormantTransition(r, newStatus, prevStatus);
     save();
     syncRequest(r);
     renderDashboard();
