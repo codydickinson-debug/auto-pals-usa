@@ -211,6 +211,7 @@
     border-radius: 24px;
     transform: rotate(15deg);
     pointer-events: none;
+    animation: float-a 14s ease-in-out infinite;
   }
   .hero-shape-2 {
     position: absolute;
@@ -219,6 +220,7 @@
     border: 1px solid rgba(245,240,232,0.05);
     border-radius: 50%;
     pointer-events: none;
+    animation: float-b 18s ease-in-out infinite;
   }
   .hero-shape-3 {
     position: absolute;
@@ -228,6 +230,19 @@
     border-radius: 12px;
     transform: rotate(30deg);
     pointer-events: none;
+    animation: float-c 11s ease-in-out infinite;
+  }
+  @keyframes float-a {
+    0%, 100% { transform: rotate(15deg) translateY(0); }
+    50%      { transform: rotate(18deg) translateY(-14px); }
+  }
+  @keyframes float-b {
+    0%, 100% { transform: translateY(0) translateX(0); }
+    50%      { transform: translateY(10px) translateX(8px); }
+  }
+  @keyframes float-c {
+    0%, 100% { transform: rotate(30deg) translateY(0); }
+    50%      { transform: rotate(36deg) translateY(-8px); }
   }
   /* Wave bottom */
   .hero::after {
@@ -1263,6 +1278,37 @@
     });
   }, { threshold: 0.1 });
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // Count-up on stat numbers — fires once when each .why-stat-val enters view.
+  // Parses the numeric prefix ("120pt" -> 120 + "pt"), counts from 0 → target
+  // with ease-out, then locks. Respects prefers-reduced-motion.
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const statObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      const original = el.textContent.trim();
+      const m = original.match(/^(\d+(?:\.\d+)?)(.*)$/);
+      if (!m) { statObserver.unobserve(el); return; }
+      const target = parseFloat(m[1]);
+      const suffix = m[2] || '';
+      const isInt = !m[1].includes('.');
+      if (reduceMotion) { statObserver.unobserve(el); return; }
+      const duration = 1200;
+      const start = performance.now();
+      el.textContent = (isInt ? '0' : '0.0') + suffix;
+      function tick(now) {
+        const t = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+        const current = target * eased;
+        el.textContent = (isInt ? Math.round(current) : current.toFixed(1)) + suffix;
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+      statObserver.unobserve(el);
+    });
+  }, { threshold: 0.6 });
+  document.querySelectorAll('.why-stat-val').forEach(el => statObserver.observe(el));
 
   // Parallax on scroll
   const slowEls = document.querySelectorAll('.parallax-slow');

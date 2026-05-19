@@ -132,8 +132,27 @@
     box-shadow: var(--shadow-lg);
     overflow: hidden;
   }
-  .booking-step { display: none; }
-  .booking-step.active { display: block; }
+  /* Steps cross-fade with a small slide as the user advances. transition-behavior:
+     allow-discrete + @starting-style lets us animate around the display flip
+     without JS — keyframes would restart from zero on rapid back/forward. */
+  .booking-step {
+    display: none;
+    opacity: 0;
+    transform: translateY(8px);
+    transition:
+      opacity 320ms var(--ease-out),
+      transform 320ms var(--ease-out),
+      display 320ms var(--ease-out) allow-discrete;
+  }
+  .booking-step.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+    @starting-style {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
 
   /* Step 1 — Date picker */
   .cal-header {
@@ -290,6 +309,48 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 32px; margin: 0 auto 20px;
     border: 1px solid #a7f3d0;
+    position: relative;
+    color: var(--green);
+  }
+  /* Confirmed icon "bloom": fires every time step-3 becomes active. The
+     icon scales in with a soft over-bounce, and a ring expands outward
+     once and fades. Both are one-shots — Emil's rule: rare events can
+     get a little delight. */
+  .booking-step.active .confirmed-icon {
+    animation: confirmedBloom 520ms var(--ease-out) both;
+  }
+  .booking-step.active .confirmed-icon::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid #a7f3d0;
+    animation: confirmedRing 900ms var(--ease-out) both;
+  }
+  @keyframes confirmedBloom {
+    0%   { transform: scale(0.5); opacity: 0; }
+    65%  { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1);   opacity: 1; }
+  }
+  @keyframes confirmedRing {
+    0%   { transform: scale(1);   opacity: 0.9; }
+    100% { transform: scale(1.6); opacity: 0;   }
+  }
+  /* Confirmation details fade up after the icon lands. */
+  .booking-step.active .confirmed-title,
+  .booking-step.active .confirmed-desc,
+  .booking-step.active .confirmed-card,
+  .booking-step.active .confirmed-home {
+    opacity: 0;
+    transform: translateY(8px);
+    animation: confirmedFadeUp 400ms var(--ease-out) forwards;
+  }
+  .booking-step.active .confirmed-title { animation-delay: 240ms; }
+  .booking-step.active .confirmed-desc  { animation-delay: 310ms; }
+  .booking-step.active .confirmed-card  { animation-delay: 380ms; }
+  .booking-step.active .confirmed-home  { animation-delay: 450ms; }
+  @keyframes confirmedFadeUp {
+    to { opacity: 1; transform: translateY(0); }
   }
   .confirmed-title {
     font-family: 'Playfair Display', serif;

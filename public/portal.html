@@ -220,11 +220,21 @@
     box-shadow: 0 4px 12px rgba(15,37,87,0.25);
   }
   /* Active step matches done — solid navy with cream content. The 5px glow
-     ring + scale stays so it's still distinguishable as the current stage. */
+     ring + scale stays so it's still distinguishable as the current stage.
+     A subtle ring pulse runs continuously so the current stage feels "alive"
+     and draws the eye on first glance. Pauses for reduced-motion users. */
   .hero-step.active .hero-step-circle {
     background: var(--navy); border-color: var(--navy); color: var(--cream);
-    box-shadow: 0 0 0 5px rgba(15,37,87,0.18), 0 4px 12px rgba(15,37,87,0.25);
     transform: scale(1.08);
+    animation: portalStepPulse 2.6s var(--ease-in-out) infinite;
+  }
+  @keyframes portalStepPulse {
+    0%, 100% {
+      box-shadow: 0 0 0 5px rgba(15,37,87,0.18), 0 4px 12px rgba(15,37,87,0.25);
+    }
+    50% {
+      box-shadow: 0 0 0 9px rgba(15,37,87,0.08), 0 4px 16px rgba(15,37,87,0.32);
+    }
   }
   .hero-step-label {
     font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
