@@ -33,19 +33,7 @@
     --radius: 10px;
     --shadow: 0 2px 16px rgba(15,37,87,0.10);
     --shadow-lg: 0 8px 40px rgba(15,37,87,0.14);
-    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   }
-
-  @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      transition-duration: 0.01ms !important;
-      scroll-behavior: auto !important;
-    }
-  }
-
   body {
     font-family: 'DM Sans', system-ui, sans-serif;
     background: var(--cream);
@@ -74,22 +62,16 @@
   .nav-link {
     padding: 7px 14px; border-radius: 8px;
     font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.65);
-    text-decoration: none; transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out), transform 150ms var(--ease-out);
+    text-decoration: none; transition: all 0.15s;
   }
-  @media (hover: hover) and (pointer: fine) {
-    .nav-link:hover { background: rgba(255,255,255,0.08); color: #fff; }
-  }
-  .nav-link:active { transform: scale(0.97); }
+  .nav-link:hover { background: rgba(255,255,255,0.08); color: #fff; }
   .nav-cta {
     margin-left: 8px; padding: 8px 18px;
     background: var(--cream); color: var(--navy);
     border-radius: 8px; font-size: 14px; font-weight: 700;
-    text-decoration: none; transition: background-color 150ms var(--ease-out), transform 150ms var(--ease-out);
+    text-decoration: none; transition: all 0.15s;
   }
-  @media (hover: hover) and (pointer: fine) {
-    .nav-cta:hover { background: var(--cream-dark); transform: translateY(-1px); }
-  }
-  .nav-cta:active { transform: scale(0.97); }
+  .nav-cta:hover { background: var(--cream-dark); transform: translateY(-1px); }
 
   /* LAYOUT */
   .portal-wrap {
@@ -140,15 +122,12 @@
     padding: 12px 22px; background: var(--navy); color: var(--cream);
     border-radius: 10px; font-family: 'DM Sans',sans-serif;
     font-size: 13px; font-weight: 700; text-decoration: none;
-    transition: transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+    transition: transform 0.15s, box-shadow 0.15s;
     flex-shrink: 0; align-self: center;
     white-space: nowrap;
     box-shadow: 0 4px 14px rgba(15,37,87,0.18);
   }
-  @media (hover: hover) and (pointer: fine) {
-    .hero-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(15,37,87,0.28); }
-  }
-  .hero-cta:active { transform: scale(0.97); }
+  .hero-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(15,37,87,0.28); }
 
   .hero-status {
     display: flex; align-items: flex-start; gap: 14px;
@@ -192,7 +171,7 @@
     width: 0;
     background: linear-gradient(90deg, var(--navy) 0%, #1a3470 100%);
     border-radius: 2px;
-    transition: width 450ms var(--ease-out);
+    transition: width 0.45s ease-out;
   }
   /* Skip animation on initial paint so the bar lands at the right position
      instead of always appearing to "load in". The .ready class enables
@@ -212,7 +191,7 @@
     border: 2px solid var(--border);
     color: var(--text-muted);
     font-family: 'DM Sans',sans-serif; font-size: 14px; font-weight: 700;
-    transition: transform 250ms var(--ease-out), background-color 250ms var(--ease-out), border-color 250ms var(--ease-out), color 250ms var(--ease-out), box-shadow 250ms var(--ease-out);
+    transition: all 0.25s;
     box-shadow: 0 1px 3px rgba(15,37,87,0.06);
   }
   .hero-step.done .hero-step-circle {
@@ -406,7 +385,7 @@
     position: relative; z-index: 1;
     flex-shrink: 0;
     margin-bottom: 10px;
-    transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out), box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out);
+    transition: all 0.2s;
   }
   .progress-step.done .step-circle   { background: var(--navy); color: var(--cream); }
   .progress-step.active .step-circle { background: var(--navy); color: var(--cream); box-shadow: 0 0 0 4px rgba(15,37,87,0.15); }
@@ -568,13 +547,9 @@
   .demo-btn {
     padding: 4px 12px; border-radius: 99px; border: 1px solid rgba(255,255,255,0.2);
     background: none; color: rgba(255,255,255,0.6); font-size: 11px; font-weight: 600;
-    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background-color 120ms var(--ease-out), color 120ms var(--ease-out), transform 120ms var(--ease-out);
+    cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.12s;
   }
-  .demo-btn.active { background: rgba(255,255,255,0.12); color: #fff; }
-  @media (hover: hover) and (pointer: fine) {
-    .demo-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
-  }
-  .demo-btn:active { transform: scale(0.95); }
+  .demo-btn.active, .demo-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
 
   /* ════════════ MOBILE STYLES (≤768px) ════════════ */
   @media (max-width: 768px) {
