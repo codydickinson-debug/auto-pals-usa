@@ -2921,9 +2921,30 @@
     // Called explicitly with the specific request after changes
   }
 
-  function syncRequest(r) {
-    // Sync a single request's current state to Supabase
-    if (!isLocal) dbPut('requests', { id: r.id, ...r });
+  // Push a narrow PATCH of just the fields the caller actually changed.
+  // The old behavior (`{ id, ...r }`) spread the entire in-memory row,
+  // which caused stale-write regressions: if device A had Rachel cached
+  // before her deposit was marked, then device A nudged her status, the
+  // outgoing PUT contained `depositPaid: false` (from stale local state)
+  // and silently clobbered the fresh true value device B had just set.
+  //
+  // Always pass the list of fields you modified. Example:
+  //   r.status = 'searching'; syncRequest(r, ['status']);
+  //   r.aiColor = '…'; r.aiReason = '…'; syncRequest(r, ['aiColor','aiReason']);
+  //
+  // A bare `syncRequest(r)` call still works but logs a warning + falls
+  // back to the legacy full-row write so we can find any missed callers
+  // in dev tools without breaking sync.
+  function syncRequest(r, fields) {
+    if (isLocal) return;
+    if (Array.isArray(fields) && fields.length) {
+      const patch = { id: r.id };
+      for (const f of fields) patch[f] = r[f];
+      return dbPut('requests', patch);
+    }
+    console.warn('[syncRequest] full-row fallback for id', r.id,
+      '— pass an explicit fields list to prevent stale-write clobbers');
+    dbPut('requests', { id: r.id, ...r });
   }
 
   // Stamp / clear r.dormantAt on the status transition. Called from each
@@ -4020,7 +4041,7 @@
     r.status = newStatus;
     stampDormantTransition(r, newStatus, prevStatus);
     save();
-    if (typeof syncRequest === 'function') syncRequest(r);
+    if (typeof syncRequest === 'function') syncRequest(r, ['status', 'dormantAt']);
 
     // 'searching' is the right moment to generate 3 vehicle suggestions from
     // the form parameters. Don't re-trigger if recs already exist.
@@ -4159,7 +4180,7 @@
       r.status = status;
       stampDormantTransition(r, status, prevStatus);
       save();
-      dbPut('requests', { id: r.id, ...r });
+      syncRequest(r, ['status', 'dormantAt']);
       renderDashboard();
       // Generate vehicle suggestions when staff moves a request into
       // "Actively Searching" via the right-click menu (mirrors the
@@ -4518,7 +4539,7 @@
     r.status = newStatus;
     stampDormantTransition(r, newStatus, prevStatus);
     save();
-    syncRequest(r);
+    syncRequest(r, ['status', 'dormantAt']);
     renderDashboard();
     // Send status update email (skip if same status, rejected, or dormant —
     // rejection is handled at submit time, and we don't notify clients that
@@ -5047,7 +5068,7 @@
         if (req && req.status !== 'in_repair' && req.status !== 'awaiting_paperwork' && req.status !== 'sold') {
           req.status = 'in_repair';
           if (typeof save === 'function') save();
-          if (typeof syncRequest === 'function') syncRequest(req);
+          if (typeof syncRequest === 'function') syncRequest(req, ['status']);
         }
       }
     }
@@ -5151,7 +5172,7 @@
     if (req && req.status !== 'sold') {
       req.status = 'awaiting_paperwork';
       if (typeof save === 'function') save();
-      if (typeof syncRequest === 'function') syncRequest(req);
+      if (typeof syncRequest === 'function') syncRequest(req, ['status']);
       if (typeof renderDashboard === 'function') renderDashboard();
     }
     renderRepairPanel();
@@ -5169,7 +5190,7 @@
     if (req && req.status === 'awaiting_paperwork') {
       req.status = 'in_repair';
       if (typeof save === 'function') save();
-      if (typeof syncRequest === 'function') syncRequest(req);
+      if (typeof syncRequest === 'function') syncRequest(req, ['status']);
       if (typeof renderDashboard === 'function') renderDashboard();
     }
     renderRepairPanel();
@@ -5273,7 +5294,7 @@
       req.aiReason = data.reason;
       req.aiSimilarSales = data.similar_sales || [];
       try { save(); } catch(_){}
-      try { syncRequest(req); } catch(_){}
+      try { syncRequest(req, ['aiColor', 'aiReason']); } catch(_){}
       try { renderDashboard(); } catch(_){}
       if (activeRequestId === req.id) {
         try { populateDetailView(req); } catch(_){}
@@ -5504,7 +5525,10 @@
     // Always finalize — clear pending, render, save.
     req.aiPending = false;
     try { save(); } catch(_){}
-    try { if (typeof syncRequest === 'function') syncRequest(req); } catch(_){}
+    // aiPending is local-only (no DB column), so nothing to sync here —
+    // the pending flag lives in localStorage. If a future migration adds
+    // ai_pending to the requests table, add it to api/db.js + bring this
+    // syncRequest back with ['aiPending'].
     try { if (typeof renderOpenSearchList === 'function') renderOpenSearchList(); } catch(_){}
     if (activeRequestId === req.id) {
       try { if (typeof populateDetailView === 'function') populateDetailView(req); } catch(_){}
@@ -5605,7 +5629,8 @@
     req.aiRecs = recs;
     req.aiPending = false;
     save();
-    syncRequest(req);
+    // aiPending is local-only; only the persistable fields go to the DB.
+    syncRequest(req, ['aiColor', 'aiReason', 'aiRecs']);
     // Update badge always
     const badge = document.getElementById('badge-opensearch');
     if (badge) badge.textContent = requests.filter(r => r.searchMode === 'open').length;
@@ -5876,7 +5901,8 @@
         r.status = 'sold';
         r.soldSaleId = newSale.id;
         save();
-        if (typeof syncRequest === 'function') syncRequest(r);
+        // soldSaleId has no DB column — local-only link to the sales row.
+        if (typeof syncRequest === 'function') syncRequest(r, ['status']);
         renderDashboard();
       }
       pendingSoldReqId = null;
