@@ -1513,7 +1513,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v145 · 2026-05-20</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v147 · 2026-05-20</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -5372,12 +5372,22 @@
         signal: ctrl.signal,
         body: JSON.stringify({
           action: 'assess',
+          // Pass the FULL request shape so the AI can reason about every
+          // factor — transmission/color/fuel can shift auction availability,
+          // searchMode + skipTheLine change the bar for "GREEN", payment
+          // method affects the client's real ceiling, and zip impacts
+          // transport cost in the landed-price math.
           request: {
             make: req.make, model: req.model,
             yearFrom: req.yearFrom, yearTo: req.yearTo,
             budgetMin: req.budgetMin, budgetMax: req.budgetMax,
             body: req.body, mileage: req.mileage,
-            features: req.features, notes: req.notes
+            transmission: req.transmission, color: req.color, fuel: req.fuel,
+            features: req.features, notes: req.notes,
+            searchMode: req.searchMode, skipTheLine: req.skipTheLine,
+            paymentMethod: req.paymentMethod,
+            downPayment: req.downPayment, monthlyPayment: req.monthlyPayment,
+            zip: req.zip
           }
         })
       });
@@ -5595,8 +5605,12 @@
             yearFrom: req.yearFrom, yearTo: req.yearTo,
             budgetMin: req.budgetMin, budgetMax: req.budgetMax,
             body: req.body, mileage: req.mileage,
-            transmission: req.transmission, color: req.color,
-            features: req.features, notes: req.notes
+            transmission: req.transmission, color: req.color, fuel: req.fuel,
+            features: req.features, notes: req.notes,
+            searchMode: req.searchMode, skipTheLine: req.skipTheLine,
+            paymentMethod: req.paymentMethod,
+            downPayment: req.downPayment, monthlyPayment: req.monthlyPayment,
+            zip: req.zip
           }
         })
       });

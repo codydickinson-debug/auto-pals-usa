@@ -24,36 +24,174 @@ try {
   console.warn('[AI] sales-history.json missing, running without past-deal context');
 }
 
-// Find the most similar past sales for a given request — by make, then by
-// price band. Used as grounding context in the prompt and surfaced to staff.
+// Brand families — vehicles in the same family share platforms / parts /
+// auction price patterns, so a Honda sales record is real signal for an
+// Acura request. Bidirectional lookups; "honda" → ['honda','acura'] etc.
+const BRAND_FAMILIES = {
+  honda:      ['honda', 'acura'],
+  acura:      ['acura', 'honda'],
+  toyota:     ['toyota', 'lexus'],
+  lexus:      ['lexus', 'toyota'],
+  hyundai:    ['hyundai', 'kia', 'genesis'],
+  kia:        ['kia', 'hyundai', 'genesis'],
+  genesis:    ['genesis', 'hyundai', 'kia'],
+  ford:       ['ford', 'lincoln'],
+  lincoln:    ['lincoln', 'ford'],
+  chevrolet:  ['chevrolet', 'gmc', 'buick', 'cadillac'],
+  chevy:      ['chevrolet', 'gmc', 'buick', 'cadillac'],
+  gmc:        ['gmc', 'chevrolet', 'buick', 'cadillac'],
+  buick:      ['buick', 'chevrolet', 'gmc'],
+  cadillac:   ['cadillac', 'chevrolet', 'gmc'],
+  nissan:     ['nissan', 'infiniti'],
+  infiniti:   ['infiniti', 'nissan'],
+  mazda:      ['mazda'],
+  subaru:     ['subaru'],
+  volkswagen: ['volkswagen', 'audi'],
+  vw:         ['volkswagen', 'audi'],
+  audi:       ['audi', 'volkswagen'],
+  bmw:        ['bmw', 'mini'],
+  mini:       ['mini', 'bmw'],
+  mercedes:   ['mercedes', 'mercedes-benz'],
+  'mercedes-benz': ['mercedes', 'mercedes-benz']
+};
+
+function brandFamily(make) {
+  if (!make) return [];
+  const k = String(make).toLowerCase().trim();
+  return BRAND_FAMILIES[k] || [k];
+}
+
+// Tokenize a model string for fuzzy matching. "Camry SE" → ['camry','se'].
+function modelTokens(model) {
+  if (!model) return [];
+  return String(model).toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/[\s-]+/)
+    .filter(t => t && t.length >= 2);
+}
+
+// How recent the sale was, in days. Used for recency weighting so a 2026
+// sale carries more market signal than a 2015 sale at the same price.
+function daysSinceSold(s) {
+  if (!s || !s.date_sold) return Infinity;
+  const t = Date.parse(s.date_sold);
+  if (!t) return Infinity;
+  return Math.max(0, Math.round((Date.now() - t) / 86400000));
+}
+
+// Find the most similar past sales for a given request. Score combines:
+//   • Make match — exact (+100) or brand-family (+60)
+//   • Model token overlap (+25 per shared token, capped)
+//   • Body style match (+15) when both have it
+//   • Within budget range (+35) and proximity to midpoint (up to +30 more)
+//   • Year in requested range (+25) or within ±3 years (+8 to +18)
+//   • Recency boost — sale within 12mo (+25), 24mo (+12), >5y (-15)
 function findSimilarSales(req, limit = 5) {
   if (!salesHistory.length) return [];
-  const make = (req.make || '').toLowerCase().trim();
-  const budgetMin = Number(req.budgetMin) || 0;
-  const budgetMax = Number(req.budgetMax) || 0;
-  const budgetMid = (budgetMin + budgetMax) / 2;
+  const reqMakeTokens = brandFamily(req.make);
+  const reqModelToks  = modelTokens(req.model);
+  const reqBody       = (req.body || '').toLowerCase().trim();
+  const budgetMin     = Number(req.budgetMin) || 0;
+  const budgetMax     = Number(req.budgetMax) || 0;
+  const budgetMid     = (budgetMin + budgetMax) / 2;
 
   const scored = salesHistory.map(s => {
     let score = 0;
-    if (make && s.make && s.make.toLowerCase() === make) score += 100;
-    else if (make && s.make && s.make.toLowerCase().includes(make.split(' ')[0])) score += 50;
-    // Budget proximity — closer to the midpoint = higher score
-    if (s.total_sale && budgetMid) {
-      const diff = Math.abs(s.total_sale - budgetMid);
-      const closeness = Math.max(0, 50 - (diff / 500));
-      score += closeness;
+    const sMake = (s.make || '').toLowerCase();
+
+    // Make / brand-family scoring
+    if (reqMakeTokens.length) {
+      if (sMake === reqMakeTokens[0])      score += 100;
+      else if (reqMakeTokens.includes(sMake)) score += 60;
     }
-    // Prefer matches within the actual budget range
-    if (s.total_sale && s.total_sale >= budgetMin && s.total_sale <= budgetMax) score += 30;
+
+    // Model token overlap
+    if (reqModelToks.length && s.model) {
+      const sToks = modelTokens(s.model);
+      const shared = reqModelToks.filter(t => sToks.includes(t)).length;
+      if (shared) score += Math.min(60, shared * 25);
+    }
+
+    // Body style (sales corpus rarely has this, but check defensively)
+    if (reqBody && s.body && s.body.toLowerCase() === reqBody) score += 15;
+
+    // Budget — being IN range is the strongest signal, then midpoint distance
+    if (s.total_sale && budgetMin && budgetMax) {
+      if (s.total_sale >= budgetMin && s.total_sale <= budgetMax) {
+        score += 35;
+        const diff = Math.abs(s.total_sale - budgetMid);
+        score += Math.max(0, 30 - (diff / 400));
+      } else {
+        // Out of range but maybe close — partial credit
+        const overshoot = s.total_sale < budgetMin
+          ? (budgetMin - s.total_sale)
+          : (s.total_sale - budgetMax);
+        score += Math.max(0, 20 - (overshoot / 300));
+      }
+    }
+
     // Year proximity
-    if (req.yearFrom && req.yearTo && s.year) {
-      if (s.year >= req.yearFrom && s.year <= req.yearTo) score += 25;
-      else score += Math.max(0, 15 - Math.abs(s.year - ((req.yearFrom + req.yearTo)/2)));
+    if (s.year) {
+      if (req.yearFrom && req.yearTo) {
+        if (s.year >= req.yearFrom && s.year <= req.yearTo) score += 25;
+        else {
+          const mid = (req.yearFrom + req.yearTo) / 2;
+          score += Math.max(0, 18 - Math.abs(s.year - mid) * 3);
+        }
+      }
     }
-    return { ...s, _score: score };
+
+    // Recency — fresh sales reflect current market; old sales become
+    // historical noise. 12mo = full boost, 5y+ = mild penalty.
+    const ageDays = daysSinceSold(s);
+    if (ageDays !== Infinity) {
+      if (ageDays <= 365)       score += 25;
+      else if (ageDays <= 730)  score += 12;
+      else if (ageDays <= 1095) score += 4;
+      else if (ageDays > 1825)  score -= 15;
+    }
+
+    return { ...s, _score: Math.round(score) };
   }).sort((a, b) => b._score - a._score);
 
   return scored.slice(0, limit).filter(s => s._score > 0);
+}
+
+// Aggregate stats over the whole sales corpus — anchors the model so it can
+// reason about whether a quote is in line with the team's historical norms.
+function corpusStats() {
+  const valid = salesHistory.filter(s => s.profit != null && s.total_sale != null);
+  if (!valid.length) return null;
+  const profits = valid.map(s => s.profit).sort((a, b) => a - b);
+  const sales   = valid.map(s => s.total_sale).sort((a, b) => a - b);
+  const recentCutoff = Date.now() - 365 * 86400000;
+  const recent = valid.filter(s => {
+    const t = Date.parse(s.date_sold || '');
+    return t && t >= recentCutoff;
+  });
+  const mid = arr => arr[Math.floor(arr.length / 2)];
+  const mean = arr => Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+  return {
+    count:         valid.length,
+    recentCount:   recent.length,
+    avgProfit:     mean(profits),
+    medianProfit:  mid(profits),
+    minProfit:     profits[0],
+    maxProfit:     profits[profits.length - 1],
+    avgSale:       mean(sales),
+    medianSale:    mid(sales),
+    minSale:       sales[0],
+    maxSale:       sales[sales.length - 1]
+  };
+}
+
+function buildCorpusStatsBlock(stats) {
+  if (!stats) return '';
+  return `
+COMPANY HISTORY SUMMARY (${stats.count} sold deals, ${stats.recentCount} in last 12 months):
+  • Sale prices:  $${stats.minSale.toLocaleString()} – $${stats.maxSale.toLocaleString()} (median $${stats.medianSale.toLocaleString()}, avg $${stats.avgSale.toLocaleString()})
+  • Per-deal profit: $${stats.minProfit.toLocaleString()} – $${stats.maxProfit.toLocaleString()} (median $${stats.medianProfit.toLocaleString()}, avg $${stats.avgProfit.toLocaleString()})
+  • Auto Pals needs to clear at least ~$${Math.max(1000, Math.round(stats.medianProfit * 0.6)).toLocaleString()} per deal to make a request worth taking on after auction + transport + service costs.`;
 }
 
 function buildSalesContextBlock(similar) {
@@ -104,37 +242,68 @@ function parseJsonFromText(text) {
 
 // ── ASSESS ─────────────────────────────────────────────────────
 // Grade a request green/yellow/red with a 1-2 sentence justification.
+// The model gets THREE layers of grounding:
+//   1. Corpus-wide stats (count, avg/median profit, price range, recency)
+//   2. The top 5 most-similar past deals (make + brand-family + model
+//      tokens + recency weighted)
+//   3. Explicit market-reasoning instructions: estimate retail price,
+//      estimate auction wholesale, calculate spread, factor in fees.
 async function handleAssess(apiKey, req) {
   const similar = findSimilarSales(req, 5);
   const salesCtx = buildSalesContextBlock(similar);
+  const stats = corpusStats();
+  const statsBlock = buildCorpusStatsBlock(stats);
 
-  const sys = `You are a pricing analyst for a used-car auction sourcing company (Auto Pals USA / Automotivation Enterprises LLC) in Pompano Beach, FL. You grade incoming client requests on whether the company can realistically source the requested vehicle at the stated budget through dealer-only auctions.
+  // Effective budget — financed buyers don't have the full sticker as
+  // sourcing budget; treat down payment + 12 monthly payments as upper bound
+  // signal (rough proxy, but stops the AI from over-promising on financed
+  // requests where the actual purchase ceiling is much lower than the
+  // stated max).
+  let effectiveBudgetNote = '';
+  if (req.paymentMethod === 'financing' && (req.downPayment || req.monthlyPayment)) {
+    effectiveBudgetNote = `\nNote: client wants FINANCING (down payment $${Number(req.downPayment||0).toLocaleString()}, target monthly $${Number(req.monthlyPayment||0).toLocaleString()}). Their workable purchase ceiling may be lower than the stated budget max.`;
+  }
 
-Use the company's ACTUAL past sales history (provided below) as your primary evidence. Don't rely on generic market guesses when real deals exist at this price point.
+  const sys = `You are a pricing analyst for Auto Pals USA / Automotivation Enterprises LLC, a dealer-auction sourcing company in Pompano Beach, FL. You grade incoming client requests on whether the company can realistically source the requested vehicle at the stated budget through dealer-only auctions AND clear enough profit to make the deal worth taking on.
+${statsBlock}
+
+How to reason (do this step-by-step internally, then output the final JSON):
+  1. Estimate the CURRENT RETAIL price (private-party / dealer-retail) for a clean example of the requested vehicle in South Florida. Use your knowledge of current used-car market pricing.
+  2. Estimate the CURRENT AUCTION WHOLESALE price (Manheim-equivalent) for the same vehicle. Wholesale typically runs 70-85% of retail depending on demand.
+  3. Add Auto Pals' fixed costs: ~$500 auction/buyer fee, ~$300-600 transport (FL local cheap, cross-country higher), ~$200-400 light recon, plus the $750 service fee built into the client price.
+  4. Compare the all-in landed cost to the client's stated budget MAX. Then compare to what similar deals in the company history actually sold for.
 
 Color rules:
-- GREEN: budget is realistic and similar vehicles have sold close to this price; sourcing is likely.
-- YELLOW: tight but workable; may need flex on year, mileage, or trim; worth discussing.
-- RED: budget is clearly below what similar vehicles have sold for; should likely be declined or pushed up.
+  • GREEN — client budget cleanly exceeds estimated all-in cost, AND similar past deals have profited ≥ median for the company; sourcing is likely and profitable.
+  • YELLOW — workable but tight; either margin would be thin (< median profit), or the spec needs flex (mileage, year, trim) to land; worth a call.
+  • RED — client budget is clearly below what similar vehicles realistically cost at auction + fees, OR is under the $4,000 minimum the company can source reliably; should be declined or budget pushed up.
 
-Respond ONLY with a JSON object: {"color":"green|yellow|red","reason":"1-2 sentences, reference specific past sales when relevant, no more than 280 chars"}.`;
+Always reference at least one specific past sale (year + make + price + profit) in the reason when relevant past data exists. If there's no relevant history, lean on market reasoning and say so.
+
+Respond with ONLY a JSON object: {"color":"green|yellow|red","reason":"1-2 sentences, ≤ 320 chars, reference specific past sales or market price when relevant"}.`;
 
   const user = `CLIENT REQUEST:
-Make: ${req.make || '(open)'}
+Make: ${req.make || '(open search)'}
 Model: ${req.model || '(any)'}
 Year range: ${req.yearFrom || '?'}-${req.yearTo || '?'}
-Budget: $${Number(req.budgetMin || 0).toLocaleString()}-$${Number(req.budgetMax || 0).toLocaleString()}
-Body: ${req.body || 'any'}
-Mileage cap: ${req.mileage || 'none'}
-Features: ${(req.features || []).join(', ') || 'none specified'}
-Notes: ${req.notes || 'none'}
+Body style: ${req.body || 'any'}
+Mileage cap: ${req.mileage || 'no limit'}
+Transmission: ${req.transmission || 'no preference'}
+Fuel: ${req.fuel || 'no preference'}
+Color: ${req.color || 'no preference'}
+Features wanted: ${(req.features || []).join(', ') || 'none specified'}
+Budget: $${Number(req.budgetMin || 0).toLocaleString()} – $${Number(req.budgetMax || 0).toLocaleString()}
+Payment method: ${req.paymentMethod || 'not specified'}${effectiveBudgetNote}
+Search mode: ${req.searchMode || 'specific'}${req.skipTheLine ? ' · ⚡ SKIP-THE-LINE TIER (premium client, higher service expectations)' : ''}
+Delivery ZIP: ${req.zip || '(not provided)'}
+Client notes: ${req.notes || 'none'}
 
-MOST RELEVANT PAST SALES FROM COMPANY HISTORY:
+MOST RELEVANT PAST DEALS FROM COMPANY HISTORY (highest similarity first):
 ${salesCtx}
 
 Grade this request.`;
 
-  const text = await callClaude(apiKey, sys, user, 400);
+  const text = await callClaude(apiKey, sys, user, 500);
   const parsed = parseJsonFromText(text);
   // Validate
   if (!['green','yellow','red'].includes(parsed.color)) parsed.color = 'yellow';
@@ -146,33 +315,48 @@ Grade this request.`;
 }
 
 // ── RECOMMEND ──────────────────────────────────────────────────
-// Suggest 3 vehicles for an open search, grounded in past sales.
+// Suggest 3 vehicles for an open search. Grounded in past sales corpus
+// + corpus stats + market reasoning, just like handleAssess.
 async function handleRecommend(apiKey, req) {
   const similar = findSimilarSales(req, 8);
   const salesCtx = buildSalesContextBlock(similar);
+  const stats = corpusStats();
+  const statsBlock = buildCorpusStatsBlock(stats);
 
-  const sys = `You recommend vehicles for a used-car auction sourcing company. The client gave preferences but not a specific make/model. Suggest 3 vehicles they should consider.
+  const sys = `You recommend vehicles for Auto Pals USA, a dealer-auction sourcing company in Pompano Beach, FL. The client gave preferences but not a specific make/model — suggest 3 vehicles they should consider.
+${statsBlock}
 
-Use the company's actual past sales history to ground your picks — vehicles they've successfully sourced in similar price ranges are the best candidates. Don't suggest vehicles outside their budget.
+How to pick:
+  • Prioritize vehicles the team has actually sourced profitably in similar budget ranges (see past deals below).
+  • Estimate current retail vs auction wholesale for each candidate — only suggest vehicles where the spread leaves room for ≥ median company profit after auction fees, transport, and recon.
+  • Match the client's body style, mileage cap, and feature preferences as closely as possible.
+  • Don't suggest vehicles whose realistic auction price would blow the client's max budget.
+  • Don't suggest vehicles below the $4,000 sourcing floor.
+  • If the client mentions a use case in their notes (work truck, family hauler, daily commuter, etc.) bias the picks toward that.
 
-Respond ONLY with a JSON object: {"recs":[{"title":"YEAR MAKE MODEL TRIM","why":"1 sentence explanation, reference past sales when helpful"},...]}
+Respond ONLY with a JSON object: {"recs":[{"title":"YEAR MAKE MODEL TRIM","why":"1 sentence, reference a past sale or specific market reasoning when relevant"},...]}
 
-Exactly 3 recommendations. Keep titles in "YEAR MAKE MODEL TRIM" format.`;
+Exactly 3 recommendations. Titles in "YEAR MAKE MODEL TRIM" format.`;
 
   const user = `CLIENT PREFERENCES:
-Budget: $${Number(req.budgetMin || 0).toLocaleString()}-$${Number(req.budgetMax || 0).toLocaleString()}
+Budget: $${Number(req.budgetMin || 0).toLocaleString()} – $${Number(req.budgetMax || 0).toLocaleString()}
 Year range: ${req.yearFrom || '?'}-${req.yearTo || '?'}
 Body style: ${req.body || 'any'}
-Mileage cap: ${req.mileage || 'none'}
-Features: ${(req.features || []).join(', ') || 'none specified'}
+Mileage cap: ${req.mileage || 'no limit'}
+Transmission: ${req.transmission || 'no preference'}
+Fuel: ${req.fuel || 'no preference'}
+Color: ${req.color || 'no preference'}
+Features wanted: ${(req.features || []).join(', ') || 'none specified'}
+Payment method: ${req.paymentMethod || 'not specified'}${req.paymentMethod === 'financing' && (req.downPayment || req.monthlyPayment) ? ` (down $${Number(req.downPayment||0).toLocaleString()}, target $${Number(req.monthlyPayment||0).toLocaleString()}/mo)` : ''}
+Delivery ZIP: ${req.zip || '(not provided)'}
 Notes from client: ${req.notes || 'none'}
 
-MOST RELEVANT PAST SALES (use these as grounding):
+MOST RELEVANT PAST DEALS FROM COMPANY HISTORY (highest similarity first):
 ${salesCtx}
 
 Recommend 3 vehicles.`;
 
-  const text = await callClaude(apiKey, sys, user, 700);
+  const text = await callClaude(apiKey, sys, user, 800);
   const parsed = parseJsonFromText(text);
   if (!Array.isArray(parsed.recs)) throw new Error('Missing recs array');
   // Sanitize
