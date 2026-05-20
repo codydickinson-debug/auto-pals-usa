@@ -1,8 +1,12 @@
 // ── ai.js — AI-backed scoring & recommendations ───────────────
-// Two modes:
-//   action=assess     → green/yellow/red + reason, grounded in real past sales
-//   action=recommend  → 3 vehicle suggestions for an open search
-//   action=similar    → just returns similar past sales for a query
+// Modes:
+//   action=assess          → green/yellow/red + reason, grounded in real past sales
+//   action=recommend       → 3 vehicle suggestions for an open search
+//   action=similar         → just returns similar past sales for a query
+//   action=polish-message  → cleans up a staff draft reply (spelling, grammar,
+//                            sentence completion) while matching the team's
+//                            existing voice (pulls last N staff messages from
+//                            Supabase as few-shot examples). Staff-gated.
 // Falls back to a passthrough proxy if a raw Anthropic request is sent.
 //
 // Past sales history is loaded from api/sales-history.json (generated from
@@ -10,6 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { verifyToken } = require('./auth.js');
 
 let salesHistory = [];
 try {
@@ -180,6 +185,119 @@ Recommend 3 vehicles.`;
   }))};
 }
 
+// ── POLISH MESSAGE ────────────────────────────────────────────
+// Pull the team's recent staff messages as few-shot voice examples, plus
+// the target client's request row for personalization context, then ask
+// Claude to clean up the draft (spelling, grammar, sentence completion).
+// The system prompt forbids adding new info or changing meaning — this is
+// editing-pass behavior, not a rewrite or content-gen tool.
+
+const SB_URL = process.env.SUPABASE_URL || 'https://phbdpvfdnxvzxpybfgbr.supabase.co';
+const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+            || process.env.SUPABASE_KEY
+            || process.env.SUPABASE_ANON_KEY;
+
+async function sbGet(path) {
+  if (!SB_KEY) return null;
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/${path}`, {
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': `Bearer ${SB_KEY}`,
+        'Accept': 'application/json'
+      }
+    });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (_) {
+    return null;
+  }
+}
+
+async function handlePolishMessage(apiKey, body) {
+  const draft = String(body.draft || '').trim();
+  if (!draft) return { error: 'empty_draft' };
+  if (draft.length < 3)    return { error: 'too_short' };
+  if (draft.length > 4000) return { error: 'too_long' };
+
+  // Pull the last 20 staff-side messages (longest first slice) as voice
+  // examples. Filter out very short ones — emoji reactions and "k" don't
+  // teach the model anything. Order by ts desc, then we'll reverse so the
+  // model sees oldest-first (chronological), which reads more naturally.
+  const recent = await sbGet(
+    'messages?select=text,from_role&from_role=in.(staff,team)'
+    + '&order=ts.desc&limit=80'
+  );
+  const examples = (recent || [])
+    .map(m => String(m.text || '').trim())
+    .filter(t => t.length >= 40 && t.length <= 600)
+    .slice(0, 20)
+    .reverse();
+
+  // Optional: client / request context for personalization grounding.
+  let clientCtx = '';
+  if (body.requestId) {
+    const rows = await sbGet(
+      `requests?id=eq.${encodeURIComponent(body.requestId)}`
+      + `&select=first_name,last_name,status,make,model,year_from,year_to,budget_min,budget_max,deposit_paid`
+      + `&limit=1`
+    );
+    const r = rows && rows[0];
+    if (r) {
+      const vehicle = r.make ? `${r.year_from || ''}-${r.year_to || ''} ${r.make} ${r.model || ''}`.trim() : 'open search';
+      const budget = (r.budget_min || r.budget_max)
+        ? `$${Number(r.budget_min||0).toLocaleString()}–$${Number(r.budget_max||0).toLocaleString()}`
+        : '';
+      clientCtx = `\nClient: ${r.first_name || ''} ${r.last_name || ''} (status: ${r.status || 'new'}, deposit_paid: ${!!r.deposit_paid})\nVehicle: ${vehicle}${budget ? ` · Budget: ${budget}` : ''}`;
+    }
+  }
+
+  const examplesBlock = examples.length
+    ? examples.map((t, i) => `Example ${i + 1}:\n${t}`).join('\n\n')
+    : '(No prior examples — match a warm, plain-spoken voice. Conversational, not corporate.)';
+
+  const systemPrompt =
+`You are polishing a draft message that an Auto Pals USA staff member is about to send to a client through the client portal.
+
+Your ONLY job is to:
+- Fix spelling errors
+- Fix grammar errors
+- Complete obviously truncated words or sentences (e.g. "I'll follow up tomor" → "I'll follow up tomorrow")
+- Lightly improve flow and clarity ONLY where it's clearly garbled
+
+You must NEVER:
+- Add new information, facts, promises, prices, or commitments the draft doesn't already contain
+- Change the meaning or substance
+- Make the message more formal, more corporate, or more salesy
+- Add a greeting or sign-off if the draft doesn't have one
+- Remove personality, slang, or casual phrasing the staff used
+
+If the draft is already clean, return it unchanged.
+
+Match the voice of these recent real messages from the team:
+
+${examplesBlock}
+${clientCtx}
+
+Respond with ONLY the polished message text. No preamble, no explanations, no quotes, no markdown.`;
+
+  const userPrompt = `Draft to polish:\n${draft}`;
+
+  try {
+    const polished = await callClaude(apiKey, systemPrompt, userPrompt, 800);
+    // Trim any leading/trailing whitespace, accidental fences, or stray quotes
+    const cleaned = polished
+      .replace(/^```[a-z]*\n?/i, '')
+      .replace(/```\s*$/, '')
+      .replace(/^["'`]+|["'`]+$/g, '')
+      .trim();
+    return { polished: cleaned || draft, examples_used: examples.length };
+  } catch (err) {
+    console.error('[AI polish] failed:', err.message);
+    return { error: 'polish_failed', detail: err.message };
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -216,6 +334,16 @@ module.exports = async function handler(req, res) {
 
   if (!apiKey) {
     return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
+  }
+
+  // polish-message is staff-gated — it costs Claude tokens per call and we
+  // don't want random portal traffic burning credits.
+  if (action === 'polish-message') {
+    const token = req.headers['x-staff-token']
+      || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    if (!verifyToken(token)) return res.status(401).json({ error: 'unauthorized' });
+    const result = await handlePolishMessage(apiKey, req.body || {});
+    return res.status(result.error ? 400 : 200).json(result);
   }
 
   try {

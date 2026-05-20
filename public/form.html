@@ -1240,6 +1240,51 @@
     .msg-send-btn:hover  { opacity: 0.9; }
   }
   .msg-send-btn:active { transform: scale(0.97); }
+  /* AI polish button — same footprint as the attach button, slots between
+     it and the textarea. Lights up while a polish call is in flight. */
+  .msg-polish-btn {
+    cursor: pointer;
+    width: 40px; height: 40px;
+    border-radius: var(--radius);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+    line-height: 1;
+    transition: background-color 120ms var(--ease-out), border-color 120ms var(--ease-out), transform 120ms var(--ease-out);
+    user-select: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .msg-polish-btn:hover:not(:disabled) { background: var(--accent-light); border-color: var(--accent); }
+  }
+  .msg-polish-btn:active:not(:disabled) { transform: scale(0.92); }
+  .msg-polish-btn:disabled {
+    cursor: progress;
+    opacity: 0.55;
+    background: var(--accent-light);
+    border-color: var(--accent);
+  }
+  .msg-polish-btn.polishing { animation: polishPulse 1.1s ease-in-out infinite; }
+  @keyframes polishPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(15,37,87,0.20); }
+    50%      { box-shadow: 0 0 0 6px rgba(15,37,87,0.00); }
+  }
+  .msg-polished-flash {
+    position: absolute;
+    pointer-events: none;
+    background: var(--green-light, #dcfce7);
+    color: var(--green, #166534);
+    border: 1px solid #a7f3d0;
+    border-radius: 99px;
+    padding: 4px 10px;
+    font-size: 11px; font-weight: 700;
+    font-family: system-ui, sans-serif;
+    opacity: 0;
+    transition: opacity 250ms var(--ease-out), transform 250ms var(--ease-out);
+    transform: translateY(4px);
+  }
+  .msg-polished-flash.show { opacity: 1; transform: translateY(0); }
   .msg-image-preview-bar {
     padding: 8px 20px 0;
     background: var(--surface);
@@ -2091,15 +2136,19 @@
             <button onclick="clearMsgImage()" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;background:var(--red);border:none;border-radius:50%;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>
           </div>
         </div>
-        <div class="msg-composer">
+        <div class="msg-composer" style="position:relative;">
           <label title="Attach image" class="msg-attach-btn">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             <input type="file" accept="image/*" style="display:none;" onchange="handleMsgImage(this)" id="msg-image-input">
           </label>
+          <button id="msg-polish-btn" class="msg-polish-btn" type="button"
+                  title="Polish — fix spelling, grammar, and finish incomplete sentences using the team's voice"
+                  onclick="polishDraftReply()">✨</button>
           <textarea id="msg-reply-input" class="msg-reply-input" rows="1" placeholder="Reply as Auto Pals USA team... (Shift+Enter for new line)"
             oninput="autoGrowReply(this)"
             onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendTeamReply();}"></textarea>
           <button class="msg-send-btn" onclick="sendTeamReply()">Send</button>
+          <div id="msg-polished-flash" class="msg-polished-flash" style="bottom:56px;right:84px;">✓ Polished</div>
         </div>
       </div>
     </div>
@@ -3216,6 +3265,80 @@
     document.getElementById('msg-image-preview').style.display = 'none';
     document.getElementById('msg-image-thumb').src = '';
   }
+
+  // ── AI POLISH (✨ button) ─────────────────────────────────────
+  // Sends the current draft to /api/ai (action=polish-message), which
+  // pulls our recent staff messages as voice examples + the client's
+  // request row for context, and runs a Claude editing pass:
+  // spelling, grammar, sentence-completion. The model is prompted to
+  // NOT add new info or change meaning — purely a polish pass.
+  // Cmd/Ctrl+J is the keyboard shortcut.
+  let _polishInFlight = false;
+  async function polishDraftReply() {
+    if (_polishInFlight) return;
+    if (!activeMessageReqId) return;
+    const input = document.getElementById('msg-reply-input');
+    const btn   = document.getElementById('msg-polish-btn');
+    const flash = document.getElementById('msg-polished-flash');
+    const draft = (input.value || '').trim();
+    if (draft.length < 3) {
+      input.focus();
+      return;
+    }
+    _polishInFlight = true;
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('polishing');
+      btn.textContent = '…';
+    }
+    try {
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: dbHeaders ? dbHeaders() : { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'polish-message',
+          draft,
+          requestId: activeMessageReqId
+        })
+      });
+      if (res.status === 401) { handleSessionExpired && handleSessionExpired(); return; }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.polished) {
+        console.warn('[polish] failed:', data && data.error);
+        return;
+      }
+      // Only replace if the user hasn't started typing more in the meantime.
+      const currentlyInBox = (input.value || '').trim();
+      if (currentlyInBox === draft) {
+        input.value = data.polished;
+        autoGrowReply(input);
+        // Flash a small "✓ Polished" pill that fades in/out.
+        if (flash) {
+          flash.classList.add('show');
+          setTimeout(() => flash.classList.remove('show'), 1600);
+        }
+      }
+    } catch (e) {
+      console.warn('[polish] error:', e && e.message);
+    } finally {
+      _polishInFlight = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('polishing');
+        btn.textContent = '✨';
+      }
+    }
+  }
+  // Keyboard shortcut: Cmd/Ctrl+J polishes whatever's in the composer.
+  document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'j' || e.key === 'J')) {
+      const input = document.getElementById('msg-reply-input');
+      if (document.activeElement === input) {
+        e.preventDefault();
+        polishDraftReply();
+      }
+    }
+  });
 
   function sendTeamReply() {
     if (!activeMessageReqId) return;
