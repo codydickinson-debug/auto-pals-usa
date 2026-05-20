@@ -332,14 +332,22 @@ module.exports = async function handler(req, res) {
           internal_notes:    b.internalNotes,
           search_mode:       b.searchMode,
           portal_code:       b.portalCode,
-          ai_color:          b.aiColor   || null,
-          ai_reason:         b.aiReason  || null,
-          ai_recs:           b.aiRecs    || null,
-          deposit_paid:      b.depositPaid || false,
-          deposit_ref:       b.depositRef  || '',
-          deposit_date:      b.depositDate || '',
-          client_recs:       b.clientRecs  || null,
-          rejection_reason:  b.rejectionReason || '',
+          // CRITICAL: no `|| default` fallbacks on PUT. Narrow PATCHes from
+          // the dashboard (e.g. just `{ id, status }`) used to flow through
+          // here as `deposit_paid: false`, `deposit_date: ''`, etc., because
+          // `undefined || false === false` and the cleanup loop below only
+          // strips real `undefined`s — `false` / `''` / `null` survive and
+          // overwrite. Result: every status flip silently un-paid the
+          // client's deposit. Pass through verbatim; an explicit `false` /
+          // `''` from the caller still clears, an omitted field stays.
+          ai_color:          b.aiColor,
+          ai_reason:         b.aiReason,
+          ai_recs:           b.aiRecs,
+          deposit_paid:      b.depositPaid,
+          deposit_ref:       b.depositRef,
+          deposit_date:      b.depositDate,
+          client_recs:       b.clientRecs,
+          rejection_reason:  b.rejectionReason,
           call_completed_at:       b.callCompletedAt,
           booking_confirmed_at:    b.bookingConfirmedAt,
           dormant_at:              b.dormantAt,

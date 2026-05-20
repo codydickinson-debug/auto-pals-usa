@@ -4591,37 +4591,12 @@
     confirmed.style.display = 'block';
     const when = new Date(r.depositReceivedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     document.getElementById('dp-deposit-date').textContent = '· ' + when;
-    // Fire receipt email + SMS alert + staff notification
-    if (r.email && r.email !== '—') {
-      sendEmail('depositReceipt', {
-        firstName: r.firstName, lastName: r.lastName, email: r.email,
-        make: r.make || 'Open Search', model: r.model,
-        yearFrom: r.yearFrom, yearTo: r.yearTo,
-        budgetMin: r.budgetMin, budgetMax: r.budgetMax,
-        depositRef: ref, depositDate: when, portalUrl: PORTAL_URL
-      });
-      // (staff_deposit_received SMS is fired server-side in api/db.js on the
-      // deposit_paid false→true flip — no need to also fire it here.)
-    }
-    // Notify the team — recipient overridden by STAFF_NOTIFY_EMAIL on the server
-    const _vehicle = r.make ? `${r.make} ${r.model || ''}`.trim() : 'Open Search';
-    const _yr = (r.yearFrom && r.yearTo)
-      ? (r.yearFrom === r.yearTo ? String(r.yearFrom) : `${r.yearFrom}–${r.yearTo}`)
-      : '';
-    const _budget = (r.budgetMin || r.budgetMax)
-      ? `$${Number(r.budgetMin || 0).toLocaleString()}–$${Number(r.budgetMax || 0).toLocaleString()}`
-      : '';
-    sendEmail('staffDepositReceived', {
-      email: 'codydickinson@autopalsusa.com', // overridden by STAFF_NOTIFY_EMAIL
-      clientName: `${r.firstName || ''} ${r.lastName || ''}`.trim(),
-      clientEmail: r.email || '',
-      amount: '750',
-      depositRef: ref,
-      depositDate: when,
-      vehicleStr: _yr ? `${_yr} ${_vehicle}`.trim() : _vehicle,
-      budgetStr: _budget,
-      portalCode: r.portalCode || ''
-    });
+    // Notification fan-out (depositReceipt to client, staffDepositReceived
+    // to us, staff_deposit_received SMS, client_contract_available SMS)
+    // is fired ONCE server-side in api/db.js when it detects the
+    // deposit_paid false→true transition on the PUT above. We used to
+    // also fire them here, which sent each email TWICE per click —
+    // remove that here, keep the server as the single source of truth.
   }
 
   function markCallComplete() {
