@@ -482,6 +482,98 @@ Respond with ONLY the polished message text. No preamble, no explanations, no qu
   }
 }
 
+// ── SUGGEST CONTINUATION ──────────────────────────────────────
+// Real-time Gmail-style "Smart Compose". Called from the message composer
+// after the staff member pauses typing for ~700ms. Returns a SHORT
+// continuation (3-12 words) that picks up where the cursor left off,
+// matching the team's voice. Staff-gated like polish-message.
+//
+// Cheap, fast Claude call: small voice corpus, small max_tokens, hard
+// 6-second timeout via fetchWithTimeout-style wrapping in callClaude
+// (handled at the model layer — sonnet typically responds in ~700ms).
+async function handleSuggestContinuation(apiKey, body) {
+  const partial = String(body.partial || '');
+  // Trim trailing whitespace only — keep leading context exactly as typed
+  const trimmed = partial.replace(/\s+$/, '');
+  if (!trimmed)               return { error: 'empty_partial' };
+  if (trimmed.length < 6)     return { error: 'too_short' };
+  if (trimmed.length > 2000)  return { error: 'too_long' };
+  // Don't suggest when the user just finished a sentence — that's a
+  // natural pause point, not a "help me finish" moment.
+  if (/[.!?](\s*)$/.test(trimmed)) return { suggestion: '' };
+
+  // Same voice-learning corpus as polish-message, smaller cap to keep
+  // round-trip fast for live UX (every keystroke pause hits this).
+  const recent = await sbGet(
+    'messages?select=text,from_role&from_role=in.(staff,team)'
+    + '&order=ts.desc&limit=40'
+  );
+  const examples = (recent || [])
+    .map(m => String(m.text || '').trim())
+    .filter(t => t.length >= 40 && t.length <= 400)
+    .slice(0, 8)
+    .reverse();
+
+  // Optional client context
+  let clientCtx = '';
+  if (body.requestId) {
+    const rows = await sbGet(
+      `requests?id=eq.${encodeURIComponent(body.requestId)}`
+      + `&select=first_name,status,make,model,deposit_paid&limit=1`
+    );
+    const r = rows && rows[0];
+    if (r) {
+      clientCtx = `\nClient: ${r.first_name || '(?)'} · status: ${r.status || 'new'} · vehicle: ${[r.make, r.model].filter(Boolean).join(' ') || 'open search'} · deposit_paid: ${!!r.deposit_paid}`;
+    }
+  }
+
+  const examplesBlock = examples.length
+    ? examples.map((t, i) => `${i + 1}: ${t}`).join('\n')
+    : '(no prior examples available — match a warm, plain-spoken voice)';
+
+  const systemPrompt =
+`You are providing a Gmail-style autocomplete suggestion for the next few words of a message that an Auto Pals USA staff member is typing in real time to a client through the portal.
+
+Continue the partial message naturally — pick up exactly where the cursor is. Match the team's voice (examples below). The continuation will be inserted immediately after the partial text, so:
+
+- Begin your continuation with the EXACT character needed to flow from the partial (usually a space, unless the partial ends with whitespace already).
+- Output 3 to 12 words maximum. Shorter is better. Aim to finish the current thought, not the whole message.
+- Match the existing tone and punctuation style.
+- Don't repeat any words from the partial.
+- Don't add a greeting, sign-off, or new sentence beyond the current one.
+- If you can't predict a confident continuation, return an empty string.
+
+Match the voice from these recent team messages:
+${examplesBlock}
+${clientCtx}
+
+Respond with ONLY the continuation text. No preamble, no explanation, no quotes, no JSON.`;
+
+  const userPrompt = `Partial message (continue from the end):\n"${partial}"`;
+
+  try {
+    const text = await callClaude(apiKey, systemPrompt, userPrompt, 80);
+    // Strip quotes/fences the model occasionally adds despite the prompt
+    let suggestion = String(text || '')
+      .replace(/^```[a-z]*\n?/i, '')
+      .replace(/```\s*$/, '')
+      .replace(/^["'`]+|["'`]+$/g, '')
+      .replace(/\n.*$/s, '')       // single line only
+      .trim();
+    // Defensive caps
+    if (suggestion.length > 120) suggestion = suggestion.slice(0, 120);
+    // If suggestion duplicates the tail of the partial, drop the dup
+    const tail = trimmed.slice(-30).toLowerCase();
+    if (suggestion.toLowerCase().startsWith(tail)) {
+      suggestion = suggestion.slice(tail.length).replace(/^\s+/, ' ');
+    }
+    return { suggestion };
+  } catch (err) {
+    console.error('[AI suggest] failed:', err.message);
+    return { error: 'suggest_failed', detail: err.message };
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -520,13 +612,21 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
   }
 
-  // polish-message is staff-gated — it costs Claude tokens per call and we
-  // don't want random portal traffic burning credits.
+  // polish-message and suggest-continuation are staff-gated — they cost
+  // Claude tokens per call and we don't want random portal traffic
+  // burning credits.
   if (action === 'polish-message') {
     const token = req.headers['x-staff-token']
       || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
     if (!verifyToken(token)) return res.status(401).json({ error: 'unauthorized' });
     const result = await handlePolishMessage(apiKey, req.body || {});
+    return res.status(result.error ? 400 : 200).json(result);
+  }
+  if (action === 'suggest-continuation') {
+    const token = req.headers['x-staff-token']
+      || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    if (!verifyToken(token)) return res.status(401).json({ error: 'unauthorized' });
+    const result = await handleSuggestContinuation(apiKey, req.body || {});
     return res.status(result.error ? 400 : 200).json(result);
   }
 
