@@ -32,6 +32,7 @@ async function query(table, method = 'GET', body = null, params = '') {
 const { verifyToken } = require('./auth.js');
 const sms = require('./_sms.js');
 const emailModule = require('./email.js');
+const sheets = require('./sheets.js');
 
 const PORTAL_URL  = process.env.PORTAL_URL  || 'https://autopalsusa.com/portal.html';
 const BOOKING_URL = process.env.BOOKING_URL || 'https://autopalsusa.com/booking.html';
@@ -226,7 +227,9 @@ module.exports = async function handler(req, res) {
           deposit_ref: body.depositRef || '',
           deposit_date: body.depositDate || '',
           client_recs: body.clientRecs || null,
-          rejection_reason: body.rejectionReason || ''
+          rejection_reason: body.rejectionReason || '',
+          referral_source: body.referralSource || null,
+          skip_the_line: !!body.skipTheLine
         };
         const data = await query('requests', 'POST', row);
 
@@ -294,6 +297,22 @@ module.exports = async function handler(req, res) {
           }
         }
 
+        // Mirror the new lead into the team Google Sheet "Leads" tab for
+        // marketing attribution (Date · Name · Email · Phone · Source ·
+        // Vehicle · Budget). Best-effort — appendLeadRow swallows its own
+        // errors so a sheet outage never blocks a form submission.
+        if (row.referral_source) {
+          fires.push(sheets.appendLeadRow({
+            submitted:      new Date().toISOString().slice(0, 10),
+            name:           _name,
+            email:          row.email,
+            phone:          row.phone,
+            referralSource: row.referral_source,
+            vehicle:        _vehStr,
+            budget:         _budgStr
+          }));
+        }
+
         const results = await Promise.allSettled(fires);
         results.forEach((r, i) => {
           if (r.status === 'rejected') console.error('[DB→notify]', i, r.reason && r.reason.message);
@@ -348,6 +367,7 @@ module.exports = async function handler(req, res) {
           deposit_date:      b.depositDate,
           client_recs:       b.clientRecs,
           rejection_reason:  b.rejectionReason,
+          referral_source:   b.referralSource,
           call_completed_at:       b.callCompletedAt,
           booking_confirmed_at:    b.bookingConfirmedAt,
           dormant_at:              b.dormantAt,

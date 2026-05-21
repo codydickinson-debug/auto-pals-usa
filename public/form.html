@@ -1551,7 +1551,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v149 · 2026-05-21</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v150 · 2026-05-21</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -1841,6 +1841,24 @@
               <div style="font-size:13px;color:#78350f;line-height:1.6;">Already know what you want and ready to roll? Skip the intro call and get started immediately. You'll go straight to signing the contract and submitting your $750 deposit. We start sourcing the same day.</div>
             </label>
           </div>
+        </div>
+
+        <hr class="form-divider">
+
+        <!-- Referral source — required, mirrored to the Leads tab of the team Google Sheet -->
+        <div class="form-section-title">How did you hear about us? <span class="req">*</span></div>
+        <div class="form-group">
+          <select id="f-referral-source" required>
+            <option value="" selected disabled>— Select one —</option>
+            <option value="Google Search">Google search</option>
+            <option value="Instagram">Instagram</option>
+            <option value="Facebook">Facebook</option>
+            <option value="TikTok">TikTok</option>
+            <option value="YouTube">YouTube</option>
+            <option value="Friend / Word of Mouth">Friend / word of mouth</option>
+            <option value="Drove By / Saw In Person">Drove past / saw in person</option>
+            <option value="Other">Other</option>
+          </select>
         </div>
 
         <button class="submit-btn" onclick="submitForm()">Submit Vehicle Request</button>
@@ -2874,7 +2892,8 @@
       contractSignedAt: r.contract_signed_at,
       contractSignatureName: r.contract_signature_name,
       contractSignatureIp: r.contract_signature_ip,
-      skipTheLine: r.skip_the_line || false
+      skipTheLine: r.skip_the_line || false,
+      referralSource: r.referral_source || ''
     };
   }
 
@@ -3622,7 +3641,7 @@
       return;
     }
 
-    const required = ['f-firstname','f-lastname','f-email','f-phone','f-date','f-zip','f-year-from','f-budget-min','f-budget-max'];
+    const required = ['f-firstname','f-lastname','f-email','f-phone','f-date','f-zip','f-year-from','f-budget-min','f-budget-max','f-referral-source'];
     // When the client says "I have a specific car in mind" (the default), the
     // make and model become required so we can scope the search. Open searches
     // skip these fields entirely.
@@ -3742,7 +3761,8 @@
       features: features,
       notes: document.getElementById('f-notes').value.trim() || '—',
       internalNotes: '',
-      skipTheLine: document.getElementById('f-skip-line') ? document.getElementById('f-skip-line').checked : false
+      skipTheLine: document.getElementById('f-skip-line') ? document.getElementById('f-skip-line').checked : false,
+      referralSource: document.getElementById('f-referral-source').value || ''
     };
 
     // ── Input validation ──────────────────────────────────────

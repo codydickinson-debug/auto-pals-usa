@@ -1,8 +1,14 @@
-// ── sheets.js — Append a sold-car row to the team's Google Sheet ─────
+// ── sheets.js — Append rows to the team's Google Sheet ───────────────
 //
-// Uses the SAME OAuth refresh token as booking.js (calendar). Set the same
-// GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN env vars; the refresh token must
-// have been generated with BOTH scopes:
+// Two consumers:
+//   1. HTTP endpoint (POST /api/sheets, staff-gated) — used by the
+//      dashboard's "save sale" flow to append the sold-car row.
+//   2. In-process module import — api/db.js calls appendRow() directly
+//      to mirror new client requests into the "Leads" tab (marketing
+//      attribution) without an HTTP round-trip.
+//
+// Uses the SAME OAuth refresh token as booking.js (calendar). The token
+// must have been generated with BOTH scopes:
 //   https://www.googleapis.com/auth/calendar.events
 //   https://www.googleapis.com/auth/spreadsheets
 //
@@ -11,10 +17,14 @@
 //   GOOGLE_CLIENT_SECRET
 //   GOOGLE_REFRESH_TOKEN
 //   SHEETS_SPREADSHEET_ID    — the target spreadsheet (from the URL)
-//   SHEETS_TAB_NAME          — optional, defaults to "Sales"
+//   SHEETS_TAB_NAME          — optional, defaults to "Sales" (sold-car tab)
+//   SHEETS_LEADS_TAB         — optional, defaults to "Leads" (referral tab)
 //
-// On the first row of the target tab, drop these headers (or copy/paste them):
+// Sold-car tab headers (first row):
 //   Date | Client | Vehicle | VIN | Mileage | Purchase | Repair Cost | Repair Profit | Finder Fee | Sale | Net Profit | Notes
+//
+// Leads tab headers (first row):
+//   Submitted | Name | Email | Phone | Referral Source | Vehicle | Budget
 
 async function getAccessToken() {
   const res = await fetch('https://oauth2.googleapis.com/token', {
@@ -37,14 +47,32 @@ async function getAccessToken() {
   return data.access_token;
 }
 
-async function appendRow(token, sale) {
+// Low-level append: send a single row array to a specific tab. Reusable
+// from any caller — sold cars, new leads, future tabs.
+async function appendRawRow(token, tab, rowValues) {
   const sheetId = process.env.SHEETS_SPREADSHEET_ID;
-  const tab = process.env.SHEETS_TAB_NAME || 'Sales';
   if (!sheetId) throw new Error('SHEETS_SPREADSHEET_ID not configured');
 
-  // Column order:
-  //   Date | Client | Vehicle | VIN | Mileage | Purchase | Repair Cost |
-  //   Repair Profit | Finder Fee | Sale | Net Profit | Notes
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tab)}!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ values: [rowValues] }),
+    signal: AbortSignal.timeout(8000)
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Sheets ${res.status}: ${err.slice(0, 200)}`);
+  }
+  return await res.json();
+}
+
+// Sold-car row builder + send (legacy: api/sheets HTTP endpoint).
+async function appendRow(token, sale) {
+  const tab = process.env.SHEETS_TAB_NAME || 'Sales';
   const row = [
     sale.date || '',
     sale.client || '',
@@ -59,22 +87,39 @@ async function appendRow(token, sale) {
     sale.profit != null ? String(sale.profit) : '',
     sale.notes || ''
   ];
+  return appendRawRow(token, tab, row);
+}
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tab)}!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ values: [row] }),
-    signal: AbortSignal.timeout(8000)
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Sheets ${res.status}: ${err.slice(0, 200)}`);
+// New: append a lead row (name + referral source). Called by api/db.js
+// after a successful client-form submission. Self-contained — handles
+// auth, demo-mode bail, and best-effort error swallowing. Never throws
+// out to the caller (signup shouldn't fail because a sheet append did).
+async function appendLeadRow(lead) {
+  const demoMode = !process.env.GOOGLE_CLIENT_ID
+                || !process.env.GOOGLE_REFRESH_TOKEN
+                || !process.env.SHEETS_SPREADSHEET_ID;
+  if (demoMode) {
+    console.log('[SHEETS DEMO LEAD] would append:', lead);
+    return { ok: true, demo: true };
   }
-  return await res.json();
+  const tab = process.env.SHEETS_LEADS_TAB || 'Leads';
+  const row = [
+    lead.submitted || new Date().toISOString().slice(0, 10),
+    lead.name || '',
+    lead.email || '',
+    lead.phone || '',
+    lead.referralSource || '',
+    lead.vehicle || '',
+    lead.budget || ''
+  ];
+  try {
+    const token = await getAccessToken();
+    await appendRawRow(token, tab, row);
+    return { ok: true };
+  } catch (err) {
+    console.error('[SHEETS lead-append] failed:', err.message);
+    return { ok: false, error: err.message };
+  }
 }
 
 const { verifyToken } = require('./auth.js');
@@ -112,3 +157,10 @@ module.exports = async function handler(req, res) {
     return res.status(502).json({ error: 'Sheets append failed', detail: err.message });
   }
 };
+
+// In-process exports so api/db.js can mirror new requests into the
+// Leads tab without an HTTP round-trip. Same pattern as api/email.js
+// exposing sendTemplate.
+module.exports.appendLeadRow = appendLeadRow;
+module.exports.appendRawRow  = appendRawRow;
+module.exports.getAccessToken = getAccessToken;
