@@ -627,21 +627,46 @@ ${footer(d)}`)
   // Sent to a client when STAFF replies in their portal. Email is the
   // always-arrives half here too — SMS to client is blocked by A2P.
   // Includes a short preview of the message to drive them back to the portal.
-  clientPortalMessage: (d) => ({
-    subject: `New message from Auto Pals USA`,
-    html: shell(`${header()}
+  clientPortalMessage: (d) => {
+    // Smart truncation: short messages render in full. Longer ones (warm-
+    // lead outreach, multi-paragraph follow-ups) get the first 1400 chars
+    // with a word-boundary break + a "see full message in the portal" hint.
+    // 400-char hard cap was cutting outreach mid-sentence.
+    const raw = String(d.messagePreview || '');
+    const SOFT_LIMIT = 1400;
+    let body = raw;
+    let truncated = false;
+    if (raw.length > SOFT_LIMIT) {
+      const slice = raw.slice(0, SOFT_LIMIT);
+      // Break at the last sentence boundary, falling back to last space
+      const lastStop = Math.max(
+        slice.lastIndexOf('. '),
+        slice.lastIndexOf('? '),
+        slice.lastIndexOf('! ')
+      );
+      const cutAt = lastStop > SOFT_LIMIT * 0.6
+        ? lastStop + 1
+        : (slice.lastIndexOf(' ') > 0 ? slice.lastIndexOf(' ') : SOFT_LIMIT);
+      body = raw.slice(0, cutAt).trimEnd() + '…';
+      truncated = true;
+    }
+    return ({
+      subject: `New message from Auto Pals USA`,
+      html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">
 <div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">You've got a message, ${d.firstName || 'there'}.</div>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 20px;">${d.staffName ? d.staffName + ' from Auto Pals USA' : 'Your Auto Pals USA team'} just sent you a message in your portal. Hop in to read it and reply when you're ready.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 20px;">${d.staffName ? d.staffName + ' from Auto Pals USA' : 'Your Auto Pals USA team'} just sent you a message in your portal.</p>
 </td></tr>
-${d.messagePreview ? `<tr><td style="padding:0 40px 22px;">
+${raw ? `<tr><td style="padding:0 40px 22px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-left:3px solid ${BRAND.navy};border-radius:0 8px 8px 0;"><tr><td style="padding:16px 20px;">
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.ink};line-height:1.65;white-space:pre-wrap;word-wrap:break-word;">${(d.messagePreview || '').slice(0, 400)}</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.ink};line-height:1.65;white-space:pre-wrap;word-wrap:break-word;">${body}</div>
+${truncated ? `<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;color:${BRAND.muted};margin-top:10px;font-style:italic;">Full message + reply in the portal →</div>` : ''}
 </td></tr></table>
 </td></tr>` : ''}
 <tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'Read & reply →')}</td></tr>
 ${footer(d)}`)
-  }),
+    });
+  },
 
   // Client-side "you booked a call" confirmation. Replaces the old inline
   // HTML in api/booking.js that was still branded Auto Motivation Enterprise.
