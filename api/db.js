@@ -432,7 +432,7 @@ module.exports = async function handler(req, res) {
               clientEmail: priorRow.email,
               vehicleStr:  _vehStr,
               budgetStr:   _budgStr,
-              amount:      '750',
+              amount:      '850',
               depositRef:  _depRef,
               depositDate: _depDate,
               portalCode:  priorRow.portal_code

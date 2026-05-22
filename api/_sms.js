@@ -127,7 +127,7 @@ const TEMPLATES = {
 
   staff_deposit_received: (d) =>
     `💰 Deposit received!\n${d.firstName || ''} ${d.lastName || ''}`.trim() +
-    ` just paid $750\nRef: ${d.depositRef || '—'}\nSearch window starts now.`,
+    ` just paid $850\nRef: ${d.depositRef || '—'}\nSearch window starts now.`,
 
   staff_rejected: (d) =>
     `❌ Request auto-rejected\n${d.firstName || ''} ${d.lastName || ''}`.trim() +

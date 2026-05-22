@@ -270,7 +270,7 @@ ${statsBlock}
 How to reason (do this step-by-step internally, then output the final JSON):
   1. Estimate the CURRENT RETAIL price (private-party / dealer-retail) for a clean example of the requested vehicle in South Florida. Use your knowledge of current used-car market pricing.
   2. Estimate the CURRENT AUCTION WHOLESALE price (Manheim-equivalent) for the same vehicle. Wholesale typically runs 70-85% of retail depending on demand.
-  3. Add Auto Pals' fixed costs: ~$500 auction/buyer fee, ~$300-600 transport (FL local cheap, cross-country higher), ~$200-400 light recon, plus the $750 service fee built into the client price.
+  3. Add Auto Pals' fixed costs: ~$500 auction/buyer fee, ~$300-600 transport (FL local cheap, cross-country higher), ~$200-400 light recon, plus the $850 service fee built into the client price.
   4. Compare the all-in landed cost to the client's stated budget MAX. Then compare to what similar deals in the company history actually sold for.
 
 Color rules:

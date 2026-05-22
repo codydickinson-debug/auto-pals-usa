@@ -251,11 +251,11 @@ ${footer(d)}`)
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:22px 26px;">
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:16px;">Receipt</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;">
-<tr><td style="padding:8px 0;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">Amount</td><td style="padding:8px 0;color:${BRAND.ink};font-weight:600;text-align:right;border-bottom:1px solid ${BRAND.border};">$750.00</td></tr>
+<tr><td style="padding:8px 0;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">Amount</td><td style="padding:8px 0;color:${BRAND.ink};font-weight:600;text-align:right;border-bottom:1px solid ${BRAND.border};">$850.00</td></tr>
 <tr><td style="padding:8px 0;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">Date</td><td style="padding:8px 0;color:${BRAND.ink};font-weight:600;text-align:right;border-bottom:1px solid ${BRAND.border};">${d.depositDate}</td></tr>
 <tr><td style="padding:8px 0;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">Reference</td><td style="padding:8px 0;color:${BRAND.navy};font-weight:700;text-align:right;font-size:12px;border-bottom:1px solid ${BRAND.border};">${d.depositRef}</td></tr>
 <tr><td style="padding:8px 0;color:${BRAND.muted};">Search window</td><td style="padding:8px 0;color:${BRAND.ink};font-weight:600;text-align:right;">60 days</td></tr>
-<tr><td style="padding:14px 0 0;color:${BRAND.ink};font-weight:700;font-size:15px;border-top:2px solid ${BRAND.border};">Total paid</td><td style="padding:14px 0 0;color:${BRAND.navy};font-weight:700;font-size:16px;text-align:right;border-top:2px solid ${BRAND.border};">$750.00</td></tr>
+<tr><td style="padding:14px 0 0;color:${BRAND.ink};font-weight:700;font-size:15px;border-top:2px solid ${BRAND.border};">Total paid</td><td style="padding:14px 0 0;color:${BRAND.navy};font-weight:700;font-size:16px;text-align:right;border-top:2px solid ${BRAND.border};">$850.00</td></tr>
 </table>
 </td></tr></table>
 </td></tr>
@@ -363,7 +363,7 @@ ${footer(d)}`)
 </td></tr>
 <tr><td style="padding:0 40px 20px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-left:3px solid ${BRAND.navy};border-radius:0 8px 8px 0;"><tr><td style="padding:16px 20px;">
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.7;">No commitment until you decide to put down the $750 deposit — and that's fully refundable if we don't find a match in 60 days.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.7;">No commitment until you decide to put down the $850 deposit — and that's fully refundable if we don't find a match in 60 days.</div>
 </td></tr></table>
 </td></tr>
 <tr><td style="padding:0 40px 12px;">${button(d.bookingUrl, 'Book your call →')}</td></tr>
@@ -396,12 +396,12 @@ ${footer(d)}`)
     html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">
 <div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Great talking yesterday, ${d.firstName}.</div>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 20px;">Thanks for the call. To officially kick off your 60-day search, we just need the $750 deposit. Once we have it, our team starts hunting through dealer auctions that same day.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 20px;">Thanks for the call. To officially kick off your 60-day search, we just need the $850 deposit. Once we have it, our team starts hunting through dealer auctions that same day.</p>
 </td></tr>
 <tr><td style="padding:0 40px 20px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-left:3px solid ${BRAND.navy};border-radius:0 8px 8px 0;"><tr><td style="padding:18px 22px;">
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:8px;">Why a deposit?</div>
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;">It's what lets us commit real auction time to your search. If we don't find a match in 60 days, you get the full $750 back — no strings, no fees.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;">It's what lets us commit real auction time to your search. If we don't find a match in 60 days, you get the full $850 back — no strings, no fees.</div>
 </td></tr></table>
 </td></tr>
 <tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'Submit your deposit →')}</td></tr>
@@ -417,7 +417,7 @@ ${footer(d)}`)
     html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">
 <div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Just a friendly nudge, ${d.firstName}.</div>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 18px;">Wanted to make sure the Zelle deposit instructions came through okay — they're in your portal if you need them again. As soon as we see the $750 land, the search kicks off that same day.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 18px;">Wanted to make sure the Zelle deposit instructions came through okay — they're in your portal if you need them again. As soon as we see the $850 land, the search kicks off that same day.</p>
 <p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">Quick reminder: it's fully refundable if we don't find your car within 60 days. No risk on your end.</p>
 </td></tr>
 <tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'Submit your deposit →')}</td></tr>
@@ -437,7 +437,7 @@ ${footer(d)}`)
 </td></tr>
 <tr><td style="padding:0 40px 20px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:18px 22px;">
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.7;"><strong style="color:${BRAND.ink};">Reminder:</strong> $750 kicks off your 60-day search window. If we don't find a match in that time, you get it all back.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.7;"><strong style="color:${BRAND.ink};">Reminder:</strong> $850 kicks off your 60-day search window. If we don't find a match in that time, you get it all back.</div>
 </td></tr></table>
 </td></tr>
 <tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'Submit your deposit →')}</td></tr>
@@ -468,7 +468,7 @@ ${footer(d)}`)
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.9;">
 <span style="color:${BRAND.navy};">✓</span> Personal vehicle sourcing through dealer-only auctions<br>
 <span style="color:${BRAND.navy};">✓</span> Wholesale pricing, not retail<br>
-<span style="color:${BRAND.navy};">✓</span> 60-day search window, $750 deposit (fully refundable if no match)<br>
+<span style="color:${BRAND.navy};">✓</span> 60-day search window, $850 deposit (fully refundable if no match)<br>
 <span style="color:${BRAND.navy};">✓</span> Free 30-minute intro call to kick everything off
 </div>
 </td></tr></table>
