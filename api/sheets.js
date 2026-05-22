@@ -47,13 +47,14 @@ async function getAccessToken() {
   return data.access_token;
 }
 
-// Low-level append: send a single row array to a specific tab. Reusable
-// from any caller — sold cars, new leads, future tabs.
-async function appendRawRow(token, tab, rowValues) {
-  const sheetId = process.env.SHEETS_SPREADSHEET_ID;
-  if (!sheetId) throw new Error('SHEETS_SPREADSHEET_ID not configured');
+// Low-level append: send a single row array to a specific tab in a
+// specific spreadsheet. Reusable from any caller — sold cars, new
+// leads, future tabs. Takes spreadsheetId explicitly so callers can
+// point at different sheets (sales vs leads have separate destinations).
+async function appendRawRow(token, spreadsheetId, tab, rowValues) {
+  if (!spreadsheetId) throw new Error('appendRawRow: spreadsheetId required');
 
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(tab)}!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(tab)}!A1:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -71,7 +72,10 @@ async function appendRawRow(token, tab, rowValues) {
 }
 
 // Sold-car row builder + send (legacy: api/sheets HTTP endpoint).
+// Targets SHEETS_SPREADSHEET_ID + SHEETS_TAB_NAME (default "Sales").
 async function appendRow(token, sale) {
+  const spreadsheetId = process.env.SHEETS_SPREADSHEET_ID;
+  if (!spreadsheetId) throw new Error('SHEETS_SPREADSHEET_ID not configured');
   const tab = process.env.SHEETS_TAB_NAME || 'Sales';
   const row = [
     sale.date || '',
@@ -87,17 +91,26 @@ async function appendRow(token, sale) {
     sale.profit != null ? String(sale.profit) : '',
     sale.notes || ''
   ];
-  return appendRawRow(token, tab, row);
+  return appendRawRow(token, spreadsheetId, tab, row);
 }
 
-// New: append a lead row (name + referral source). Called by api/db.js
-// after a successful client-form submission. Self-contained — handles
-// auth, demo-mode bail, and best-effort error swallowing. Never throws
-// out to the caller (signup shouldn't fail because a sheet append did).
+// Append a lead row (name + referral source) to a DEDICATED leads
+// spreadsheet, separate from the sold-car sales sheet. Called by
+// api/db.js after a successful client-form submission. Self-contained:
+// handles auth, demo-mode bail, and error swallowing — never throws
+// out to the caller (a form submission shouldn't fail because a sheet
+// append did).
+//
+// Targets SHEETS_LEADS_SPREADSHEET_ID + SHEETS_LEADS_TAB (default
+// "Leads"). When SHEETS_LEADS_SPREADSHEET_ID isn't set the function
+// silently no-ops (demo mode) so deploys before the env var is
+// configured still succeed — the data still lands in Supabase as the
+// system of record.
 async function appendLeadRow(lead) {
+  const spreadsheetId = process.env.SHEETS_LEADS_SPREADSHEET_ID;
   const demoMode = !process.env.GOOGLE_CLIENT_ID
                 || !process.env.GOOGLE_REFRESH_TOKEN
-                || !process.env.SHEETS_SPREADSHEET_ID;
+                || !spreadsheetId;
   if (demoMode) {
     console.log('[SHEETS DEMO LEAD] would append:', lead);
     return { ok: true, demo: true };
@@ -114,7 +127,7 @@ async function appendLeadRow(lead) {
   ];
   try {
     const token = await getAccessToken();
-    await appendRawRow(token, tab, row);
+    await appendRawRow(token, spreadsheetId, tab, row);
     return { ok: true };
   } catch (err) {
     console.error('[SHEETS lead-append] failed:', err.message);
