@@ -57,6 +57,9 @@ function footer(d = {}) {
           Auto Pals USA &middot; Pompano Beach, FL<br>
           Reply to this email any time${portalLink}. We read every message.
         </div>
+        <div style="margin-top:22px;text-align:center;">
+          <img src="https://autopalsusa.com/images/logo.png" alt="Auto Pals USA" width="64" height="64" style="display:inline-block;width:64px;height:64px;border-radius:10px;border:1px solid ${BRAND.border};">
+        </div>
       </td>
     </tr>`;
 }
