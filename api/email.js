@@ -87,6 +87,24 @@ function buttonSecondary(href, label) {
   return `<a href="${href}" style="display:inline-block;background:transparent;color:${BRAND.navy};font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;font-weight:600;padding:11px 22px;border-radius:8px;text-decoration:none;border:1px solid ${BRAND.border};margin-left:10px;">${label}</a>`;
 }
 
+// 60-day refund guarantee callout. Used at the TOP of every deposit-related
+// email so the eye lands on protection before the money ask — mirrors the
+// pre-payment trust card in the portal's deposit receipt view. Table-based
+// for Outlook box-model + uses HTML entity check for cross-client rendering.
+function refundGuarantee() {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.greenSoft};border:1px solid #a7f3d0;border-radius:10px;"><tr><td style="padding:16px 20px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+<td valign="top" width="32" style="padding-right:12px;">
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="${BRAND.green}" style="border-radius:50%;"><tr><td align="center" valign="middle" width="24" height="24" style="font-family:Arial,sans-serif;font-size:14px;font-weight:700;color:#ffffff;line-height:24px;">&#10003;</td></tr></table>
+</td>
+<td valign="top">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;font-weight:700;color:${BRAND.green};margin-bottom:3px;line-height:1.3;">60-Day Refund Guarantee</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;color:${BRAND.ink};line-height:1.55;">If we don't land your match within 60 days, the full $850 comes back. No fees, no fine print.</div>
+</td>
+</tr></table>
+</td></tr></table>`;
+}
+
 const TEMPLATES = {
   confirmation: (d) => ({
     subject: `We got your request, ${d.firstName} — let's find your car`,
@@ -394,58 +412,89 @@ ${footer(d)}`)
   // ─── DEPOSIT REMINDERS ────────────────────────────────────────
   // Sent at 24h, 48h, and 72h after call marked complete, if no deposit received.
   // 1 = friendly nudge, 2 = gentle middle check-in, 3 = firmer last call.
-  depositReminder1: (d) => ({
-    subject: `Quick follow-up from our call, ${d.firstName}`,
-    html: shell(`${header()}
+  depositReminder1: (d) => {
+    const vehicle = d.make
+      ? `${d.make}${d.model && d.model !== '—' ? ' ' + d.model : ''}`
+      : 'vehicle';
+    return ({
+      subject: `Locking in your search, ${d.firstName}`,
+      html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">
 <div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Great talking yesterday, ${d.firstName}.</div>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 20px;">Thanks for the call. To officially kick off your 60-day search, we just need the $850 deposit. Once we have it, our team starts hunting through dealer auctions that same day.</p>
 </td></tr>
-<tr><td style="padding:0 40px 20px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-left:3px solid ${BRAND.navy};border-radius:0 8px 8px 0;"><tr><td style="padding:18px 22px;">
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:8px;">Why a deposit?</div>
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;">It's what lets us commit real auction time to your search. If we don't find a match in 60 days, you get the full $850 back — no strings, no fees.</div>
-</td></tr></table>
+<tr><td style="padding:0 40px 20px;">${refundGuarantee()}</td></tr>
+<tr><td style="padding:0 40px 18px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0;">As soon as the $850 deposit lands in our Zelle, your 60-day search for the <strong style="color:${BRAND.ink};">${vehicle}</strong> kicks off — same day. We start scanning dealer auctions immediately.</p>
 </td></tr>
-<tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'Submit your deposit →')}</td></tr>
+<tr><td style="padding:0 40px 14px;">${button(d.portalUrl, 'Send your deposit →')}</td></tr>
 <tr><td style="padding:0 40px 8px;">
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:8px 0 0;">Questions about anything? Just reply and we'll sort it out.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;">After you send the Zelle, drop the receipt screenshot in your portal messages — we'll confirm within 5 minutes during business hours.</p>
+</td></tr>
+<tr><td style="padding:14px 40px 0;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;">Any last questions before you send it? Just reply here — we read every message.</p>
 </td></tr>
 ${footer(d)}`)
-  }),
+    });
+  },
 
-  // 48h — gentle middle nudge, not pushy yet
+  // 48h — handle objections head-on. Most clients who haven't paid by now
+  // have a specific friction point ("is Zelle safe?", "what if I bail?",
+  // "when does this actually start?"). Answer those before they have to ask.
   depositReminder2: (d) => ({
-    subject: `Following up on your deposit, ${d.firstName}`,
+    subject: `Two days in — your search is still on hold, ${d.firstName}`,
     html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">
-<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Just a friendly nudge, ${d.firstName}.</div>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 18px;">Wanted to make sure the Zelle deposit instructions came through okay — they're in your portal if you need them again. As soon as we see the $850 land, the search kicks off that same day.</p>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">Quick reminder: it's fully refundable if we don't find your car within 60 days. No risk on your end.</p>
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Quick follow-up, ${d.firstName}.</div>
 </td></tr>
-<tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'Submit your deposit →')}</td></tr>
+<tr><td style="padding:0 40px 20px;">${refundGuarantee()}</td></tr>
+<tr><td style="padding:0 40px 18px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0;">It's been a couple days since we talked and the deposit hasn't come through yet. No pressure on our end — just want to make sure nothing's getting in the way.</p>
+</td></tr>
+<tr><td style="padding:0 40px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:18px 22px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:12px;">A few common questions at this point</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.55;font-weight:700;margin-bottom:3px;">Is Zelle safe?</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin-bottom:14px;">Yes. It's bank-to-bank, no intermediary, and instant. Zero transaction fees, which is why we use it.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.55;font-weight:700;margin-bottom:3px;">What if I change my mind?</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin-bottom:14px;">You have 60 days. If we don't land a match in that window, the full $850 comes back. Terms are in your portal contract.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.55;font-weight:700;margin-bottom:3px;">When does the search actually start?</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;">The same day the deposit lands. Most matches show up within 2–4 weeks of bidding.</div>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:0 40px 14px;">${button(d.portalUrl, 'Send your deposit →')}</td></tr>
 <tr><td style="padding:0 40px 8px;">
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:8px 0 0;">Anything holding things up? Just reply and we'll help sort it out.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;">Got a different question we didn't cover? Just hit reply.</p>
 </td></tr>
 ${footer(d)}`)
   }),
 
-  // 72h — firmer last call (was depositReminder2 before the 48h slot was added)
+  // 72h — graceful last touch. Replaces the previous stick framing
+  // ("we can't begin sourcing until the deposit is in") with a two-paths
+  // close: still in / not in. Lower-pressure but clearer. Data showed the
+  // ~7-day-post-call cliff after which leads go dark forever, so this
+  // email's job is either to convert the wobblers or get a clean "close
+  // it out" reply so the team can stop spending cycles on dead leads.
   depositReminder3: (d) => ({
-    subject: `Ready to start your search, ${d.firstName}?`,
+    subject: `Should I close out your file, ${d.firstName}?`,
     html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">
-<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Just checking in, ${d.firstName}.</div>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 20px;">It's been a few days since we talked and we haven't received the deposit yet. <strong style="color:${BRAND.ink};">We can't begin sourcing your vehicle until the deposit is in.</strong> Just want to make sure nothing's fallen through the cracks.</p>
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">One last check-in, ${d.firstName}.</div>
 </td></tr>
-<tr><td style="padding:0 40px 20px;">
+<tr><td style="padding:0 40px 20px;">${refundGuarantee()}</td></tr>
+<tr><td style="padding:0 40px 18px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0;">It's been about three days since our call. I'm not going to keep pestering you, but I wanted to give you one clear last touch — there are two paths from here:</p>
+</td></tr>
+<tr><td style="padding:0 40px 18px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:18px 22px;">
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.7;"><strong style="color:${BRAND.ink};">Reminder:</strong> $850 kicks off your 60-day search window. If we don't find a match in that time, you get it all back.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.55;font-weight:700;margin-bottom:4px;">Still in the market? →</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin-bottom:16px;">The Zelle address is in your portal. Once the $850 lands, your search is live within hours.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.55;font-weight:700;margin-bottom:4px;">Decided to pass? →</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;">Totally fine. Just reply with "close it out" and I'll archive your file so we're not in your inbox.</div>
 </td></tr></table>
 </td></tr>
-<tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'Submit your deposit →')}</td></tr>
+<tr><td style="padding:0 40px 14px;">${button(d.portalUrl, 'Send your deposit →')}</td></tr>
 <tr><td style="padding:0 40px 8px;">
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:8px 0 0;">If you've changed your mind or something's come up, no problem — just let us know so we can close things out on our end.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;">Either way, just hit reply and let me know — I'd much rather hear from you than guess.</p>
 </td></tr>
 ${footer(d)}`)
   }),
