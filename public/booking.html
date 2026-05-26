@@ -544,6 +544,23 @@
 
     <!-- STEP 1: Pick date & time -->
     <div class="booking-step active" id="step-1">
+      <!-- Quick-book hero — the next 3 open slots as one-click tappable cards.
+           Reduces "scan a 30-day calendar" burden into "pick from 3 obvious
+           options" for the majority who'd be happy with the next available
+           weekday slot anyway. Full calendar still lives below for anyone
+           who needs a specific date. Populated by renderQuickBook() after
+           preloadMonthBookings resolves. -->
+      <div id="quick-book" style="padding:22px 28px 6px;border-bottom:1px solid var(--border);">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:12px;">⚡ Quick book — next open slots</div>
+        <div id="quick-book-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+          <!-- populated by renderQuickBook() -->
+          <div style="font-size:13px;color:var(--text-muted);padding:10px 0;">Loading…</div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);text-align:center;padding:4px 0 8px;">
+          Or pick a specific date below ↓
+        </div>
+      </div>
+
       <div class="cal-header">
         <div class="cal-month" id="cal-month-label">Loading...</div>
         <div class="cal-nav">
@@ -661,6 +678,46 @@
 </div>
 
 <script>
+  // ── ANONYMOUS FUNNEL TRACKING ──────────────────────────────────
+  // Mirrors the helper in form.html. Lazily mints a per-visitor session ID
+  // in localStorage and pings /api/db?table=events. Fire-and-forget, uses
+  // keepalive so events survive same-tab navigation. Never throws into UX.
+  let _sessionId = null;
+  function _getSessionId() {
+    if (_sessionId) return _sessionId;
+    try {
+      let s = localStorage.getItem('aup_session_id');
+      if (!s) {
+        s = (window.crypto && window.crypto.randomUUID)
+          ? window.crypto.randomUUID()
+          : 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem('aup_session_id', s);
+      }
+      _sessionId = s;
+      return s;
+    } catch (e) {
+      return 's_' + Date.now();
+    }
+  }
+  function track(name, props, requestId) {
+    try {
+      fetch('/api/db?table=events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          sessionId: _getSessionId(),
+          page: (window.location && window.location.pathname) || '',
+          props: props || null,
+          requestId: requestId || null
+        }),
+        keepalive: true
+      }).catch(() => {});
+    } catch (e) { /* never throw */ }
+  }
+  // Page-load event fires once per visit.
+  try { track('booking_view'); } catch (e) {}
+
   // ── CALENDAR STATE ──────────────────────────────────────────────
   const today = new Date();
   // Earliest bookable day = tomorrow. Same-day sales calls are blocked so
@@ -799,6 +856,7 @@
 
   function selectTime(time) {
     selectedTime = time;
+    try { track('booking_slot_selected', { date: selectedDate, time }); } catch (e) {}
     document.querySelectorAll('.time-slot').forEach(el => {
       el.classList.toggle('selected', el.textContent === time);
     });
@@ -922,6 +980,17 @@
     document.getElementById('conf-time').textContent = selectedTime;
     document.getElementById('conf-email').textContent = email;
 
+    // Funnel close-event: caller booked a call. Linked to the portal code
+    // if we have one in sessionStorage so we can join back to the request.
+    try {
+      track('booking_submit_success', {
+        date: selectedDate,
+        time: selectedTime,
+        has_portal_code: !!sessionStorage.getItem('portal_code'),
+        vehicle: (document.getElementById('b-vehicle') || {}).value || ''
+      });
+    } catch (e) {}
+
     // If the calendar event failed (or we're in demo mode without Google
     // configured), warn the user instead of silently claiming success.
     const banner = document.getElementById('conf-warning');
@@ -942,6 +1011,70 @@
   }
 
   function goBack() { showStep(1); }
+
+  // ── QUICK-BOOK HERO ──────────────────────────────────────────────
+  // Surfaces the next 3 open slots as one-click cards so most visitors
+  // never need to interact with the calendar. Walks forward through
+  // weekdays, skipping days at the MAX_PER_DAY cap and already-booked
+  // slot times. Caps the search at ~60 days out as a safety bound.
+  function getNextAvailableSlots(maxCount) {
+    const out = [];
+    const startDate = firstBookableWeekday();
+    const d = new Date(startDate.getTime());
+    const cutoff = new Date(startDate.getTime() + 60 * 24 * 60 * 60 * 1000);
+    while (out.length < maxCount && d < cutoff) {
+      if (d.getDay() === 0 || d.getDay() === 6) { d.setDate(d.getDate() + 1); continue; }
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const dayBooked = BOOKED[dateStr] || [];
+      if ((DAY_COUNTS[dateStr] || 0) < MAX_PER_DAY) {
+        for (const slot of SLOTS) {
+          if (dayBooked.includes(slot)) continue;
+          out.push({ date: dateStr, dateObj: new Date(d.getTime()), time: slot });
+          if (out.length >= maxCount) break;
+        }
+      }
+      d.setDate(d.getDate() + 1);
+    }
+    return out;
+  }
+
+  function renderQuickBook() {
+    const list = document.getElementById('quick-book-list');
+    if (!list) return;
+    const slots = getNextAvailableSlots(3);
+    if (slots.length === 0) {
+      list.innerHTML = `<div style="font-size:13px;color:var(--text-muted);padding:10px 0;">No open slots in the next few weeks — use the calendar below.</div>`;
+      return;
+    }
+    list.innerHTML = slots.map((s, i) => {
+      const dayName  = s.dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+      const dateBit  = s.dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const pillText = i === 0 ? 'Next available' : (i === 1 ? 'Also open' : 'Or');
+      const accent   = i === 0
+        ? 'background:var(--navy);color:var(--cream);border:none;'
+        : 'background:var(--white);color:var(--text);border:1px solid var(--border);';
+      return `<button type="button" onclick="pickQuickSlot('${s.date}','${s.time.replace(/'/g, "\\'")}')" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-radius:12px;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;text-align:left;transition:all 0.15s;${accent}" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;opacity:0.75;margin-bottom:3px;">${pillText}</div>
+          <div style="font-size:15px;font-weight:700;line-height:1.3;">${dayName} ${dateBit} · ${s.time}</div>
+        </div>
+        <div style="font-size:13px;font-weight:600;opacity:0.85;">Book →</div>
+      </button>`;
+    }).join('');
+  }
+
+  function pickQuickSlot(date, time) {
+    selectedDate = date;
+    selectedTime = time;
+    try { track('booking_quick_slot_selected', { date, time }); } catch (e) {}
+    const dateObj = new Date(date + 'T12:00:00');
+    const dateLabel = dateObj.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+    const confDate = document.getElementById('confirm-date');
+    const confTime = document.getElementById('confirm-time');
+    if (confDate) confDate.textContent = dateLabel;
+    if (confTime) confTime.textContent = time;
+    showStep(2);
+  }
 
   // Auto-pick the first bookable weekday so every visitor lands with a
   // selected date + visible time slots — no extra click required. Runs once
@@ -979,6 +1112,9 @@
     renderCalendar();
     await preloadMonthBookings();
     await autoSelectFirstBookable();
+    // After autoSelect — which may swap viewMonth and re-preload — so the
+    // BOOKED data we look at in getNextAvailableSlots is fresh.
+    renderQuickBook();
   })();
 
   // Pre-fill from sessionStorage.bookingPrefill if the user just came from

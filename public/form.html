@@ -1871,6 +1871,7 @@
 
         <!-- Primary CTA — book the call -->
         <a id="primary-cta" href="booking.html"
+           onclick="try{track('success_primary_cta_click',{cta:(document.getElementById('primary-cta')||{}).textContent||''});}catch(e){}"
            style="display:inline-block;padding:16px 32px;background:var(--navy);color:#f5f0e8;border-radius:12px;text-decoration:none;font-family:'DM Sans',system-ui,sans-serif;font-size:16px;font-weight:700;margin-bottom:20px;letter-spacing:0.01em;box-shadow:0 4px 14px rgba(15,37,87,0.18);">
           📅 Book your 30-min call →
         </a>
@@ -1900,12 +1901,12 @@
         <!-- Skip-the-call alternative (hidden for skip-the-line submissions) -->
         <p id="skip-cta-wrap" style="font-size:13px;color:var(--text-muted);margin:14px 0;line-height:1.6;">
           Want to skip the call and start sourcing today?
-          <a href="portal.html" style="color:var(--navy);font-weight:600;text-decoration:underline;">Pay your $850 deposit →</a>
+          <a href="portal.html" onclick="try{track('success_skip_pay_click');}catch(e){}" style="color:var(--navy);font-weight:600;text-decoration:underline;">Pay your $850 deposit →</a>
         </p>
 
         <!-- Secondary actions -->
         <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px;">
-          <a id="secondary-cta" href="portal.html" style="padding:9px 18px;background:rgba(15,37,87,0.06);color:var(--navy);border-radius:8px;text-decoration:none;font-family:system-ui,sans-serif;font-size:13px;font-weight:600;">Go to portal</a>
+          <a id="secondary-cta" href="portal.html" onclick="try{track('success_portal_click');}catch(e){}" style="padding:9px 18px;background:rgba(15,37,87,0.06);color:var(--navy);border-radius:8px;text-decoration:none;font-family:system-ui,sans-serif;font-size:13px;font-weight:600;">Go to portal</a>
           <button class="submit-btn" style="max-width:160px;background:none;border:1px solid var(--border);color:var(--text-muted);padding:9px 18px;font-size:13px;" onclick="resetForm()">Submit Another</button>
         </div>
       </div>
@@ -2886,6 +2887,49 @@
     } catch {}
   }
 
+  // ── ANONYMOUS FUNNEL TRACKING ────────────────────────────────────
+  // Lazily mints a per-visitor session ID in localStorage and pings the
+  // /api/db?table=events endpoint with named events. Fire-and-forget — uses
+  // fetch's keepalive flag so the request survives same-tab navigation
+  // (essential for CTA-click events that immediately route away). Never
+  // throws into the UI; tracking failures must not affect the user flow.
+  // Used to answer "where in the form/booking funnel do we lose people?"
+  // since the requests table only stores successful submissions.
+  let _sessionId = null;
+  function _getSessionId() {
+    if (_sessionId) return _sessionId;
+    try {
+      let s = localStorage.getItem('aup_session_id');
+      if (!s) {
+        s = (window.crypto && window.crypto.randomUUID)
+          ? window.crypto.randomUUID()
+          : 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem('aup_session_id', s);
+      }
+      _sessionId = s;
+      return s;
+    } catch (e) {
+      return 's_' + Date.now();
+    }
+  }
+  function track(name, props, requestId) {
+    if (isLocal) return;
+    try {
+      fetch(`${DB_BASE}?table=events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          sessionId: _getSessionId(),
+          page: (window.location && window.location.pathname) || '',
+          props: props || null,
+          requestId: requestId || null
+        }),
+        keepalive: true
+      }).catch(() => {});
+    } catch (e) { /* never throw */ }
+  }
+
   function mapRequestFromDB(r) {
     return {
       id: r.id, submitted: r.submitted, status: r.status,
@@ -3649,6 +3693,15 @@
     const fin  = document.getElementById('f-pay-finance');
     if (cash) cash.addEventListener('change', syncPaymentFields);
     if (fin)  fin.addEventListener('change', syncPaymentFields);
+
+    // Fire form_view only when the public client form is the active view —
+    // skips the staff dashboard, which also lives in this file.
+    try {
+      const clientView = document.getElementById('view-client');
+      if (clientView && clientView.classList.contains('active')) {
+        track('form_view');
+      }
+    } catch (e) { /* swallow */ }
   });
 
   let _submitting = false;
@@ -3905,6 +3958,16 @@
 
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('success-msg').style.display = 'block';
+
+    // Funnel event — capturing the minimum useful set for drop-off analysis.
+    // Linked to the new request_id so we can join events ⨯ requests later.
+    track('form_submit_success', {
+      budget_max:       req.budgetMax,
+      skip_the_line:    !!req.skipTheLine,
+      vehicle:          req.make ? `${req.make}${req.model && req.model !== '—' ? ' ' + req.model : ''}` : 'open_search',
+      referral_source:  req.referralSource || null,
+      search_mode:      req.searchMode || null
+    }, req.id);
   }
 
   function generateAccessCode(firstName, id) {

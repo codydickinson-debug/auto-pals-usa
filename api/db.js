@@ -147,11 +147,13 @@ module.exports = async function handler(req, res) {
   //   - POST /messages         (client sending a message through portal)
   //   - GET /messages          (client viewing their own thread)
   //   - PUT /messages          (marking messages read)
+  //   - POST /events           (anonymous funnel analytics from form/booking/etc.)
   // Everything else (DELETE of anything, PUT on requests, all repairs/sales writes) = staff only.
   const isPublicOp =
     (table === 'requests' && (req.method === 'GET' || req.method === 'POST')) ||
     (table === 'bookings' && (req.method === 'GET' || req.method === 'POST')) ||
-    (table === 'messages' && req.method !== 'DELETE');
+    (table === 'messages' && req.method !== 'DELETE') ||
+    (table === 'events'   && req.method === 'POST');
 
   if (!isPublicOp) {
     const token = req.headers['x-staff-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
@@ -607,6 +609,42 @@ module.exports = async function handler(req, res) {
         const reqId = body.requestId || body.request_id || body.id;
         await query('messages', 'DELETE', null, `?request_id=eq.${reqId}`);
         return res.json({ ok: true });
+      }
+    }
+
+    // ── EVENTS (anonymous funnel analytics) ───────────────────────
+    // POST only from public surfaces (form, booking, success screen, portal).
+    // GET requires staff token (handled by the isPublicOp gate above).
+    // Errors here MUST NOT fail the user's request — these are fire-and-forget
+    // tracking pings; we swallow any DB issue and return 202 so a flaky
+    // events insert can never break the form submit flow that triggered it.
+    if (table === 'events') {
+      if (req.method === 'POST') {
+        try {
+          const row = {
+            name:        String(body.name || '').slice(0, 80),
+            session_id:  body.sessionId ? String(body.sessionId).slice(0, 64) : null,
+            page:        body.page ? String(body.page).slice(0, 200) : null,
+            props:       (body.props && typeof body.props === 'object') ? body.props : null,
+            request_id:  body.requestId ? Number(body.requestId) : null
+          };
+          if (!row.name) {
+            return res.status(202).json({ ok: false, reason: 'missing_name' });
+          }
+          await query('events', 'POST', row);
+          return res.status(202).json({ ok: true });
+        } catch (e) {
+          // Swallow errors — tracking failures should never affect UX.
+          console.warn('[events] insert failed:', e && e.message);
+          return res.status(202).json({ ok: false });
+        }
+      }
+      if (req.method === 'GET') {
+        // Staff-only (already gated above). Pass through to Supabase with
+        // sensible defaults so a bare /events GET returns the last 500.
+        const params = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '?order=ts.desc&limit=500';
+        const data = await query('events', 'GET', null, params);
+        return res.json(data || []);
       }
     }
 
