@@ -409,6 +409,47 @@ ${footer(d)}`)
 ${footer(d)}`)
   }),
 
+  // ─── POST-CALL DEPOSIT NUDGE ──────────────────────────────────
+  // Fires immediately when staff marks the call complete in the dashboard.
+  // Goal: capitalize on the warm-from-the-call moment with a clear next
+  // step (refund guarantee + inline Zelle + portal link) BEFORE the
+  // excitement cools off. Distinct from the depositReminderN drip below
+  // which is timer-based via daily cron. Trigger lives in api/db.js
+  // PUT handler, on the call_completed_at null→set transition (and only
+  // for non-skip-the-line requests since those bypass the call entirely).
+  postCallNudge: (d) => {
+    const vehicle = d.make
+      ? `${d.make}${d.model && d.model !== '—' ? ' ' + d.model : ''}`
+      : 'vehicle';
+    return ({
+      subject: `Here's your deposit link, ${d.firstName}`,
+      html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Great chatting just now, ${d.firstName}.</div>
+</td></tr>
+<tr><td style="padding:0 40px 20px;">${refundGuarantee()}</td></tr>
+<tr><td style="padding:0 40px 18px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0;">As promised, here's everything you need to lock in your 60-day search for the <strong style="color:${BRAND.ink};">${vehicle}</strong>. Send the $850 deposit via Zelle to the address below and your search goes live the same day.</p>
+</td></tr>
+<tr><td style="padding:0 40px 18px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border:1px solid ${BRAND.border};border-radius:10px;"><tr><td style="padding:18px 22px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:6px;">Zelle Address</div>
+<div style="font-family:'SF Mono','Menlo','Consolas',monospace;font-size:16px;font-weight:700;color:${BRAND.navy};word-break:break-all;margin-bottom:14px;">automotivationent@gmail.com</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:6px;">Amount</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:16px;font-weight:700;color:${BRAND.navy};">$850.00</div>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:0 40px 14px;">${button(d.portalUrl, 'Open portal →')}</td></tr>
+<tr><td style="padding:0 40px 8px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;">After you send the Zelle, drop the receipt screenshot in your portal messages — we'll confirm within 5 minutes during business hours.</p>
+</td></tr>
+<tr><td style="padding:14px 40px 0;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;">Anything come up after we hung up? Just hit reply — we read every message.</p>
+</td></tr>
+${footer(d)}`)
+    });
+  },
+
   // ─── DEPOSIT REMINDERS ────────────────────────────────────────
   // Sent at 24h, 48h, and 72h after call marked complete, if no deposit received.
   // 1 = friendly nudge, 2 = gentle middle check-in, 3 = firmer last call.

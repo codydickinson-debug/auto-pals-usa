@@ -456,6 +456,31 @@ module.exports = async function handler(req, res) {
           await Promise.allSettled(depositFires);
         }
 
+        // Call just got marked complete: fire the immediate post-call deposit
+        // nudge (refund guarantee + inline Zelle + portal link) so the client
+        // gets a clear next step while the call is still fresh. Distinct from
+        // the depositReminderN drip below which fires from the daily cron.
+        // Skip the email when:
+        //   - this is a skip-the-line request (no actual call happened; the
+        //     call_completed_at is auto-set at form submit)
+        //   - the deposit is already paid (rare edge case where call gets
+        //     marked complete after payment)
+        //   - the client has no email on file
+        const wasCalled    = !!(priorRow && priorRow.call_completed_at);
+        const nowCalled    = !!mapped.call_completed_at;
+        const isSkipLine   = !!(priorRow && priorRow.skip_the_line);
+        const wasDeposited = !!(priorRow && priorRow.deposit_paid);
+        if (!wasCalled && nowCalled && !isSkipLine && !wasDeposited && priorRow && priorRow.email) {
+          await safeSendEmail('postCallNudge', {
+            firstName: priorRow.first_name,
+            lastName:  priorRow.last_name,
+            email:     priorRow.email,
+            make:      priorRow.make,
+            model:     priorRow.model,
+            portalUrl: PORTAL_URL
+          });
+        }
+
         return res.json({ ok: true });
       }
       if (req.method === 'DELETE') {
