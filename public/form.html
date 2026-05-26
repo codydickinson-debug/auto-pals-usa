@@ -1859,20 +1859,55 @@
         <button class="submit-btn" onclick="submitForm()">Submit Vehicle Request</button>
       </div>
 
-      <!-- Success message -->
+      <!-- Success message
+           Active conversion path: primary CTA pushes them to book the call
+           immediately (peak intent moment, post-form-submit). The submitForm()
+           handler in JS rewrites headline/subhead/CTA based on req.skipTheLine
+           so skip-the-line clients see a "go pay deposit" path instead. -->
       <div class="success-msg" id="success-msg">
         <div class="success-icon">✓</div>
-        <h2>Request Received</h2>
-        <p>Thanks for submitting your request. A member of the Auto Pals USA team will reach out within 24 hours to discuss next steps and schedule a call.</p>
-        <br>
-        <div id="portal-code-box" style="background:var(--navy);border-radius:12px;padding:24px 28px;margin:0 auto 20px;max-width:360px;text-align:center;">
-          <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(245,240,232,0.5);margin-bottom:8px;">Your Portal Access Code</div>
-          <div id="portal-code-display" style="font-family:'Playfair Display',serif;font-size:32px;font-weight:700;color:#f5f0e8;letter-spacing:0.15em;margin-bottom:10px;"></div>
-          <div style="font-size:12px;color:rgba(245,240,232,0.5);line-height:1.6;">Save this code — you'll need it to access your Client Portal and track your request.</div>
+        <h2 id="success-headline" style="margin-bottom:8px;">Got it — now book your call.</h2>
+        <p id="success-subhead" style="max-width:480px;margin:0 auto 24px;color:var(--text-muted);line-height:1.6;">A 30-min discovery call is the fastest way to lock in your search. Pick a time that works below.</p>
+
+        <!-- Primary CTA — book the call -->
+        <a id="primary-cta" href="booking.html"
+           style="display:inline-block;padding:16px 32px;background:var(--navy);color:#f5f0e8;border-radius:12px;text-decoration:none;font-family:'DM Sans',system-ui,sans-serif;font-size:16px;font-weight:700;margin-bottom:20px;letter-spacing:0.01em;box-shadow:0 4px 14px rgba(15,37,87,0.18);">
+          📅 Book your 30-min call →
+        </a>
+
+        <!-- What you'll cover on the call -->
+        <div id="what-youll-learn" style="background:rgba(245,240,232,0.55);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin:0 auto 18px;max-width:460px;text-align:left;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;text-align:center;">On the call we'll cover</div>
+          <ul style="margin:0;padding-left:20px;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;color:var(--text);line-height:1.7;">
+            <li>What you can realistically expect to land for your budget</li>
+            <li>How auctions work and where the savings actually come from</li>
+            <li>Timeline — most clients see matches within 2–4 weeks</li>
+          </ul>
         </div>
-        <a href="portal.html" style="display:inline-block;padding:12px 28px;background:var(--navy);color:#f5f0e8;border-radius:10px;text-decoration:none;font-family:system-ui,sans-serif;font-size:14px;font-weight:700;margin-bottom:16px;letter-spacing:0.02em;">Go to My Portal →</a>
-        <br>
-        <button class="submit-btn" style="max-width:200px;margin:0 auto;display:block;background:none;border:1px solid var(--border);color:var(--text-muted);" onclick="resetForm()">Submit Another</button>
+
+        <!-- Availability hint -->
+        <div id="availability-hint" style="font-family:'DM Sans',system-ui,sans-serif;font-size:12px;color:var(--text-muted);margin-bottom:24px;">
+          📅 Mon–Fri 9am–5pm ET &nbsp;•&nbsp; most days have 4–6 open slots
+        </div>
+
+        <!-- Portal code (smaller now, supporting role) -->
+        <div id="portal-code-box" style="background:var(--navy);border-radius:10px;padding:16px 22px;margin:0 auto 18px;max-width:320px;text-align:center;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(245,240,232,0.5);margin-bottom:6px;">Your Portal Access Code</div>
+          <div id="portal-code-display" style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#f5f0e8;letter-spacing:0.12em;margin-bottom:4px;"></div>
+          <div style="font-size:11px;color:rgba(245,240,232,0.5);line-height:1.5;">Save this — needed to track your request</div>
+        </div>
+
+        <!-- Skip-the-call alternative (hidden for skip-the-line submissions) -->
+        <p id="skip-cta-wrap" style="font-size:13px;color:var(--text-muted);margin:14px 0;line-height:1.6;">
+          Want to skip the call and start sourcing today?
+          <a href="portal.html" style="color:var(--navy);font-weight:600;text-decoration:underline;">Pay your $850 deposit →</a>
+        </p>
+
+        <!-- Secondary actions -->
+        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px;">
+          <a id="secondary-cta" href="portal.html" style="padding:9px 18px;background:rgba(15,37,87,0.06);color:var(--navy);border-radius:8px;text-decoration:none;font-family:system-ui,sans-serif;font-size:13px;font-weight:600;">Go to portal</a>
+          <button class="submit-btn" style="max-width:160px;background:none;border:1px solid var(--border);color:var(--text-muted);padding:9px 18px;font-size:13px;" onclick="resetForm()">Submit Another</button>
+        </div>
       </div>
     </div>
   </div>
@@ -3830,6 +3865,44 @@
 
     // Show success with code
     document.getElementById('portal-code-display').textContent = accessCode;
+
+    // Branch the success screen by Skip-the-Line. Non-skip clients see the
+    // "book your call" path (primary conversion); skip-the-line clients see
+    // a "pay deposit" path since they explicitly opted out of the call.
+    const isSkipLine = !!req.skipTheLine;
+    const headline    = document.getElementById('success-headline');
+    const subhead     = document.getElementById('success-subhead');
+    const primaryCta  = document.getElementById('primary-cta');
+    const learnBox    = document.getElementById('what-youll-learn');
+    const availHint   = document.getElementById('availability-hint');
+    const skipCtaWrap = document.getElementById('skip-cta-wrap');
+    if (isSkipLine) {
+      headline.textContent = `Got it, ${req.firstName} — head to your portal.`;
+      subhead.textContent  = `You opted in to Skip the Line, so we go straight to sourcing. Pay your $850 deposit and we start hunting auctions the same day.`;
+      primaryCta.textContent = '💳 Pay $850 deposit & start sourcing →';
+      primaryCta.setAttribute('href', 'portal.html');
+      learnBox.style.display    = 'none';
+      availHint.style.display   = 'none';
+      skipCtaWrap.style.display = 'none';
+    } else {
+      headline.textContent = `Got it, ${req.firstName} — now lock in your call.`;
+    }
+
+    // Stash for the booking page so the user doesn't re-type 5 fields. Read
+    // by booking.html on DOMContentLoaded; sessionStorage clears when the tab
+    // closes so this doesn't leak across browser sessions.
+    try {
+      sessionStorage.setItem('bookingPrefill', JSON.stringify({
+        firstName: req.firstName || '',
+        lastName:  req.lastName  || '',
+        email:     req.email     || '',
+        phone:     req.phone     || '',
+        vehicle:   (req.make && req.make !== '—')
+          ? `${req.make}${req.model && req.model !== '—' ? ' ' + req.model : ''}`
+          : ''
+      }));
+    } catch (e) { /* sessionStorage can throw in private-mode browsers; non-fatal */ }
+
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('success-msg').style.display = 'block';
   }

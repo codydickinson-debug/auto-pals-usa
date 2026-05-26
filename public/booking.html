@@ -980,6 +980,20 @@
     await preloadMonthBookings();
     await autoSelectFirstBookable();
   })();
+
+  // Pre-fill from sessionStorage.bookingPrefill if the user just came from
+  // the form. Removes the "re-type 5 fields you just filled out" friction
+  // at the exact moment intent is highest. Wrapped in try/catch because
+  // sessionStorage can throw in private-mode browsers.
+  try {
+    const pre = JSON.parse(sessionStorage.getItem('bookingPrefill') || '{}');
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+    set('b-fn',      pre.firstName);
+    set('b-ln',      pre.lastName);
+    set('b-email',   pre.email);
+    set('b-phone',   pre.phone);
+    set('b-vehicle', pre.vehicle);
+  } catch (e) { /* sessionStorage unavailable; non-fatal */ }
 </script>
 </body>
 </html>

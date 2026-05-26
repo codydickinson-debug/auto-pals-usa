@@ -83,12 +83,37 @@ module.exports = async function handler(req, res) {
       try {
         // ── BOOKING REMINDERS ──
         // Skip if they've already booked a call (booking_confirmed_at set),
-        // or if staff marked the call complete (call_completed_at).
-        if (!r.booking_confirmed_at && !r.call_completed_at) {
+        // or if staff marked the call complete (call_completed_at), or if
+        // they opted in to Skip-the-Line (no call needed), or if staff has
+        // moved them to dormant (paused / on-hold).
+        // NOTE: 'rejected' and 'sold' are already excluded at the query
+        // level (line 80) so we don't need to check those here.
+        if (!r.booking_confirmed_at && !r.call_completed_at && !r.skip_the_line && r.status !== 'dormant') {
           const h = hoursSince(r.submitted);
           if (h === null) continue;
 
           const sentArr = Array.isArray(r.booking_reminders_sent) ? r.booking_reminders_sent : [];
+
+          // OPEN-SLOT NUDGE — fires once at ~4h post-submit with a specific
+          // suggested time. Concierge framing ("got 11am tomorrow open?")
+          // catches wobblers before intent fully cools and before the
+          // regular bookingReminderN drip kicks in at 24h.
+          if (h >= 4 && h < 24 && !sentArr.includes('open_slot')) {
+            const ok = await sendEmail(host, 'openSlotNudge', {
+              firstName: r.first_name,
+              lastName: r.last_name,
+              email: r.email,
+              make: r.make,
+              model: r.model,
+              bookingUrl: BOOKING_URL,
+              portalUrl: PORTAL_URL
+            });
+            if (ok) {
+              sentArr.push('open_slot');
+              await sb('requests', 'PATCH', { booking_reminders_sent: sentArr }, `?id=eq.${r.id}`);
+              summary.bookingRemindersSent++;
+            }
+          }
 
           for (let i = 0; i < BOOKING_REMINDER_HOURS.length; i++) {
             const threshold = BOOKING_REMINDER_HOURS[i];
@@ -137,7 +162,10 @@ module.exports = async function handler(req, res) {
 
         // ── DEPOSIT REMINDERS ──
         // Only if staff has marked call complete AND deposit is still unpaid.
-        if (r.call_completed_at && !r.deposit_paid) {
+        // Also skip dormant — if staff has paused the file, the deposit drip
+        // should pause with it. 'rejected'/'sold' are already excluded at the
+        // query level (line 80).
+        if (r.call_completed_at && !r.deposit_paid && r.status !== 'dormant') {
           const h = hoursSince(r.call_completed_at);
           if (h === null) continue;
 

@@ -136,6 +136,9 @@ ${d.portalCode ? `<tr><td style="padding:0 40px 22px;">
 ${button(d.bookingUrl, 'Book your call →')}
 ${d.portalUrl ? buttonSecondary(d.portalUrl, 'View portal') : ''}
 </td></tr>
+<tr><td style="padding:18px 40px 0;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;font-style:italic;"><strong style="color:${BRAND.ink};font-style:normal;">P.S.</strong> — We only book calls Monday–Friday 9–5 ET and the slots fill up fast. Grabbing one now is the quickest way to get matched.</p>
+</td></tr>
 ${footer(d)}`)
   }),
 
@@ -313,6 +316,63 @@ ${footer(d)}`)
 </td></tr>
 ${footer(d)}`)
   }),
+
+  // ─── OPEN-SLOT NUDGE ──────────────────────────────────────────
+  // Fires ~4h post-form-submit if no call booked yet. Goal: catch the
+  // wobblers before intent fully cools. Proposes a SPECIFIC time on the
+  // next business day ("Got 11am tomorrow open?") instead of a generic
+  // "book a call" — feels like a personal handoff. Sent once; the regular
+  // bookingReminderN drip takes over at 24h+.
+  openSlotNudge: (d) => {
+    // Compute the next business day at render time (skips Sat/Sun). If it's
+    // literally tomorrow we say "tomorrow"; otherwise we say "Monday" etc.
+    const now = new Date();
+    const target = new Date(now);
+    target.setDate(target.getDate() + 1);
+    while (target.getDay() === 0 || target.getDay() === 6) {
+      target.setDate(target.getDate() + 1);
+    }
+    const tmrw = new Date(now);
+    tmrw.setDate(tmrw.getDate() + 1);
+    const isLiterallyTomorrow = (
+      target.getFullYear() === tmrw.getFullYear() &&
+      target.getMonth()    === tmrw.getMonth() &&
+      target.getDate()     === tmrw.getDate()
+    );
+    const dayLabel = isLiterallyTomorrow
+      ? 'tomorrow'
+      : target.toLocaleDateString('en-US', { weekday: 'long' });
+    const vehicle = d.make
+      ? `${d.make}${d.model && d.model !== '—' ? ' ' + d.model : ''}`
+      : '';
+    const vehicleClause = vehicle ? ` for the ${vehicle}` : '';
+    return ({
+      subject: `Got ${dayLabel} at 11am open, ${d.firstName}?`,
+      html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Hey ${d.firstName} — quick one.</div>
+</td></tr>
+<tr><td style="padding:0 40px 18px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0;">Saw your request come in${vehicleClause}, but I haven't seen the call booked yet. I've got <strong style="color:${BRAND.ink};">${dayLabel} at 11am ET</strong> open if that works — most clients tell me mornings are easier anyway.</p>
+</td></tr>
+<tr><td style="padding:0 40px 14px;">${button(d.bookingUrl, `Book ${dayLabel} 11am →`)}</td></tr>
+<tr><td style="padding:0 40px 18px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.7;margin:0;">If 11am doesn't fit, try:</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.8;margin:6px 0 0;">
+<a href="${d.bookingUrl}" style="color:${BRAND.navy};text-decoration:underline;font-weight:600;">2pm ${dayLabel}</a> &nbsp;·&nbsp;
+<a href="${d.bookingUrl}" style="color:${BRAND.navy};text-decoration:underline;font-weight:600;">4pm ${dayLabel}</a> &nbsp;·&nbsp;
+<a href="${d.bookingUrl}" style="color:${BRAND.navy};text-decoration:underline;font-weight:600;">Pick your own time</a>
+</p>
+</td></tr>
+<tr><td style="padding:0 40px 8px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;">Still thinking it over? No rush — just hit reply with any questions and I'll get back to you fast.</p>
+</td></tr>
+<tr><td style="padding:14px 40px 0;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.ink};line-height:1.65;margin:0;">— Cody</p>
+</td></tr>
+${footer(d)}`)
+    });
+  },
 
   // ─── BOOKING REMINDERS ────────────────────────────────────────
   // Sent at 24h, 72h, 7 days if no call booked after form submission
