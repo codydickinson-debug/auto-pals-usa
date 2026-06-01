@@ -231,7 +231,10 @@ module.exports = async function handler(req, res) {
           client_recs: body.clientRecs || null,
           rejection_reason: body.rejectionReason || '',
           referral_source: body.referralSource || null,
-          skip_the_line: !!body.skipTheLine
+          skip_the_line: !!body.skipTheLine,
+          // Explicit SMS opt-in. Stored as boolean (not coerced) so a
+          // missing value stays null = legacy implicit-consent row.
+          sms_consent: typeof body.smsConsent === 'boolean' ? body.smsConsent : null
         };
         const data = await query('requests', 'POST', row);
 
@@ -265,7 +268,8 @@ module.exports = async function handler(req, res) {
           }));
           if (row.phone) {
             fires.push(sms.send('client_book_call', {
-              firstName: row.first_name, phone: row.phone
+              firstName: row.first_name, phone: row.phone,
+              smsConsent: row.sms_consent
             }));
           }
           if (row.email) {
@@ -370,6 +374,7 @@ module.exports = async function handler(req, res) {
           client_recs:       b.clientRecs,
           rejection_reason:  b.rejectionReason,
           referral_source:   b.referralSource,
+          sms_consent:       b.smsConsent,
           call_completed_at:       b.callCompletedAt,
           booking_confirmed_at:    b.bookingConfirmedAt,
           dormant_at:              b.dormantAt,
@@ -442,7 +447,8 @@ module.exports = async function handler(req, res) {
           ];
           if (priorRow.phone) {
             depositFires.push(sms.send('client_contract_available', {
-              firstName: priorRow.first_name, phone: priorRow.phone
+              firstName: priorRow.first_name, phone: priorRow.phone,
+              smsConsent: priorRow.sms_consent
             }));
           }
           if (priorRow.email) {
@@ -567,7 +573,8 @@ module.exports = async function handler(req, res) {
               if (r0.phone) {
                 msgFires.push(sms.send('client_portal_message', {
                   phone: r0.phone,
-                  staffName: body.staffName || 'Auto Pals USA'
+                  staffName: body.staffName || 'Auto Pals USA',
+                  smsConsent: r0.sms_consent
                 }));
               }
               if (r0.email) {

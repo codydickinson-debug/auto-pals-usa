@@ -172,7 +172,19 @@ async function send(type, data = {}) {
   if (!fn) return { ok: false, error: 'unknown_type', type };
   const body = fn(data);
   if (STAFF_TYPES.has(type)) return sendToStaff(body);
-  if (CLIENT_TYPES.has(type)) return sendToClient(data.phone, body);
+  if (CLIENT_TYPES.has(type)) {
+    // A2P 10DLC consent gate. `false` is an explicit opt-out from the
+    // form's SMS consent checkbox → hard block. `undefined` / `null` /
+    // `true` all pass: legacy rows submitted before the checkbox keep
+    // receiving transactional SMS under their original implicit
+    // consent. Caller (api/db.js, booking.js, portal-sign.js) must
+    // forward `smsConsent` from the request row when available.
+    if (data.smsConsent === false) {
+      console.log('[SMS] skipped — sms_consent=false for', type, data.phone || '');
+      return { ok: false, skipped: true, reason: 'sms_consent_false' };
+    }
+    return sendToClient(data.phone, body);
+  }
   return { ok: false, error: 'unrouted_type', type };
 }
 
