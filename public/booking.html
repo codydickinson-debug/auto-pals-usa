@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Schedule a Call — Auto Pals USA</title>
-<meta name="description" content="Book a 30-minute call with Alex or Josh to start your vehicle search. Monday–Friday, 9am–5pm ET.">
+<meta name="description" content="Book a 30-minute call with Alex or Josh to start your vehicle search. Monday–Saturday, 9am–5pm ET.">
 <meta name="robots" content="noindex, follow">
 <meta property="og:title" content="Schedule a Call — Auto Pals USA">
 <meta property="og:description" content="Book a 30-minute call with our team to start your vehicle search.">
@@ -519,7 +519,7 @@
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
         </svg>
       </div>
-      Monday – Friday, 9am – 5pm ET
+      Monday – Saturday, 9am – 5pm ET
     </div>
     <div class="info-detail">
       <div class="info-detail-icon">
@@ -724,13 +724,13 @@
   // the team has at least overnight to prep before any new call lands.
   const earliestBookable = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
-  // First bookable WEEKDAY — skips Saturday/Sunday so the calendar can
-  // auto-select a clickable cell on load. (If tomorrow is Sat, jump to Mon;
-  // if Sun, jump to Mon.) Used as the default selection so every visitor —
-  // new or returning — sees "next day" pre-selected as the first option.
+  // First bookable DAY — skips Sundays so the calendar can auto-select
+  // a clickable cell on load. (If tomorrow is Sunday, jump to Monday.)
+  // Used as the default selection so every visitor — new or returning —
+  // sees "next day" pre-selected as the first option.
   function firstBookableWeekday() {
     const d = new Date(earliestBookable.getTime());
-    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+    while (d.getDay() === 0) d.setDate(d.getDate() + 1);  // skip Sundays only
     return d;
   }
 
@@ -739,7 +739,7 @@
   let selectedDate = null;
   let selectedTime = null;
 
-  // Business hours: Mon–Fri, 9am–5pm ET, 30-min slots
+  // Business hours: Mon–Sat, 9am–5pm ET, 30-min slots
   const SLOTS = ['9:00 AM','9:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM',
                   '12:00 PM','12:30 PM','1:00 PM','1:30 PM','2:00 PM','2:30 PM',
                   '3:00 PM','3:30 PM','4:00 PM','4:30 PM'];
@@ -773,7 +773,7 @@
     const promises = [];
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(viewYear, viewMonth, d);
-      if (date.getDay() === 0 || date.getDay() === 6) continue;
+      if (date.getDay() === 0) continue;       // skip Sundays only
       if (date < earliestBookable) continue;
       const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       promises.push(loadBookingsForDate(dateStr));
@@ -805,7 +805,8 @@
       const dow = date.getDay();
       // Same-day calls are blocked — earliest bookable date is tomorrow.
       const isBeforeEarliest = date < earliestBookable;
-      const isWeekend = dow === 0 || dow === 6;
+      // Sundays are off — Mon-Sat are bookable.
+      const isClosedDay = dow === 0;
       const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const isSelected = selectedDate === dateStr;
       const isToday = d === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
@@ -815,14 +816,15 @@
       const el = document.createElement('div');
       el.textContent = d;
       el.className = 'cal-day' +
-        (isBeforeEarliest || isWeekend || isFull ? ' disabled' : ' has-slots') +
+        (isBeforeEarliest || isClosedDay || isFull ? ' disabled' : ' has-slots') +
         (isSelected ? ' selected' : '') +
         (isToday && !isSelected ? ' today' : '');
 
       if (isFull) el.title = 'Fully booked — choose another day';
       else if (isToday) el.title = "Same-day calls aren't available — please pick tomorrow or later.";
+      else if (isClosedDay) el.title = "Closed Sundays — please pick another day.";
 
-      if (!isBeforeEarliest && !isWeekend && !isFull) {
+      if (!isBeforeEarliest && !isClosedDay && !isFull) {
         el.onclick = () => selectDate(dateStr, date);
       }
       grid.appendChild(el);
@@ -1023,7 +1025,7 @@
     const d = new Date(startDate.getTime());
     const cutoff = new Date(startDate.getTime() + 60 * 24 * 60 * 60 * 1000);
     while (out.length < maxCount && d < cutoff) {
-      if (d.getDay() === 0 || d.getDay() === 6) { d.setDate(d.getDate() + 1); continue; }
+      if (d.getDay() === 0) { d.setDate(d.getDate() + 1); continue; }  // skip Sundays only
       const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       const dayBooked = BOOKED[dateStr] || [];
       if ((DAY_COUNTS[dateStr] || 0) < MAX_PER_DAY) {

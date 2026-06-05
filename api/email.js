@@ -132,12 +132,12 @@ ${d.portalCode ? `<tr><td style="padding:0 40px 22px;">
 </td></tr>
 <tr><td style="padding:0 40px 12px;">
 <div style="font-family:Georgia,serif;font-size:15px;font-weight:700;color:${BRAND.navy};margin-bottom:10px;">📅 Next step — book a 30-min call</div>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 18px;">Pick a time that works. Monday through Friday, 9am–5pm ET.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 18px;">Pick a time that works. Monday through Saturday, 9am–5pm ET.</p>
 ${button(d.bookingUrl, 'Book your call →')}
 ${d.portalUrl ? buttonSecondary(d.portalUrl, 'View portal') : ''}
 </td></tr>
 <tr><td style="padding:18px 40px 0;">
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;font-style:italic;"><strong style="color:${BRAND.ink};font-style:normal;">P.S.</strong> — We only book calls Monday–Friday 9–5 ET and the slots fill up fast. Grabbing one now is the quickest way to get matched.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;font-style:italic;"><strong style="color:${BRAND.ink};font-style:normal;">P.S.</strong> — We book calls Monday–Saturday 9–5 ET and the slots fill up fast. Grabbing one now is the quickest way to get matched.</p>
 </td></tr>
 ${footer(d)}`)
   }),
@@ -312,7 +312,7 @@ ${footer(d)}`)
 </td></tr>
 <tr><td style="padding:0 40px 12px;">${button(d.bookingUrl, 'Book your call →')}</td></tr>
 <tr><td style="padding:0 40px 8px;">
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;color:${BRAND.mutedSoft};line-height:1.6;margin:8px 0 0;">30 minutes &middot; Monday–Friday, 9am–5pm ET</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;color:${BRAND.mutedSoft};line-height:1.6;margin:8px 0 0;">30 minutes &middot; Monday–Saturday, 9am–5pm ET</p>
 </td></tr>
 ${footer(d)}`)
   }),
@@ -324,12 +324,13 @@ ${footer(d)}`)
   // "book a call" — feels like a personal handoff. Sent once; the regular
   // bookingReminderN drip takes over at 24h+.
   openSlotNudge: (d) => {
-    // Compute the next business day at render time (skips Sat/Sun). If it's
-    // literally tomorrow we say "tomorrow"; otherwise we say "Monday" etc.
+    // Compute the next bookable day at render time (skips Sundays only —
+    // Mon-Sat are open). If it's literally tomorrow we say "tomorrow";
+    // otherwise we say "Monday" / "Saturday" / etc.
     const now = new Date();
     const target = new Date(now);
     target.setDate(target.getDate() + 1);
-    while (target.getDay() === 0 || target.getDay() === 6) {
+    while (target.getDay() === 0) {  // skip Sundays only
       target.setDate(target.getDate() + 1);
     }
     const tmrw = new Date(now);
