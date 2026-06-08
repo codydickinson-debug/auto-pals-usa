@@ -1553,7 +1553,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v155 · 2026-06-08</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v156 · 2026-06-08</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2561,6 +2561,34 @@
   </div>
 </div>
 
+<!-- PSI Modal -->
+<div class="detail-overlay" id="psi-modal" onclick="closePsiModal(event)">
+  <div class="detail-panel">
+    <button class="detail-close" onclick="document.getElementById('psi-modal').classList.remove('open');pendingPsiReqId=null;">&#x2715; Close</button>
+    <br><br>
+    <div class="detail-name">Move to PSI Period</div>
+    <div class="detail-sub" style="margin-bottom:20px;">Enter the car we bought and the deal numbers. These carry over to Sold Cars when the deal closes.</div>
+
+    <div class="detail-section">
+      <div class="detail-section-title">Car &amp; Deal</div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label style="font-size:12px;">Car we bought <span class="req">*</span></label>
+        <input type="text" id="pm-car" placeholder="e.g. 2021 Toyota Tacoma TRD">
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label style="font-size:12px;">Current mileage <span class="req">*</span></label>
+        <input type="number" id="pm-miles" placeholder="e.g. 34000">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label style="font-size:12px;">Sale price — what the client pays ($) <span class="req">*</span></label>
+        <input type="number" id="pm-sale" placeholder="e.g. 27500">
+      </div>
+    </div>
+
+    <button class="submit-btn" onclick="savePsi()" style="margin-top:8px;">Save</button>
+  </div>
+</div>
+
 <!-- Detail Panel -->
 <div class="detail-overlay" id="detail-overlay" onclick="closeDetail(event)">
   <div class="detail-panel" id="detail-panel">
@@ -2999,7 +3027,9 @@
       referralSource: r.referral_source || '',
       smsConsent: r.sms_consent,
       psiCar: r.psi_car || '',
-      psiStartedAt: r.psi_started_at || null
+      psiStartedAt: r.psi_started_at || null,
+      psiMiles: (r.psi_miles != null ? r.psi_miles : ''),
+      psiSalePrice: (r.psi_sale_price != null ? r.psi_sale_price : '')
     };
   }
 
@@ -5802,48 +5832,69 @@
     // (Vehicle recommendations are no longer auto-backfilled — they fire on
     // status transition to "searching". See updateStatusFromDetail.)
   }
-  // ─── OPEN SEARCHES ───────────────────────────────────────────
   // ─── PSI PERIOD ──────────────────────────────────────────────
   // The PSI ("Post-Sale Inspection") period is the window after we've bought a
   // car for a client and before it's handed over. Moving a request here captures
-  // which car we bought (psiCar) and stamps when the PSI started (psiStartedAt),
-  // so the PSI tab can show name + car + how long it's been running.
-  function enterPsi(r) {
+  // the car we bought (psiCar), the mileage (psiMiles), and the sale price
+  // (psiSalePrice), and stamps when the PSI started (psiStartedAt). The car/
+  // miles/price then carry over to the Sold Cars log when the deal closes.
+  let pendingPsiReqId = null;
+
+  // Open the Move-to-PSI modal, prefilled from the request (and any prior PSI
+  // values if we're editing an existing PSI entry).
+  function openPsiModal(r) {
     if (!r) return;
+    pendingPsiReqId = r.id;
     const defaultCar = r.psiCar || [r.make, r.model].filter(v => v && v !== '—').join(' ') || '';
-    const car = prompt(`What car did we buy for ${r.firstName} ${r.lastName}?`, defaultCar);
-    if (car === null) return; // cancelled — leave status untouched
+    document.getElementById('pm-car').value   = defaultCar;
+    document.getElementById('pm-miles').value = (r.psiMiles  != null && r.psiMiles  !== '') ? r.psiMiles      : '';
+    document.getElementById('pm-sale').value  = (r.psiSalePrice != null && r.psiSalePrice !== '') ? r.psiSalePrice : '';
+    document.getElementById('psi-modal').classList.add('open');
+    document.getElementById('pm-car').focus();
+  }
+
+  function closePsiModal(e) {
+    if (e.target === document.getElementById('psi-modal')) {
+      document.getElementById('psi-modal').classList.remove('open');
+      pendingPsiReqId = null;
+    }
+  }
+
+  function savePsi() {
+    const r = requests.find(x => x.id === pendingPsiReqId);
+    if (!r) { document.getElementById('psi-modal').classList.remove('open'); return; }
+    const car   = document.getElementById('pm-car').value.trim();
+    const miles = parseInt(document.getElementById('pm-miles').value, 10);
+    const sale  = parseFloat(document.getElementById('pm-sale').value);
+    if (!car)              { alert('Enter the car we bought.');        document.getElementById('pm-car').focus();   return; }
+    if (!Number.isFinite(miles) || miles < 0) { alert('Enter the current mileage.'); document.getElementById('pm-miles').focus(); return; }
+    if (!Number.isFinite(sale)  || sale  <= 0){ alert('Enter the sale price.');       document.getElementById('pm-sale').focus();  return; }
+
     r.status = 'psi';
-    r.psiCar = car.trim();
+    r.psiCar = car;
+    r.psiMiles = miles;
+    r.psiSalePrice = sale;
     if (!r.psiStartedAt) r.psiStartedAt = new Date().toISOString();
     save();
-    dbPut('requests', { id: r.id, status: 'psi', psiCar: r.psiCar, psiStartedAt: r.psiStartedAt });
+    dbPut('requests', { id: r.id, status: 'psi', psiCar: r.psiCar, psiMiles: r.psiMiles, psiSalePrice: r.psiSalePrice, psiStartedAt: r.psiStartedAt });
+
+    document.getElementById('psi-modal').classList.remove('open');
+    pendingPsiReqId = null;
     renderDashboard();
+    // If the detail view is open on this request, refresh it so the new status shows.
+    if (activeRequestId === r.id && typeof populateDetailView === 'function') populateDetailView(r);
   }
 
   function ctxMoveToPsi() {
     const r = requests.find(req => req.id === ctxTargetId);
     ctxMenu.classList.remove('open');
-    enterPsi(r);
+    openPsiModal(r);
   }
 
   function moveToPsiFromDetail() {
     const r = requests.find(x => x.id === activeRequestId);
     if (!r) return;
-    enterPsi(r);
-    populateDetailView(r);
-  }
-
-  // Edit the bought-car string for a client already in PSI.
-  function editPsiCar(id) {
-    const r = requests.find(x => x.id === id);
-    if (!r) return;
-    const car = prompt(`Update the car we bought for ${r.firstName} ${r.lastName}:`, r.psiCar || '');
-    if (car === null) return;
-    r.psiCar = car.trim();
-    save();
-    dbPut('requests', { id: r.id, psiCar: r.psiCar });
-    renderPsiList();
+    openPsiModal(r);
   }
 
   // Whole days elapsed since the PSI started (0 = started today).
@@ -5883,17 +5934,19 @@
       const since = r.psiStartedAt
         ? new Date(r.psiStartedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         : '—';
+      const milesStr = (r.psiMiles != null && r.psiMiles !== '') ? Number(r.psiMiles).toLocaleString() + ' mi' : '—';
+      const saleStr  = (r.psiSalePrice != null && r.psiSalePrice !== '') ? '$' + Number(r.psiSalePrice).toLocaleString() : '—';
       return `<div class="repair-card" style="border-left-color:#4338ca;">
         <div class="repair-card-header">
           <div>
             <div class="repair-card-title">${escapeHtml(r.firstName + ' ' + r.lastName)}</div>
             <div class="repair-card-sub">🚗 ${escapeHtml(car)}</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:4px;font-family:system-ui,sans-serif;">In PSI since ${since}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px;font-family:system-ui,sans-serif;">${milesStr} &middot; Sale ${saleStr} &middot; In PSI since ${since}</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
             <span class="status-pill status-psi" style="white-space:nowrap;"><span class="dot dot-psi"></span>PSI: ${dayLabel}</span>
             <div class="repair-card-actions">
-              <button class="filter-btn" onclick="editPsiCar(${r.id})">Edit car</button>
+              <button class="filter-btn" onclick="openPsiModal(requests.find(x=>x.id===${r.id}))">Edit</button>
               <button class="filter-btn" onclick="openDetailView(${r.id})">View</button>
             </div>
           </div>
@@ -6316,9 +6369,13 @@
     const banner = document.getElementById('sm-prefill-banner');
     if (prefillReq) {
       const name = prefillReq.firstName + ' ' + prefillReq.lastName;
-      const vehicle = [prefillReq.yearFrom !== prefillReq.yearTo ? prefillReq.yearFrom + '–' + prefillReq.yearTo : prefillReq.yearFrom, prefillReq.make, prefillReq.model !== '—' ? prefillReq.model : ''].filter(Boolean).join(' ');
+      // Prefer the actual car we bought (captured at PSI) over the request's make/model.
+      const vehicle = prefillReq.psiCar || [prefillReq.yearFrom !== prefillReq.yearTo ? prefillReq.yearFrom + '–' + prefillReq.yearTo : prefillReq.yearFrom, prefillReq.make, prefillReq.model !== '—' ? prefillReq.model : ''].filter(Boolean).join(' ');
       document.getElementById('sm-client').value = name;
       document.getElementById('sm-vehicle').value = vehicle;
+      // Carry over mileage + sale price captured when the car entered PSI.
+      if (prefillReq.psiMiles != null && prefillReq.psiMiles !== '') document.getElementById('sm-miles').value = prefillReq.psiMiles;
+      if (prefillReq.psiSalePrice != null && prefillReq.psiSalePrice !== '') document.getElementById('sm-sale').value = prefillReq.psiSalePrice;
 
       // Auto-fill repair costs (labor + parts) from the matching repair record.
       // Previously only summed labor; parts were silently excluded so margin
