@@ -382,7 +382,9 @@ module.exports = async function handler(req, res) {
           deposit_reminders_sent:  b.depositRemindersSent,
           contract_signed_at:         b.contractSignedAt,
           contract_signature_name:    b.contractSignatureName,
-          contract_signature_ip:      b.contractSignatureIp
+          contract_signature_ip:      b.contractSignatureIp,
+          psi_car:                     b.psiCar,
+          psi_started_at:              b.psiStartedAt
         };
         // Remove undefined values
         Object.keys(mapped).forEach(k => { if (mapped[k] === undefined) delete mapped[k]; });
@@ -407,7 +409,7 @@ module.exports = async function handler(req, res) {
           }
           // 2. Deposit just flipped paid: bump to 'searching' unless they've
           //    already progressed further (e.g. into 'in_repair' / sold).
-          const advancedStatuses = ['searching', 'in_repair', 'awaiting_paperwork', 'sold'];
+          const advancedStatuses = ['searching', 'psi', 'in_repair', 'awaiting_paperwork', 'sold'];
           if (mapped.deposit_paid && !priorRow.deposit_paid
               && !advancedStatuses.includes(priorStatus)) {
             mapped.status = 'searching';
