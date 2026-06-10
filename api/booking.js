@@ -246,17 +246,57 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok: true, demo: true });
   }
 
-  try {
+  // PARALLEL FAN-OUT — was sequential and Vercel Hobby's 10s lambda
+  // cap intermittently killed the staff fan-out mid-flight (see commit
+  // notes for v157). Now all four work paths fire at the same instant
+  // and we Promise.allSettled the whole batch so a slow Google
+  // Calendar response can't starve the SendGrid notifications.
+  //
+  // Critical pieces of the booking experience, in order of importance:
+  //   1. Staff email notification  (you need to know calls were booked)
+  //   2. Google Calendar event     (you need to see the call on your day)
+  //   3. Client confirmation email (clients also get this from the form)
+  //   4. Staff SMS                 (currently A2P-blocked; logs only)
+  //
+  // The handler doesn't error on any one of these failing — we report
+  // what worked and what didn't in the response so the client UI can
+  // still warn appropriately. Booking DB row was already inserted by
+  // /api/db?table=bookings before this endpoint was called.
+
+  // Calendar creation needs an OAuth access token first; chain those.
+  const calendarPromise = (async () => {
     const token = await getAccessToken();
-    const event = await createCalendarEvent(token, booking);
-    await sendConfirmationEmail(booking);
-    await Promise.allSettled([
-      staffBookingSmsPromise(booking),
-      staffBookingEmailPromise(booking)
-    ]);
-    return res.status(200).json({ ok: true, eventId: event.id });
-  } catch (err) {
-    console.error('Booking error:', err.message);
-    return res.status(500).json({ error: err.message });
+    return createCalendarEvent(token, booking);
+  })();
+
+  const [staffEmailRes, clientConfRes, calendarRes, staffSmsRes] = await Promise.allSettled([
+    staffBookingEmailPromise(booking),
+    sendConfirmationEmail(booking),
+    calendarPromise,
+    staffBookingSmsPromise(booking)
+  ]);
+
+  const eventId =
+    calendarRes.status === 'fulfilled' && calendarRes.value && calendarRes.value.id
+      ? calendarRes.value.id
+      : null;
+
+  if (calendarRes.status === 'rejected') {
+    console.error('[BOOKING] Calendar event failed:', calendarRes.reason && calendarRes.reason.message);
   }
+  if (staffEmailRes.status === 'rejected') {
+    console.error('[BOOKING] Staff email failed:', staffEmailRes.reason && staffEmailRes.reason.message);
+  }
+  if (clientConfRes.status === 'rejected') {
+    console.error('[BOOKING] Client confirmation failed:', clientConfRes.reason && clientConfRes.reason.message);
+  }
+
+  return res.status(200).json({
+    ok: true,
+    eventId,
+    calendarOk:   calendarRes.status === 'fulfilled',
+    staffEmailOk: staffEmailRes.status === 'fulfilled',
+    clientEmailOk: clientConfRes.status === 'fulfilled',
+    staffSmsOk:   staffSmsRes.status === 'fulfilled'
+  });
 }
