@@ -1553,7 +1553,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v157 · 2026-06-10</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v158 · 2026-06-15</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2320,6 +2320,14 @@
         <div id="dv-features" style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);"></div>
       </div>
 
+      <!-- Documents — surfaces files the client has uploaded via the portal.
+           File itself is delivered as a SendGrid attachment to staff email;
+           this is the dashboard-side status. populateDetailView() fills it. -->
+      <div style="margin-bottom:14px;" id="dv-docs-section">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Documents</div>
+        <div id="dv-docs" style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);"></div>
+      </div>
+
       <div style="margin-bottom:14px;" id="dv-notes-section"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Client Notes</div>
         <div id="dv-notes" style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);font-style:italic;"></div>
       </div>
@@ -3026,6 +3034,8 @@
       skipTheLine: r.skip_the_line || false,
       referralSource: r.referral_source || '',
       smsConsent: r.sms_consent,
+      // Per-doc upload metadata { license: { uploaded_at, filename, size_kb }, insurance: {...} }
+      documentsUploaded: r.documents_uploaded || null,
       psiCar: r.psi_car || '',
       psiStartedAt: r.psi_started_at || null,
       psiMiles: (r.psi_miles != null ? r.psi_miles : ''),
@@ -4438,6 +4448,35 @@
     // Features
     const featEl = document.getElementById('dv-features');
     if (featEl) featEl.innerHTML = (r.features && r.features.length) ? r.features.map(f => escapeHtml(f)).join(', ') : '<em>None specified</em>';
+
+    // Documents — status badges per doc type the portal supports. Showing
+    // both "uploaded" + "not yet" so staff can tell at a glance what's
+    // pending. File itself was emailed to staff (staffClientDocumentUploaded
+    // template); this surface just reflects what landed.
+    const docsEl = document.getElementById('dv-docs');
+    if (docsEl) {
+      const supported = [
+        { key: 'license',   label: "Driver's License"   },
+        { key: 'insurance', label: 'Proof of Insurance' }
+      ];
+      const docs = r.documentsUploaded || {};
+      docsEl.innerHTML = supported.map(({ key, label }) => {
+        const d = docs[key];
+        if (!d || !d.uploaded_at) {
+          return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;color:var(--text-muted);">`
+               + `<span style="display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:50%;font-size:11px;color:#94a3b8;">—</span>`
+               + `<span style="font-size:12px;">${escapeHtml(label)} <em style="color:#94a3b8;">— not uploaded</em></span>`
+               + `</div>`;
+        }
+        const when = new Date(d.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const size = Number.isFinite(d.size_kb) ? `${d.size_kb} KB` : '';
+        const filename = d.filename ? ` · ${escapeHtml(String(d.filename).slice(0, 40))}` : '';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;color:var(--text);">`
+             + `<span style="display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;background:var(--green-light,#dcfce7);border:1px solid #a7f3d0;border-radius:50%;font-size:11px;color:var(--green,#166534);font-weight:700;">✓</span>`
+             + `<span style="font-size:12px;"><strong>${escapeHtml(label)}</strong> <span style="color:var(--text-muted);">— ${escapeHtml(when)}${size ? ' · ' + size : ''}${filename}</span></span>`
+             + `</div>`;
+      }).join('');
+    }
 
     // Notes
     const notesEl = document.getElementById('dv-notes');

@@ -89,7 +89,7 @@ async function handleDocumentUpload(req, res, body) {
   try {
     const lookup = await sb('GET',
       `requests?portal_code=eq.${encodeURIComponent(portalCode)}`
-      + `&select=id,first_name,last_name,email,phone,make,model,year_from,year_to,status`
+      + `&select=id,first_name,last_name,email,phone,make,model,year_from,year_to,status,documents_uploaded`
       + `&limit=1`);
     if (!lookup.ok || !Array.isArray(lookup.body) || !lookup.body.length) {
       return res.status(404).json({ error: 'not_found' });
@@ -133,6 +133,34 @@ async function handleDocumentUpload(req, res, body) {
     return res.status(500).json({ error: 'email_error' });
   }
 
+  // Persist upload metadata to the request row so the staff dashboard can
+  // show "✓ uploaded on DATE" badges in the client's profile detail view.
+  // Merge with whatever's already in documents_uploaded so a 2nd upload
+  // (e.g. clearer photo of the license) overwrites just its own slot
+  // without clobbering the other doc's record. Best-effort — never fail
+  // the upload response if Supabase hiccups.
+  const fileSizeKb = Math.max(1, Math.round(approxBytes / 1024));
+  try {
+    const existing = (row && row.documents_uploaded && typeof row.documents_uploaded === 'object')
+      ? row.documents_uploaded
+      : {};
+    const merged = {
+      ...existing,
+      [docKey]: {
+        uploaded_at: new Date().toISOString(),
+        filename,
+        size_kb: fileSizeKb,
+        mime_type: mimeType
+      }
+    };
+    const patchRes = await sb('PATCH', `requests?id=eq.${row.id}`, { documents_uploaded: merged });
+    if (!patchRes.ok) {
+      console.error('[portal-upload] documents_uploaded patch failed', patchRes.status, patchRes.body && JSON.stringify(patchRes.body).slice(0, 200));
+    }
+  } catch (err) {
+    console.error('[portal-upload] documents_uploaded patch error', err && err.message);
+  }
+
   // Best-effort staff SMS — same pattern as portal messages. Failure here
   // doesn't block the success response; the email is the always-arrives half.
   try {
@@ -143,7 +171,7 @@ async function handleDocumentUpload(req, res, body) {
     ok: true,
     docLabel,
     filename,
-    fileSizeKb: Math.max(1, Math.round(approxBytes / 1024))
+    fileSizeKb
   });
 }
 
