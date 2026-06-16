@@ -1553,7 +1553,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v159 · 2026-06-16</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v161 · 2026-06-16</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2351,10 +2351,12 @@
         </button>
       </div>
 
-      <!-- DOCUMENT SUBMISSIONS -->
+      <!-- DOCUMENT SUBMISSIONS — main prominent card. populateDetailView()
+           writes the same HTML to both this and the sidebar #dv-docs so
+           uploads are visible no matter which column you're looking at. -->
       <div class="detail-3col-card">
         <h3>📎 Documents</h3>
-        <div id="dv-docs" style="font-size:13px;color:var(--text-muted);font-family:system-ui,sans-serif;">No documents uploaded yet.</div>
+        <div id="dv-docs-card" style="font-size:13px;color:var(--text-muted);font-family:system-ui,sans-serif;">No documents uploaded yet.</div>
       </div>
 
       <!-- CONTRACT STATUS -->
@@ -4453,14 +4455,16 @@
     // both "uploaded" + "not yet" so staff can tell at a glance what's
     // pending. File itself was emailed to staff (staffClientDocumentUploaded
     // template); this surface just reflects what landed.
-    const docsEl = document.getElementById('dv-docs');
-    if (docsEl) {
+    const docsEl     = document.getElementById('dv-docs');
+    const docsCardEl = document.getElementById('dv-docs-card');
+    if (docsEl || docsCardEl) {
       const supported = [
         { key: 'license',   label: "Driver's License"   },
         { key: 'insurance', label: 'Proof of Insurance' }
       ];
       const docs = r.documentsUploaded || {};
-      docsEl.innerHTML = supported.map(({ key, label }) => {
+      const anyUploaded = supported.some(({ key }) => docs[key] && docs[key].uploaded_at);
+      const rowsHtml = supported.map(({ key, label }) => {
         const d = docs[key];
         if (!d || !d.uploaded_at) {
           return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;color:var(--text-muted);">`
@@ -4476,6 +4480,12 @@
              + `<span style="font-size:12px;"><strong>${escapeHtml(label)}</strong> <span style="color:var(--text-muted);">— ${escapeHtml(when)}${size ? ' · ' + size : ''}${filename}</span></span>`
              + `</div>`;
       }).join('');
+      const badge = anyUploaded
+        ? `<div style="margin-bottom:8px;display:inline-flex;align-items:center;gap:6px;padding:3px 9px;background:var(--green-light,#dcfce7);border:1px solid #a7f3d0;border-radius:99px;font-size:11px;font-weight:700;color:var(--green,#166534);letter-spacing:0.04em;">✓ Uploaded</div>`
+        : '';
+      const html = badge + rowsHtml;
+      if (docsEl) docsEl.innerHTML = html;
+      if (docsCardEl) docsCardEl.innerHTML = html;
     }
 
     // Notes
@@ -5496,14 +5506,12 @@
   const LABOR_RATE = 20;
 
   // ── Tiered markup applied to wholesale "Your Cost" before billing client.
-  // <$150 → 35% · $150–$200 → 30% · >$200 → 25%
+  // <$150 → 30% · $150+ → 35%
   // Markup is INTERNAL ONLY — never shown to the client; only the final
   // price appears on their receipt.
   function markupRate(cost) {
     const c = Number(cost) || 0;
-    if (c < 150) return 1.35;
-    if (c <= 200) return 1.30;
-    return 1.25;
+    return c < 150 ? 1.30 : 1.35;
   }
   // Per-item client charge for a repair (labor + parts cost combined).
   function repairItemCharge(item) {
@@ -5690,6 +5698,38 @@
         }
       }
       console.log('[Repair] receipt posted to request', reqId);
+
+      // ── Email the reconditioning quote to the client too ──
+      // The portal message is the always-on channel; the email gives them
+      // a copy in their inbox plus the "View & approve in portal" CTA so
+      // they can click through to mark it approved.
+      const matchedReq = (Array.isArray(requests) ? requests : []).find(r => r.id === reqId);
+      if (matchedReq && matchedReq.email && typeof sendEmail === 'function') {
+        const repairId = (editingRepairId || (repairCars[0] && repairCars[0].id) || null);
+        sendEmail('reconditioningQuote', {
+          firstName: matchedReq.firstName,
+          lastName:  matchedReq.lastName,
+          email:     matchedReq.email,
+          vehicle,
+          vin,
+          services: repairs.map(r => ({
+            desc:   r.desc,
+            charge: (Number(r.cost) || 0) * markupRate(Number(r.cost) || 0)
+          })),
+          laborHours: totalHours,
+          laborRate:  LABOR_RATE,
+          laborCharge: laborTotal,
+          parts: parts.map(p => ({
+            name:   p.name || p.desc || 'Part',
+            charge: partItemCharge(p)
+          })),
+          total,
+          notes: document.getElementById('rm-notes').value.trim() || '',
+          portalCode: matchedReq.portalCode || '',
+          requestId:  reqId,
+          repairId
+        }).catch(err => console.warn('[Repair] quote email failed', err && err.message));
+      }
     }
 
     pendingRepairReqId = null;
@@ -5723,6 +5763,14 @@
       if (typeof renderDashboard === 'function') renderDashboard();
     }
     renderRepairPanel();
+
+    // ── Auto-prompt the Sold Cars modal so staff don't have to dig for it.
+    // openSaleModal handles the PSI prefill (miles, purchase price) and sums
+    // labor + parts from the matched repair record. Defer one tick so the
+    // repair-panel re-render finishes first and the modal lands on top.
+    if (req && typeof openSaleModal === 'function') {
+      setTimeout(() => openSaleModal(req), 50);
+    }
   }
 
   function undoRepairDone(carId) {
@@ -5744,6 +5792,26 @@
   }
 
   function removeRepairCar(id) {
+    // Resolve the linked request BEFORE we lose the car row — so a removed
+    // repair drags the request status back out of "In Repair" / "Awaiting
+    // Paperwork" too. Without this the dashboard kept showing the client as
+    // mid-repair after the actual repair record was gone.
+    const car = repairCars.find(c => c.id === id);
+    let req = null;
+    if (car && Array.isArray(requests)) {
+      if (car.requestId) req = requests.find(r => r.id === car.requestId);
+      if (!req && car.client) {
+        req = requests.find(r => ((r.firstName || '') + ' ' + (r.lastName || '')).trim().toLowerCase() === (car.client || '').toLowerCase());
+      }
+    }
+    if (req && (req.status === 'in_repair' || req.status === 'awaiting_paperwork')) {
+      // Send them back to wherever they were before repair was opened.
+      // Deposit paid → search is still active. No deposit → back to qualified.
+      req.status = (req.depositPaid || req.depositReceived) ? 'searching' : 'qualified';
+      if (typeof save === 'function') save();
+      if (typeof syncRequest === 'function') syncRequest(req, ['status']);
+      if (typeof renderDashboard === 'function') renderDashboard();
+    }
     dbDelete('repair_cars', id);
     repairCars = repairCars.filter(c => c.id !== id);
     saveRepairData();

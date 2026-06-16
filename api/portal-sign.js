@@ -175,6 +175,90 @@ async function handleDocumentUpload(req, res, body) {
   });
 }
 
+// Client approves the reconditioning quote shown in their portal. Stamps
+// repair_cars.quote_approved_at with the current time, gated by the same
+// portal_code that authenticated the rest of the portal session.
+async function handleApproveQuote(req, res, body) {
+  const portalCode = String(body.portalCode || '').trim().toUpperCase();
+  const repairId   = Number(body.repairId);
+
+  if (!portalCode) return res.status(400).json({ error: 'missing_portal_code' });
+  if (!Number.isFinite(repairId) || repairId <= 0) {
+    return res.status(400).json({ error: 'missing_repair_id' });
+  }
+
+  // 1. Resolve portal_code → request.id (so we can confirm the repair
+  //    belongs to this client and isn't being approved by someone with
+  //    a different valid portal_code).
+  let request;
+  try {
+    const lookup = await sb('GET',
+      `requests?portal_code=eq.${encodeURIComponent(portalCode)}`
+      + `&select=id,first_name,last_name,email&limit=1`);
+    if (!lookup.ok || !Array.isArray(lookup.body) || !lookup.body.length) {
+      return res.status(404).json({ error: 'not_found' });
+    }
+    request = lookup.body[0];
+  } catch (err) {
+    console.error('[portal-approve-quote] lookup error', err && err.message);
+    return res.status(500).json({ error: 'lookup_failed' });
+  }
+
+  // 2. Fetch the repair row and verify it belongs to this client. Fall
+  //    back to client-name match for legacy rows where request_id wasn't
+  //    populated at creation.
+  let repair;
+  try {
+    const rl = await sb('GET',
+      `repair_cars?id=eq.${repairId}&select=id,client,request_id,quote_approved_at&limit=1`);
+    if (!rl.ok || !Array.isArray(rl.body) || !rl.body.length) {
+      return res.status(404).json({ error: 'repair_not_found' });
+    }
+    repair = rl.body[0];
+  } catch (err) {
+    console.error('[portal-approve-quote] repair lookup error', err && err.message);
+    return res.status(500).json({ error: 'repair_lookup_failed' });
+  }
+
+  const ownsByRequestId = repair.request_id != null && Number(repair.request_id) === Number(request.id);
+  const fullName = `${request.first_name || ''} ${request.last_name || ''}`.trim();
+  const ownsByName = !ownsByRequestId
+    && repair.client
+    && fullName
+    && String(repair.client).trim().toLowerCase() === fullName.toLowerCase();
+  if (!ownsByRequestId && !ownsByName) {
+    return res.status(403).json({ error: 'not_your_quote' });
+  }
+
+  // 3. Idempotent — re-approving returns the existing timestamp without
+  //    a new PATCH so duplicate clicks don't churn the row.
+  if (repair.quote_approved_at) {
+    return res.status(200).json({
+      ok: true, alreadyApproved: true, approvedAt: repair.quote_approved_at
+    });
+  }
+
+  const nowIso = new Date().toISOString();
+  try {
+    const patch = await sb('PATCH', `repair_cars?id=eq.${repairId}`,
+      { quote_approved_at: nowIso });
+    if (!patch.ok) {
+      console.error('[portal-approve-quote] patch failed', patch.status, JSON.stringify(patch.body).slice(0, 200));
+      return res.status(500).json({ error: 'save_failed' });
+    }
+  } catch (err) {
+    console.error('[portal-approve-quote] patch error', err && err.message);
+    return res.status(500).json({ error: 'save_failed' });
+  }
+
+  // Best-effort staff notification — same pattern as document upload.
+  try {
+    await sms.send('staff_portal_message', { clientName: `${fullName} — approved reconditioning quote` });
+  } catch (e) { /* swallow */ }
+
+  return res.status(200).json({ ok: true, approvedAt: nowIso });
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -190,6 +274,7 @@ module.exports = async function handler(req, res) {
   // don't set `action` keep working unchanged.
   const action = String(body.action || 'sign').trim();
   if (action === 'upload-document') return handleDocumentUpload(req, res, body);
+  if (action === 'approve-quote')   return handleApproveQuote(req, res, body);
   if (action !== 'sign') return res.status(400).json({ error: 'unknown_action' });
 
   const portalCode  = String(body.portalCode || '').trim().toUpperCase();

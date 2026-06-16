@@ -917,12 +917,48 @@
   </div>
 
 
+  <!-- RECONDITIONING QUOTE — only rendered if loadRepairQuote() finds a
+       repair_cars row for this client. Hidden by default; the loader flips
+       display:block once a row is fetched and rendered. -->
+  <div class="portal-section" id="quote-section" style="display:none;">
+    <div class="portal-section-title">Reconditioning Quote</div>
+    <div class="progress-card" style="margin-bottom:0;padding:0;overflow:hidden;">
+      <div style="background:var(--navy);padding:22px 26px;color:var(--cream);">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(245,240,232,0.55);margin-bottom:4px;">Optional service quote</div>
+        <div style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;line-height:1.2;" id="quote-vehicle-line">Your vehicle</div>
+        <div style="font-size:12px;color:rgba(245,240,232,0.55);margin-top:4px;" id="quote-vin-line"></div>
+      </div>
+      <div style="padding:22px 26px 6px;font-size:13px;color:var(--text-muted);line-height:1.7;">
+        Here's the reconditioning quote our shop put together for your vehicle. <strong style="color:var(--text);">This work is optional</strong> — let us know if you'd like to move forward and we'll get it scheduled.
+      </div>
+      <div id="quote-breakdown" style="padding:8px 26px 16px;"></div>
+      <div style="padding:14px 26px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div style="font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);">Total</div>
+        <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--navy);" id="quote-total">$0.00</div>
+      </div>
+      <div style="padding:18px 26px;background:var(--cream);border-top:1px solid var(--border);font-size:12px;color:var(--text-muted);line-height:1.6;">
+        <div style="margin-bottom:8px;"><strong style="color:var(--text);">Payment:</strong> Zelle to <strong style="color:var(--navy);">automotivationent@gmail.com</strong> once you're ready to move forward.</div>
+        <div>Questions about any line item? Reply in the Messages section above or email <a href="mailto:info@autopalsusa.com" style="color:var(--navy);">info@autopalsusa.com</a>.</div>
+      </div>
+      <div style="padding:20px 26px;border-top:1px solid var(--border);" id="quote-action-row">
+        <button id="quote-approve-btn" onclick="approveQuote()" style="width:100%;padding:14px;background:var(--navy);color:var(--cream);border:none;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;letter-spacing:0.03em;cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='var(--navy-mid,#1a3470)'" onmouseout="this.style.background='var(--navy)'">
+          Approve this quote
+        </button>
+        <div id="quote-approve-status" style="margin-top:10px;font-size:12px;color:var(--text-muted);text-align:center;min-height:16px;"></div>
+      </div>
+    </div>
+  </div>
+
+
   <!-- DOCUMENTS -->
   <div class="portal-section">
     <div class="portal-section-title">Documents</div>
     <div class="progress-card" style="margin-bottom:0;">
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;background:var(--green-light,#dcfce7);border:1px solid #a7f3d0;border-radius:99px;font-size:11px;font-weight:700;color:var(--green,#166534);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:14px;">
+        🔒 Protected upload
+      </div>
       <div style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:20px;">
-        Please upload the following documents so we can process your temporary tags and paperwork. Files are stored securely and only accessed by the Auto Pals USA team.
+        Please upload the following documents so we can process your temporary tags and paperwork. Files are encrypted in transit and visible only to the Auto Pals USA team — they're never shared with third parties.
       </div>
 
       <!-- Driver's License -->
@@ -1155,7 +1191,7 @@
 
   </div><!-- /portal-flow -->
 
-  <div id="portal-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v124 · 2026-05-14</div>
+  <div id="portal-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v125 · 2026-06-16</div>
 </div><!-- /portal-content -->
 
 <script>
@@ -1387,6 +1423,176 @@
     const callCta = document.getElementById('schedule-call-cta');
     if (callCta) {
       callCta.style.display = (client.skipTheLine || client.callCompletedAt) ? 'none' : '';
+    }
+
+    // Reconditioning quote (if any) — fires-and-forgets; the section stays
+    // hidden until a row comes back.
+    loadRepairQuote(client);
+  }
+
+  // ── Reconditioning Quote ─────────────────────────────────────────
+  // State for the currently-rendered quote so approveQuote() knows what
+  // id to PATCH and whether it's already approved.
+  let activeQuote = null;
+
+  // Same two-tier markup as the dashboard. Keep in sync with form.html's
+  // markupRate() — if you change one, change both.
+  function _quoteMarkupRate(cost) {
+    const c = Number(cost) || 0;
+    return c < 150 ? 1.30 : 1.35;
+  }
+  const _QUOTE_LABOR_RATE = 20;
+  function _fmtMoney(n) {
+    return '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  async function loadRepairQuote(client) {
+    const section = document.getElementById('quote-section');
+    if (!section || !client || !client.id) return;
+    let rows = [];
+    try {
+      // repair_cars GET is public per api/db.js (no portal_code required for
+      // read), filtered server-side by request_id so we only see this
+      // client's quote.
+      const res = await fetch('/api/db?table=repair_cars&request_id=' + encodeURIComponent(client.id));
+      if (res.ok) {
+        const json = await res.json();
+        rows = Array.isArray(json) ? json : (Array.isArray(json && json.data) ? json.data : []);
+      }
+    } catch (err) {
+      console.warn('[portal-quote] fetch failed', err && err.message);
+    }
+    if (!rows.length) {
+      section.style.display = 'none';
+      activeQuote = null;
+      return;
+    }
+    // Most recent repair record wins (rows are usually returned id-desc).
+    const repair = rows.reduce((newest, r) => (newest && newest.id > r.id ? newest : r), null);
+    renderRepairQuote(repair, client);
+    section.style.display = 'block';
+  }
+
+  function renderRepairQuote(repair, client) {
+    activeQuote = repair;
+    const repairs = Array.isArray(repair.repairs) ? repair.repairs : [];
+    const parts   = Array.isArray(repair.parts)   ? repair.parts   : [];
+
+    const servicesTotal = repairs.reduce((a, r) => {
+      const c = Number(r.cost) || 0;
+      return a + (c * _quoteMarkupRate(c));
+    }, 0);
+    const totalHours = repairs.reduce((a, r) => a + (Number(r.hours) || 0), 0);
+    const laborTotal = totalHours * _QUOTE_LABOR_RATE;
+    const partsTotal = parts.reduce((a, p) => {
+      const c = Number(p.cost) || 0;
+      return a + (c * _quoteMarkupRate(c));
+    }, 0);
+    const grandTotal = servicesTotal + laborTotal + partsTotal;
+
+    document.getElementById('quote-vehicle-line').textContent = repair.vehicle || 'Your vehicle';
+    document.getElementById('quote-vin-line').textContent = repair.vin ? ('VIN ' + repair.vin) : '';
+    document.getElementById('quote-total').textContent = _fmtMoney(grandTotal);
+
+    const breakdownEl = document.getElementById('quote-breakdown');
+    const blocks = [];
+    if (repairs.length) {
+      blocks.push(
+        '<div style="margin-top:14px;">'
+        + '<div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Services</div>'
+        + repairs.map(r => {
+            const c = Number(r.cost) || 0;
+            const charge = c * _quoteMarkupRate(c);
+            return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px;">'
+              + '<span>' + escapeHtmlSafe(r.desc || 'Service') + '</span>'
+              + '<span style="font-weight:600;color:var(--navy);">' + _fmtMoney(charge) + '</span>'
+              + '</div>';
+          }).join('')
+        + '</div>'
+      );
+    }
+    if (totalHours > 0) {
+      blocks.push(
+        '<div style="margin-top:14px;">'
+        + '<div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Labor</div>'
+        + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px;">'
+        + '<span>' + totalHours + ' hr × ' + _fmtMoney(_QUOTE_LABOR_RATE) + '/hr</span>'
+        + '<span style="font-weight:600;color:var(--navy);">' + _fmtMoney(laborTotal) + '</span>'
+        + '</div>'
+        + '</div>'
+      );
+    }
+    if (parts.length) {
+      blocks.push(
+        '<div style="margin-top:14px;">'
+        + '<div style="font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Parts</div>'
+        + parts.map(p => {
+            const c = Number(p.cost) || 0;
+            const charge = c * _quoteMarkupRate(c);
+            return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px;">'
+              + '<span>' + escapeHtmlSafe(p.name || p.desc || 'Part') + '</span>'
+              + '<span style="font-weight:600;color:var(--navy);">' + _fmtMoney(charge) + '</span>'
+              + '</div>';
+          }).join('')
+        + '</div>'
+      );
+    }
+    breakdownEl.innerHTML = blocks.join('');
+
+    // Already-approved → swap the button for a confirmation badge.
+    const actionRow = document.getElementById('quote-action-row');
+    if (repair.quote_approved_at && actionRow) {
+      const when = new Date(repair.quote_approved_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      actionRow.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px;background:var(--green-light,#dcfce7);border:1px solid #a7f3d0;border-radius:var(--radius);font-size:14px;font-weight:700;color:var(--green,#166534);">✓ Quote approved on ' + escapeHtmlSafe(when) + '</div>';
+    }
+  }
+
+  function escapeHtmlSafe(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  async function approveQuote() {
+    if (!activeQuote || !activeQuote.id) return;
+    const btn = document.getElementById('quote-approve-btn');
+    const statusEl = document.getElementById('quote-approve-status');
+    const portalCode = (sessionStorage.getItem('portal_code') || '').trim().toUpperCase();
+    if (!portalCode) {
+      statusEl.textContent = 'Please log in again.';
+      statusEl.style.color = 'var(--red)';
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Approving…';
+    statusEl.textContent = '';
+    try {
+      const res = await fetch('/api/portal-sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'approve-quote',
+          portalCode,
+          repairId: activeQuote.id
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        btn.disabled = false;
+        btn.textContent = 'Approve this quote';
+        statusEl.textContent = (data && data.error === 'not_your_quote')
+          ? 'This quote doesn\'t belong to your account.'
+          : 'Could not save your approval — please try again.';
+        statusEl.style.color = 'var(--red)';
+        return;
+      }
+      activeQuote.quote_approved_at = data.approvedAt || new Date().toISOString();
+      renderRepairQuote(activeQuote, activeClientData);
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Approve this quote';
+      statusEl.textContent = 'Network error — please try again.';
+      statusEl.style.color = 'var(--red)';
     }
   }
 
