@@ -292,6 +292,58 @@ ${footer(d)}`)
 ${footer(d)}`)
   }),
 
+  // Reconditioning quote — sent when staff saves a repair quote in the
+  // dashboard. Optional service; client can approve in the portal and pay
+  // via Zelle or wait until pickup. Internal wholesale cost and markup
+  // never appear — only what the client pays.
+  reconditioningQuote: (d) => {
+    const fmt = n => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const repairs = Array.isArray(d.repairs) ? d.repairs : [];
+    const parts   = Array.isArray(d.parts)   ? d.parts   : [];
+    const lineRow = (label, val, isLast) => `<tr><td style="padding:10px 0;color:${BRAND.ink};font-size:14px;${isLast ? '' : `border-bottom:1px solid ${BRAND.border};`}">${label}</td><td style="padding:10px 0;color:${BRAND.ink};font-weight:600;font-size:14px;text-align:right;${isLast ? '' : `border-bottom:1px solid ${BRAND.border};`}">${val}</td></tr>`;
+    const servicesBlock = repairs.length ? `
+<tr><td style="padding:18px 0 6px;font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};" colspan="2">Services</td></tr>
+${repairs.map((r, i) => lineRow(r.desc || 'Service', fmt(r.charge), i === repairs.length - 1 && d.laborCharge <= 0 && parts.length === 0)).join('')}
+` : '';
+    const laborBlock = Number(d.laborCharge) > 0 ? `
+<tr><td style="padding:18px 0 6px;font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};" colspan="2">Labor</td></tr>
+${lineRow(`${Number(d.laborHours || 0).toLocaleString()} hr`, fmt(d.laborCharge), parts.length === 0)}
+` : '';
+    const partsBlock = parts.length ? `
+<tr><td style="padding:18px 0 6px;font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};" colspan="2">Parts</td></tr>
+${parts.map((p, i) => lineRow(p.name || p.desc || 'Part', fmt(p.charge), i === parts.length - 1)).join('')}
+` : '';
+    const totalRow = `
+<tr><td style="padding:18px 0 0;color:${BRAND.ink};font-weight:700;font-size:15px;border-top:2px solid ${BRAND.border};">Total estimate</td><td style="padding:18px 0 0;color:${BRAND.navy};font-weight:700;font-size:18px;text-align:right;border-top:2px solid ${BRAND.border};">${fmt(d.total)}</td></tr>
+`;
+    return ({
+      subject: `Your reconditioning quote, ${d.firstName || 'there'} — Auto Pals USA`,
+      html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:10px;">Here's your reconditioning quote, ${d.firstName || 'there'}.</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 6px;">We put together a recommended reconditioning estimate for your <strong style="color:${BRAND.ink};">${d.vehicle || 'vehicle'}</strong>${d.vin ? ` (VIN ${d.vin})` : ''}. Full breakdown below.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0 0 22px;font-style:italic;">This is optional — you can approve any or all of it whenever you're ready, or skip it entirely.</p>
+</td></tr>
+<tr><td style="padding:0 40px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:22px 26px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:6px;">Quote</div>
+<div style="font-family:Georgia,serif;font-size:18px;color:${BRAND.ink};font-weight:700;margin-bottom:14px;">${d.vehicle || 'Vehicle'}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;">
+${servicesBlock}${laborBlock}${partsBlock}${totalRow}
+</table>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:0 40px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f1f5f9;border-left:3px solid ${BRAND.navy};border-radius:0 8px 8px 0;"><tr><td style="padding:16px 22px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.65;"><strong>How to pay (optional):</strong> You can approve the quote in your portal, or send the total via Zelle to <strong style="color:${BRAND.navy};">automotivationent@gmail.com</strong>.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin-top:8px;">Questions? Just reply to this email or message us at <a href="mailto:info@autopalsusa.com" style="color:${BRAND.navy};text-decoration:underline;">info@autopalsusa.com</a> — happy to walk through anything before you decide.</div>
+</td></tr></table>
+</td></tr>
+<tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'View & approve in portal →')}</td></tr>
+${footer(d)}`)
+    });
+  },
+
   scheduleCall: (d) => ({
     subject: `Let's talk, ${d.firstName}`,
     html: shell(`${header()}

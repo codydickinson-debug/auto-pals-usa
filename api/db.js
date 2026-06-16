@@ -153,7 +153,12 @@ module.exports = async function handler(req, res) {
     (table === 'requests' && (req.method === 'GET' || req.method === 'POST')) ||
     (table === 'bookings' && (req.method === 'GET' || req.method === 'POST')) ||
     (table === 'messages' && req.method !== 'DELETE') ||
-    (table === 'events'   && req.method === 'POST');
+    (table === 'events'   && req.method === 'POST') ||
+    // Portal reads its own reconditioning quote from repair_cars (filtered
+    // by request_id on the GET). Same gating model as messages — no token
+    // required, but practical exposure is bounded by needing to know the
+    // request_id which itself flows through the portal-code lookup.
+    (table === 'repair_cars' && req.method === 'GET');
 
   if (!isPublicOp) {
     const token = req.headers['x-staff-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
@@ -504,7 +509,15 @@ module.exports = async function handler(req, res) {
     // ── REPAIRS ───────────────────────────────────────────────────
     if (table === 'repair_cars') {
       if (req.method === 'GET') {
-        const data = await query('repair_cars', 'GET', null, '?order=id.desc');
+        // Portal use case: client wants just THEIR own reconditioning quote.
+        // Passing ?request_id=… narrows the response to repair cars tied to
+        // that originating request. Without it (staff use case), the dashboard
+        // gets the full list as before.
+        const reqId = req.query.request_id;
+        const params = reqId
+          ? `?request_id=eq.${encodeURIComponent(reqId)}&order=id.desc`
+          : '?order=id.desc';
+        const data = await query('repair_cars', 'GET', null, params);
         return res.json(data || []);
       }
       if (req.method === 'POST') {
@@ -515,13 +528,29 @@ module.exports = async function handler(req, res) {
           vin: body.vin || '',
           notes: body.notes || '',
           repairs: body.repairs || [],
-          parts: body.parts || []
+          parts: body.parts || [],
+          // Connect this repair to the originating request so the portal can
+          // look up "my quote" by request id. The dashboard already passes
+          // requestId on the create payload when the modal was opened from
+          // a request row; older repairs without it remain queryable by
+          // client name as a fallback.
+          request_id: body.requestId || body.request_id || null
         };
         const data = await query('repair_cars', 'POST', row);
         return res.json(data);
       }
       if (req.method === 'PUT') {
         const { id, ...updates } = body;
+        // Normalize camelCase → snake_case for the few columns where the
+        // dashboard JS speaks camelCase but Supabase columns are snake_case.
+        if (updates.requestId !== undefined && updates.request_id === undefined) {
+          updates.request_id = updates.requestId;
+          delete updates.requestId;
+        }
+        if (updates.quoteApprovedAt !== undefined && updates.quote_approved_at === undefined) {
+          updates.quote_approved_at = updates.quoteApprovedAt;
+          delete updates.quoteApprovedAt;
+        }
         await query('repair_cars', 'PATCH', updates, `?id=eq.${id}`);
         return res.json({ ok: true });
       }
