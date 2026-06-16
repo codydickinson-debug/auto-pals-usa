@@ -1553,7 +1553,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v161 · 2026-06-16</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v162 · 2026-06-16</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2534,12 +2534,12 @@
 
     <div class="detail-section">
       <div class="detail-section-title">Financials</div>
+      <!-- Purchase price field removed in v162 — user prefers a lighter
+           sold-cars log. sm-purchase still exists as a hidden input so the
+           profit math + saveSale persistence stay compatible (treated as 0). -->
+      <input type="hidden" id="sm-purchase" value="0">
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Purchase Price &mdash; what you paid at auction ($)</label>
-        <input type="number" id="sm-purchase" placeholder="e.g. 22000" oninput="calcSaleProfit()">
-      </div>
-      <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Sale Price &mdash; what the client paid ($)</label>
+        <label style="font-size:12px;">Sale Price &mdash; what the client paid ($) <span style="color:var(--text-muted);font-weight:400;">— auto-filled from PSI</span></label>
         <input type="number" id="sm-sale" placeholder="e.g. 27500" oninput="calcSaleProfit()">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
@@ -2552,8 +2552,8 @@
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Profit margin on repairs (client pays this on top of your wholesale cost). Auto-filled from Repairs when the car was tracked there.</div>
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Your Service / Finder Fee (charged to client) ($)</label>
-        <input type="number" id="sm-finder" placeholder="e.g. 1500" oninput="calcSaleProfit()">
+        <label style="font-size:12px;">Finder Fee (charged to client) ($) <span style="color:var(--text-muted);font-weight:400;">— defaults to $850</span></label>
+        <input type="number" id="sm-finder" placeholder="850" oninput="calcSaleProfit()">
       </div>
       <div id="sm-profit-preview" style="display:none;padding:12px;border-radius:8px;background:var(--green-light);border:1px solid #a7f3d0;font-family:system-ui,sans-serif;font-size:13px;">
         <span style="color:var(--text-muted);">Net Profit Preview:</span>
@@ -2902,6 +2902,72 @@
       if (res.status === 401) { handleSessionExpired(); return null; }
       return res.ok ? res.json() : null;
     } catch { return null; }
+  }
+
+  // ── Document preview hydration ─────────────────────────────────────
+  // Each uploaded doc gets a fresh one-hour signed URL from /api/doc-url
+  // (staff-gated). Cached per storage_path inside this load so flipping
+  // between requests doesn't re-mint URLs needlessly.
+  const _docUrlCache = new Map();
+  async function fetchDocUrl(storagePath) {
+    if (!storagePath) return null;
+    if (_docUrlCache.has(storagePath)) return _docUrlCache.get(storagePath);
+    const tk = sessionStorage.getItem('staff_token');
+    if (!tk) return null;
+    try {
+      const res = await fetch('/api/doc-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Staff-Token': tk },
+        body: JSON.stringify({ storage_path: storagePath })
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const url = data && data.url;
+      if (url) _docUrlCache.set(storagePath, url);
+      return url || null;
+    } catch (err) {
+      console.warn('[doc-url] fetch failed', err && err.message);
+      return null;
+    }
+  }
+  function ext(mime) {
+    if (!mime) return '';
+    if (mime === 'application/pdf') return '.pdf';
+    if (mime.startsWith('image/')) return '.' + mime.split('/')[1].replace('jpeg', 'jpg');
+    return '';
+  }
+  async function hydrateDocRow(row) {
+    const path = row.getAttribute('data-doc-path');
+    const mime = row.getAttribute('data-doc-mime') || '';
+    const filename = row.getAttribute('data-doc-filename') || ('document' + ext(mime));
+    if (!path) return;
+    const url = await fetchDocUrl(path);
+    if (!url) {
+      const thumb = row.querySelector('.doc-thumb-wrap');
+      if (thumb) thumb.textContent = 'Preview unavailable';
+      return;
+    }
+    const thumb = row.querySelector('.doc-thumb-wrap');
+    if (thumb && mime.startsWith('image/')) {
+      thumb.style.backgroundImage = `url("${url}")`;
+      thumb.textContent = '';
+      thumb.style.cursor = 'zoom-in';
+      thumb.onclick = () => window.open(url, '_blank', 'noopener');
+    }
+    const dl = row.querySelector('.doc-dl-btn');
+    if (dl) {
+      dl.onclick = (e) => {
+        e.preventDefault();
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
+    }
   }
 
   // Build headers with staff token when present. POST requests on some tables
@@ -4451,10 +4517,13 @@
     const featEl = document.getElementById('dv-features');
     if (featEl) featEl.innerHTML = (r.features && r.features.length) ? r.features.map(f => escapeHtml(f)).join(', ') : '<em>None specified</em>';
 
-    // Documents — status badges per doc type the portal supports. Showing
-    // both "uploaded" + "not yet" so staff can tell at a glance what's
-    // pending. File itself was emailed to staff (staffClientDocumentUploaded
-    // template); this surface just reflects what landed.
+    // Documents — staff-side view of files the client uploaded through
+    // the portal. Renders an image thumbnail (or PDF icon) + Download
+    // button for each uploaded doc, with a one-hour signed URL pulled
+    // lazily from /api/doc-url. Both the sidebar #dv-docs and the
+    // middle-column #dv-docs-card receive the same HTML; pre-v162 rows
+    // without a storage_path render as "✓ uploaded · file in email" and
+    // skip the thumbnail since the file was never persisted.
     const docsEl     = document.getElementById('dv-docs');
     const docsCardEl = document.getElementById('dv-docs-card');
     if (docsEl || docsCardEl) {
@@ -4467,7 +4536,7 @@
       const rowsHtml = supported.map(({ key, label }) => {
         const d = docs[key];
         if (!d || !d.uploaded_at) {
-          return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;color:var(--text-muted);">`
+          return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;color:var(--text-muted);">`
                + `<span style="display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:50%;font-size:11px;color:#94a3b8;">—</span>`
                + `<span style="font-size:12px;">${escapeHtml(label)} <em style="color:#94a3b8;">— not uploaded</em></span>`
                + `</div>`;
@@ -4475,9 +4544,27 @@
         const when = new Date(d.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const size = Number.isFinite(d.size_kb) ? `${d.size_kb} KB` : '';
         const filename = d.filename ? ` · ${escapeHtml(String(d.filename).slice(0, 40))}` : '';
-        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;color:var(--text);">`
+        const isImage = d.mime_type && d.mime_type.startsWith('image/');
+        const hasFile = !!d.storage_path;
+        // Stable per-doc anchor ids so both copies of the section (sidebar +
+        // main card) can be hydrated by the same async URL fetch. Suffix
+        // matches the element they live in.
+        const anchor = hasFile ? ` data-doc-path="${escapeHtml(d.storage_path)}" data-doc-mime="${escapeHtml(d.mime_type || '')}" data-doc-filename="${escapeHtml(d.filename || (key + ext(d.mime_type)))}"` : '';
+        const thumbHtml = hasFile
+          ? (isImage
+              ? `<div class="doc-thumb-wrap" style="margin-top:8px;width:140px;height:96px;border:1px solid var(--border);border-radius:8px;background:#f1f5f9 center/contain no-repeat;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted);overflow:hidden;">Loading…</div>`
+              : `<div style="margin-top:8px;display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:#f1f5f9;font-size:12px;color:var(--text);">📄 ${escapeHtml(d.filename || 'PDF')}</div>`)
+          : `<div style="margin-top:6px;font-size:11px;color:var(--text-muted);font-style:italic;">File in staff email (pre-v162 upload — no preview available)</div>`;
+        const dlHtml = hasFile
+          ? `<button class="doc-dl-btn" style="margin-top:6px;padding:5px 12px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-family:system-ui,sans-serif;font-size:11px;font-weight:600;cursor:pointer;">↓ Download</button>`
+          : '';
+        return `<div class="doc-row"${anchor} style="display:flex;flex-direction:column;gap:2px;padding:10px 0;border-top:1px dashed var(--border);">`
+             + `<div style="display:flex;align-items:center;gap:8px;color:var(--text);">`
              + `<span style="display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;background:var(--green-light,#dcfce7);border:1px solid #a7f3d0;border-radius:50%;font-size:11px;color:var(--green,#166534);font-weight:700;">✓</span>`
              + `<span style="font-size:12px;"><strong>${escapeHtml(label)}</strong> <span style="color:var(--text-muted);">— ${escapeHtml(when)}${size ? ' · ' + size : ''}${filename}</span></span>`
+             + `</div>`
+             + thumbHtml
+             + dlHtml
              + `</div>`;
       }).join('');
       const badge = anyUploaded
@@ -4486,6 +4573,14 @@
       const html = badge + rowsHtml;
       if (docsEl) docsEl.innerHTML = html;
       if (docsCardEl) docsCardEl.innerHTML = html;
+      // Async: pull a fresh signed URL per uploaded doc and hydrate the
+      // thumbnails + wire the download buttons.
+      [docsEl, docsCardEl].forEach(container => {
+        if (!container) return;
+        container.querySelectorAll('.doc-row[data-doc-path]').forEach(row => {
+          hydrateDocRow(row);
+        });
+      });
     }
 
     // Notes
@@ -5764,12 +5859,22 @@
     }
     renderRepairPanel();
 
-    // ── Auto-prompt the Sold Cars modal so staff don't have to dig for it.
-    // openSaleModal handles the PSI prefill (miles, purchase price) and sums
-    // labor + parts from the matched repair record. Defer one tick so the
-    // repair-panel re-render finishes first and the modal lands on top.
-    if (req && typeof openSaleModal === 'function') {
-      setTimeout(() => openSaleModal(req), 50);
+    // ── Auto-prompt the Sold Cars modal — ALWAYS, no exceptions. If we
+    // matched a request, hand it through so PSI prefill (miles, sale
+    // price, finder fee, repair totals) runs against real data. If we
+    // didn't (orphaned repair, name typo), still pop the modal with a
+    // car-derived stub so staff aren't left clicking "Log a Sale" by
+    // hand. Defer one tick so renderRepairPanel finishes first.
+    if (typeof openSaleModal === 'function') {
+      const prefill = req || {
+        id: null,
+        firstName: car.client || '',
+        lastName: '',
+        psiCar: car.vehicle || '',
+        psiMiles: '',
+        psiSalePrice: ''
+      };
+      setTimeout(() => openSaleModal(prefill), 50);
     }
   }
 
@@ -6464,10 +6569,17 @@
   let pendingSoldReqId = null;
 
   function openSaleModal(prefillReq) {
-    ['sm-client','sm-vehicle','sm-vin','sm-purchase','sm-sale','sm-repair','sm-repair-profit','sm-finder','sm-notes','sm-miles'].forEach(id => {
+    ['sm-client','sm-vehicle','sm-vin','sm-sale','sm-repair','sm-repair-profit','sm-notes','sm-miles'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
+    // sm-purchase is hidden in v162 — kept at 0 so the profit math stays
+    // well-defined without bothering staff for a number they don't track.
+    const purchaseEl = document.getElementById('sm-purchase');
+    if (purchaseEl) purchaseEl.value = '0';
+    // Finder fee is always $850 per business policy — staff can still
+    // override per-deal if needed.
+    document.getElementById('sm-finder').value = 850;
     document.getElementById('sm-date').value = new Date().toISOString().split('T')[0];
     document.getElementById('sm-profit-preview').style.display = 'none';
 
@@ -6596,12 +6708,14 @@
     const vinEl    = document.getElementById('sm-vin');
     const vin      = vinEl ? vinEl.value.trim().toUpperCase() : '';
     const date     = document.getElementById('sm-date').value;
-    const purchase = parseFloat(document.getElementById('sm-purchase').value);
+    // sm-purchase is hidden in v162 — treat blank as 0 so the math still
+    // works without requiring staff to fill in an auction-side number.
+    const purchase = parseFloat(document.getElementById('sm-purchase').value) || 0;
     const sale     = parseFloat(document.getElementById('sm-sale').value);
     const miles    = parseInt(document.getElementById('sm-miles').value);
 
-    if (!client || !vehicle || !date || isNaN(purchase) || isNaN(sale)) {
-      alert('Please fill in client name, vehicle, date, purchase price, and sale price.');
+    if (!client || !vehicle || !date || isNaN(sale)) {
+      alert('Please fill in client name, vehicle, date, and sale price.');
       return;
     }
     if (!vin) {

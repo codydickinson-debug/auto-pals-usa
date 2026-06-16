@@ -140,6 +140,36 @@ async function handleDocumentUpload(req, res, body) {
   // without clobbering the other doc's record. Best-effort — never fail
   // the upload response if Supabase hiccups.
   const fileSizeKb = Math.max(1, Math.round(approxBytes / 1024));
+
+  // ── Persist the actual file to Supabase Storage so the dashboard can
+  // render a thumbnail / download link instead of only "✓ uploaded".
+  // Bucket is private (RLS-bypassed via service role); the dashboard pulls
+  // signed URLs through /api/doc-url. Best-effort — failure here still
+  // leaves the metadata + email-attachment path intact.
+  const ext = (filename.match(/\.[a-zA-Z0-9]+$/) || ['.bin'])[0].toLowerCase();
+  const storagePath = `${row.id}/${docKey}_${Date.now()}${ext}`;
+  let storageOk = false;
+  try {
+    const buf = Buffer.from(fileB64, 'base64');
+    const upRes = await fetch(`${SUPABASE_URL}/storage/v1/object/client-documents/${storagePath}`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': mimeType,
+        'x-upsert': 'true'
+      },
+      body: buf
+    });
+    storageOk = upRes.ok;
+    if (!upRes.ok) {
+      const txt = await upRes.text().catch(() => '');
+      console.error('[portal-upload] storage put failed', upRes.status, txt.slice(0, 200));
+    }
+  } catch (err) {
+    console.error('[portal-upload] storage put error', err && err.message);
+  }
+
   try {
     const existing = (row && row.documents_uploaded && typeof row.documents_uploaded === 'object')
       ? row.documents_uploaded
@@ -150,7 +180,8 @@ async function handleDocumentUpload(req, res, body) {
         uploaded_at: new Date().toISOString(),
         filename,
         size_kb: fileSizeKb,
-        mime_type: mimeType
+        mime_type: mimeType,
+        storage_path: storageOk ? storagePath : null
       }
     };
     const patchRes = await sb('PATCH', `requests?id=eq.${row.id}`, { documents_uploaded: merged });
