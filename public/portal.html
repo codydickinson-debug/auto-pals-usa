@@ -961,46 +961,81 @@
         Please upload the following documents so we can process your temporary tags and paperwork. Files are encrypted in transit and visible only to the Auto Pals USA team — they're never shared with third parties.
       </div>
 
-      <!-- Driver's License -->
-      <div id="doc-license-wrap" style="margin-bottom:16px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;background:var(--navy-light);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--navy);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2.5"/><line x1="14" y1="10" x2="19" y2="10"/><line x1="14" y1="14" x2="17" y2="14"/></svg></div>
-            <div>
-              <div style="font-size:14px;font-weight:600;color:var(--text);">Driver's License</div>
-              <div style="font-size:12px;color:var(--text-muted);">Front and back — JPG, PNG, or PDF</div>
-            </div>
+      <!-- Driver's License — front + back slots. The legacy `license` key
+           still works server-side; new uploads land in `license_front`. -->
+      <div id="doc-license-group" style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="width:36px;height:36px;background:var(--navy-light);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--navy);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2.5"/><line x1="14" y1="10" x2="19" y2="10"/><line x1="14" y1="14" x2="17" y2="14"/></svg></div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text);">Driver's License</div>
+            <div style="font-size:12px;color:var(--text-muted);">Upload both front and back — JPG, PNG, or PDF</div>
           </div>
-          <div id="doc-license-status" style="font-size:12px;font-weight:600;color:var(--text-muted);">Not uploaded</div>
         </div>
-        <div id="doc-license-preview" style="display:none;margin-bottom:8px;"></div>
-        <label style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1.5px dashed var(--border);border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text-muted);transition:all 0.15s;background:var(--cream);" onmouseover="this.style.borderColor='var(--navy)';this.style.color='var(--navy)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Upload File
-          <input type="file" accept="image/*,.pdf" style="display:none;" onchange="handleDocUpload('license', this)">
-        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div id="doc-license_front-wrap">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <div style="font-size:12px;font-weight:600;color:var(--text);">Front</div>
+              <div id="doc-license_front-status" style="font-size:11px;font-weight:600;color:var(--text-muted);">Not uploaded</div>
+            </div>
+            <div id="doc-license_front-preview" style="display:none;margin-bottom:6px;"></div>
+            <label style="display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border:1.5px dashed var(--border);border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--text-muted);transition:all 0.15s;background:var(--cream);" onmouseover="this.style.borderColor='var(--navy)';this.style.color='var(--navy)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Upload Front
+              <input type="file" accept="image/*,.pdf" style="display:none;" onchange="handleDocUpload('license_front', this)">
+            </label>
+          </div>
+          <div id="doc-license_back-wrap">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <div style="font-size:12px;font-weight:600;color:var(--text);">Back</div>
+              <div id="doc-license_back-status" style="font-size:11px;font-weight:600;color:var(--text-muted);">Not uploaded</div>
+            </div>
+            <div id="doc-license_back-preview" style="display:none;margin-bottom:6px;"></div>
+            <label style="display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border:1.5px dashed var(--border);border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--text-muted);transition:all 0.15s;background:var(--cream);" onmouseover="this.style.borderColor='var(--navy)';this.style.color='var(--navy)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Upload Back
+              <input type="file" accept="image/*,.pdf" style="display:none;" onchange="handleDocUpload('license_back', this)">
+            </label>
+          </div>
+        </div>
       </div>
 
       <div style="border-top:1px solid var(--border);margin:16px 0;"></div>
 
-      <!-- Insurance Card -->
-      <div id="doc-insurance-wrap">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;background:var(--navy-light);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--navy);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-            <div>
-              <div style="font-size:14px;font-weight:600;color:var(--text);">Insurance Card</div>
-              <div style="font-size:12px;color:var(--text-muted);">Current coverage card — JPG, PNG, or PDF</div>
-            </div>
+      <!-- Insurance Card — front + back slots. -->
+      <div id="doc-insurance-group">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+          <div style="width:36px;height:36px;background:var(--navy-light);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--navy);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text);">Insurance Card</div>
+            <div style="font-size:12px;color:var(--text-muted);">Upload both front and back — JPG, PNG, or PDF</div>
           </div>
-          <div id="doc-insurance-status" style="font-size:12px;font-weight:600;color:var(--text-muted);">Not uploaded</div>
         </div>
-        <div id="doc-insurance-preview" style="display:none;margin-bottom:8px;"></div>
-        <label style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:1.5px dashed var(--border);border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:var(--text-muted);transition:all 0.15s;background:var(--cream);" onmouseover="this.style.borderColor='var(--navy)';this.style.color='var(--navy)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          Upload File
-          <input type="file" accept="image/*,.pdf" style="display:none;" onchange="handleDocUpload('insurance', this)">
-        </label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div id="doc-insurance_front-wrap">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <div style="font-size:12px;font-weight:600;color:var(--text);">Front</div>
+              <div id="doc-insurance_front-status" style="font-size:11px;font-weight:600;color:var(--text-muted);">Not uploaded</div>
+            </div>
+            <div id="doc-insurance_front-preview" style="display:none;margin-bottom:6px;"></div>
+            <label style="display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border:1.5px dashed var(--border);border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--text-muted);transition:all 0.15s;background:var(--cream);" onmouseover="this.style.borderColor='var(--navy)';this.style.color='var(--navy)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Upload Front
+              <input type="file" accept="image/*,.pdf" style="display:none;" onchange="handleDocUpload('insurance_front', this)">
+            </label>
+          </div>
+          <div id="doc-insurance_back-wrap">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <div style="font-size:12px;font-weight:600;color:var(--text);">Back</div>
+              <div id="doc-insurance_back-status" style="font-size:11px;font-weight:600;color:var(--text-muted);">Not uploaded</div>
+            </div>
+            <div id="doc-insurance_back-preview" style="display:none;margin-bottom:6px;"></div>
+            <label style="display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;border:1.5px dashed var(--border);border-radius:var(--radius);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:var(--text-muted);transition:all 0.15s;background:var(--cream);" onmouseover="this.style.borderColor='var(--navy)';this.style.color='var(--navy)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Upload Back
+              <input type="file" accept="image/*,.pdf" style="display:none;" onchange="handleDocUpload('insurance_back', this)">
+            </label>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -1191,7 +1226,7 @@
 
   </div><!-- /portal-flow -->
 
-  <div id="portal-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v125 · 2026-06-16</div>
+  <div id="portal-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v126 · 2026-06-16</div>
 </div><!-- /portal-content -->
 
 <script>

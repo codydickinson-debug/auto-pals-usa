@@ -51,10 +51,16 @@ async function sb(method, path, body) {
 const MAX_UPLOAD_BYTES = 3 * 1024 * 1024;
 
 // Friendly labels for the doc keys the portal can send. New keys can be added
-// here without touching portal.html or the email template.
+// here without touching portal.html or the email template. The bare
+// `license` / `insurance` keys are legacy (pre-v163, single-photo uploads);
+// new portal builds send `*_front` / `*_back` for both doc types.
 const DOC_LABELS = {
-  license:   "Driver's License",
-  insurance: 'Proof of Insurance'
+  license:          "Driver's License",
+  license_front:    "Driver's License — Front",
+  license_back:     "Driver's License — Back",
+  insurance:        'Proof of Insurance',
+  insurance_front:  'Proof of Insurance — Front',
+  insurance_back:   'Proof of Insurance — Back'
 };
 
 // MIME allowlist — anything outside this gets rejected. PDF + common image

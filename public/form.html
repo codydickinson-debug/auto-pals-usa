@@ -1553,7 +1553,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v162 · 2026-06-16</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v163 · 2026-06-16</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2534,10 +2534,12 @@
 
     <div class="detail-section">
       <div class="detail-section-title">Financials</div>
-      <!-- Purchase price field removed in v162 — user prefers a lighter
-           sold-cars log. sm-purchase still exists as a hidden input so the
-           profit math + saveSale persistence stay compatible (treated as 0). -->
-      <input type="hidden" id="sm-purchase" value="0">
+      <!-- Restored in v163 — user wants both auction-side and client-side
+           prices captured so the profit stat stays honest. -->
+      <div class="form-group" style="margin-bottom:14px;">
+        <label style="font-size:12px;">Purchase Price &mdash; what you paid at auction ($)</label>
+        <input type="number" id="sm-purchase" placeholder="e.g. 22000" oninput="calcSaleProfit()">
+      </div>
       <div class="form-group" style="margin-bottom:14px;">
         <label style="font-size:12px;">Sale Price &mdash; what the client paid ($) <span style="color:var(--text-muted);font-weight:400;">— auto-filled from PSI</span></label>
         <input type="number" id="sm-sale" placeholder="e.g. 27500" oninput="calcSaleProfit()">
@@ -3143,7 +3145,14 @@
       localStorage.setItem('am_repair', JSON.stringify(repairCars));
     }
     if (dbSales?.length >= 0) {
-      sales = dbSales;
+      // Normalize snake_case → camelCase so existing code (calcSaleProfit,
+      // sales table render) keeps working without per-row .repair_profit
+      // fallbacks. The DB column was added in v163; pre-v163 rows have
+      // null and just look like a missing markup, which is correct.
+      sales = dbSales.map(s => ({
+        ...s,
+        repairProfit: (s.repair_profit != null ? Number(s.repair_profit) : (s.repairProfit != null ? Number(s.repairProfit) : 0))
+      }));
       localStorage.setItem('am_sales', JSON.stringify(sales));
     }
     const allMsgs = await dbGet('messages');
@@ -4527,11 +4536,27 @@
     const docsEl     = document.getElementById('dv-docs');
     const docsCardEl = document.getElementById('dv-docs-card');
     if (docsEl || docsCardEl) {
+      // Six supported keys: 4 new (front/back per doc type, v163+) plus 2
+      // legacy (`license`, `insurance` — single-photo uploads from before
+      // the front/back split). Legacy ones still render but are skipped
+      // when their _front equivalent exists, so re-uploading replaces them
+      // cleanly in the UI without leaving stale rows around.
+      const docsAll = r.documentsUploaded || {};
+      // Only surface a legacy slot if it actually has data AND the new
+      // front equivalent hasn't been uploaded yet — otherwise it's just
+      // noise. Once the client uploads a new Front, the legacy row falls
+      // away automatically.
+      const showLegacyLicense   = !!(docsAll.license   && docsAll.license.uploaded_at   && !(docsAll.license_front   && docsAll.license_front.uploaded_at));
+      const showLegacyInsurance = !!(docsAll.insurance && docsAll.insurance.uploaded_at && !(docsAll.insurance_front && docsAll.insurance_front.uploaded_at));
       const supported = [
-        { key: 'license',   label: "Driver's License"   },
-        { key: 'insurance', label: 'Proof of Insurance' }
+        { key: 'license_front',   label: "Driver's License — Front"   },
+        { key: 'license_back',    label: "Driver's License — Back"    },
+        { key: 'insurance_front', label: 'Proof of Insurance — Front' },
+        { key: 'insurance_back',  label: 'Proof of Insurance — Back'  },
+        ...(showLegacyLicense   ? [{ key: 'license',   label: "Driver's License (legacy single-photo upload)" }]   : []),
+        ...(showLegacyInsurance ? [{ key: 'insurance', label: 'Proof of Insurance (legacy single-photo upload)' }] : [])
       ];
-      const docs = r.documentsUploaded || {};
+      const docs = docsAll;
       const anyUploaded = supported.some(({ key }) => docs[key] && docs[key].uploaded_at);
       const rowsHtml = supported.map(({ key, label }) => {
         const d = docs[key];
@@ -5567,7 +5592,11 @@
     const banner = document.getElementById('rm-prefill-banner');
     if (prefillReq) {
       document.getElementById('rm-client').value = prefillReq.firstName + ' ' + prefillReq.lastName;
-      const vehicle = [prefillReq.yearFrom !== prefillReq.yearTo ? prefillReq.yearFrom + '–' + prefillReq.yearTo : prefillReq.yearFrom, prefillReq.make, prefillReq.model !== '—' ? prefillReq.model : ''].filter(Boolean).join(' ');
+      // Prefer the actual car captured at PSI (what was bought at auction)
+      // over the request's original make/model range. Mirrors openSaleModal
+      // so Repair → Sold flow uses the same vehicle string end-to-end.
+      const vehicle = prefillReq.psiCar
+        || [prefillReq.yearFrom !== prefillReq.yearTo ? prefillReq.yearFrom + '–' + prefillReq.yearTo : prefillReq.yearFrom, prefillReq.make, prefillReq.model !== '—' ? prefillReq.model : ''].filter(Boolean).join(' ');
       document.getElementById('rm-vehicle').value = vehicle;
       banner.style.display = 'block';
     } else {
@@ -6569,14 +6598,10 @@
   let pendingSoldReqId = null;
 
   function openSaleModal(prefillReq) {
-    ['sm-client','sm-vehicle','sm-vin','sm-sale','sm-repair','sm-repair-profit','sm-notes','sm-miles'].forEach(id => {
+    ['sm-client','sm-vehicle','sm-vin','sm-purchase','sm-sale','sm-repair','sm-repair-profit','sm-notes','sm-miles'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
-    // sm-purchase is hidden in v162 — kept at 0 so the profit math stays
-    // well-defined without bothering staff for a number they don't track.
-    const purchaseEl = document.getElementById('sm-purchase');
-    if (purchaseEl) purchaseEl.value = '0';
     // Finder fee is always $850 per business policy — staff can still
     // override per-deal if needed.
     document.getElementById('sm-finder').value = 850;
@@ -6708,14 +6733,12 @@
     const vinEl    = document.getElementById('sm-vin');
     const vin      = vinEl ? vinEl.value.trim().toUpperCase() : '';
     const date     = document.getElementById('sm-date').value;
-    // sm-purchase is hidden in v162 — treat blank as 0 so the math still
-    // works without requiring staff to fill in an auction-side number.
-    const purchase = parseFloat(document.getElementById('sm-purchase').value) || 0;
+    const purchase = parseFloat(document.getElementById('sm-purchase').value);
     const sale     = parseFloat(document.getElementById('sm-sale').value);
     const miles    = parseInt(document.getElementById('sm-miles').value);
 
-    if (!client || !vehicle || !date || isNaN(sale)) {
-      alert('Please fill in client name, vehicle, date, and sale price.');
+    if (!client || !vehicle || !date || isNaN(purchase) || isNaN(sale)) {
+      alert('Please fill in client name, vehicle, date, purchase price, and sale price.');
       return;
     }
     if (!vin) {

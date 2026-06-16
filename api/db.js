@@ -567,7 +567,27 @@ module.exports = async function handler(req, res) {
         return res.json(data || []);
       }
       if (req.method === 'POST') {
-        const data = await query('sales', 'POST', { id: body.id || Date.now(), ...body });
+        // Whitelist + normalize. The dashboard sends camelCase keys like
+        // `repairProfit`; Supabase wants `repair_profit`. Until v163 we
+        // spread the body verbatim, so unknown keys made the whole INSERT
+        // 4xx and the row silently disappeared from the next loadFromDB().
+        const row = {
+          id:            body.id || Date.now(),
+          client:        body.client || null,
+          vehicle:       body.vehicle || null,
+          vin:           body.vin || null,
+          miles:         body.miles ?? null,
+          date:          body.date || null,
+          purchase:      body.purchase ?? null,
+          sale:          body.sale ?? null,
+          fees:          body.fees ?? null,
+          repair:        body.repair ?? null,
+          repair_profit: body.repair_profit ?? body.repairProfit ?? null,
+          finder:        body.finder ?? null,
+          profit:        body.profit ?? null,
+          notes:         body.notes || null
+        };
+        const data = await query('sales', 'POST', row);
         return res.json(data);
       }
       if (req.method === 'DELETE') {
