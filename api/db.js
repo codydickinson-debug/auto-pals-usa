@@ -391,7 +391,8 @@ module.exports = async function handler(req, res) {
           psi_car:                     b.psiCar,
           psi_started_at:              b.psiStartedAt,
           psi_miles:                   b.psiMiles,
-          psi_sale_price:              b.psiSalePrice
+          psi_sale_price:              b.psiSalePrice,
+          psi_purchase_price:          b.psiPurchasePrice
         };
         // Remove undefined values
         Object.keys(mapped).forEach(k => { if (mapped[k] === undefined) delete mapped[k]; });

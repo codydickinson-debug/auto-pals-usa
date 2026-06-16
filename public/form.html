@@ -1553,7 +1553,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v163 · 2026-06-16</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v164 · 2026-06-16</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2377,6 +2377,17 @@
 
     <!-- RIGHT: Sticky payment + actions -->
     <div class="detail-3col-side">
+      <!-- Awaiting Paperwork → Sold finalize CTA. Hidden by default;
+           populateDetailView() flips it on when r.status === 'awaiting_paperwork'.
+           Clicking Mark Sold ✓ is the only path from awaiting paperwork →
+           sold (no further data captured — saleSale already wrote the
+           sales row when the client landed in awaiting paperwork). -->
+      <div id="dv-awaiting-cta" style="display:none;margin-bottom:18px;padding:14px;background:linear-gradient(135deg,#1e3a8a,#3730a3);border-radius:10px;color:#fff;">
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;opacity:0.7;margin-bottom:6px;">Awaiting Paperwork</div>
+        <div style="font-size:14px;font-weight:600;line-height:1.45;margin-bottom:10px;">Tags &amp; title finished? Finalize this deal — no extra info needed.</div>
+        <button onclick="markRequestSoldFromAwaiting(activeRequestId)" style="width:100%;padding:10px 14px;background:#fff;color:#1e3a8a;border:none;border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Mark Sold ✓</button>
+      </div>
+
       <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Call Status</div>
         <div id="dv-call-pending" style="display:flex;flex-direction:column;gap:8px;">
           <span style="font-family:system-ui,sans-serif;font-size:13px;color:var(--text-muted);">Call not yet completed</span>
@@ -2501,10 +2512,10 @@
   <div class="detail-panel">
     <button class="detail-close" onclick="document.getElementById('sale-modal').classList.remove('open');pendingSoldReqId=null;">&#x2715; Close</button>
     <br><br>
-    <div class="detail-name">Log a Sale</div>
-    <div class="detail-sub" style="margin-bottom:20px;">Enter the details for this completed deal.</div>
+    <div class="detail-name">Move to Awaiting Paperwork</div>
+    <div class="detail-sub" style="margin-bottom:20px;">Capture all the deal details now. Saving lands the client in Awaiting Paperwork — once tags &amp; title are done, click <strong>Mark Sold ✓</strong> there to finalize.</div>
     <div id="sm-prefill-banner" style="display:none;margin-bottom:16px;padding:10px 14px;background:var(--accent-light);border:1px solid var(--accent-border);border-radius:var(--radius);font-family:system-ui,sans-serif;font-size:12px;color:var(--accent-bright);font-weight:600;">
-      ✓ Pre-filled from client request — enter the financial details below.
+      ✓ Pre-filled from PSI — review and fill in anything missing below.
     </div>
 
     <div class="detail-section">
@@ -2569,7 +2580,7 @@
       <textarea class="notes-area" id="sm-notes" placeholder="Any notes about this deal..."></textarea>
     </div>
 
-    <button class="submit-btn" onclick="saveSale()" style="margin-top:8px;">Save Sale</button>
+    <button class="submit-btn" onclick="saveSale()" style="margin-top:8px;">Save → Awaiting Paperwork</button>
   </div>
 </div>
 
@@ -2590,6 +2601,10 @@
       <div class="form-group" style="margin-bottom:14px;">
         <label style="font-size:12px;">Current mileage <span class="req">*</span></label>
         <input type="number" id="pm-miles" placeholder="e.g. 34000">
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label style="font-size:12px;">Purchase price — what we paid at auction ($) <span class="req">*</span></label>
+        <input type="number" id="pm-purchase" placeholder="e.g. 22000">
       </div>
       <div class="form-group" style="margin-bottom:0;">
         <label style="font-size:12px;">Sale price — what the client pays ($) <span class="req">*</span></label>
@@ -3107,6 +3122,7 @@
       // Per-doc upload metadata { license: { uploaded_at, filename, size_kb }, insurance: {...} }
       documentsUploaded: r.documents_uploaded || null,
       psiCar: r.psi_car || '',
+      psiPurchasePrice: (r.psi_purchase_price != null ? r.psi_purchase_price : ''),
       psiStartedAt: r.psi_started_at || null,
       psiMiles: (r.psi_miles != null ? r.psi_miles : ''),
       psiSalePrice: (r.psi_sale_price != null ? r.psi_sale_price : '')
@@ -4473,6 +4489,10 @@
     const psiSub = r.status === 'psi' && r.psiCar ? ` · 🚗 ${escapeHtml(r.psiCar)}` : '';
     document.getElementById('dv-sub').innerHTML = `Submitted ${new Date(r.submitted).toLocaleDateString()} · Status: ${escapeHtml(dvStatusLabel)}${psiSub}`;
 
+    // Awaiting Paperwork → Sold one-click finalize CTA.
+    const awaitCta = document.getElementById('dv-awaiting-cta');
+    if (awaitCta) awaitCta.style.display = r.status === 'awaiting_paperwork' ? 'block' : 'none';
+
     // Highlight the active status button. Most buttons encode their status in the
     // onclick (updateStatusFromDetail('x')); PSI uses moveToPsiFromDetail(), so
     // match it explicitly.
@@ -4861,7 +4881,8 @@
     <button class="ctx-item" onclick="ctxMoveToPsi()" style="color:#4338ca;font-weight:600;"><span class="ctx-dot" style="background:#4338ca"></span>Send to PSI Period</button>
     <button class="ctx-item" onclick="ctxMoveToRepair()" style="color:var(--amber);font-weight:600;"><span class="ctx-dot" style="background:var(--amber)"></span>Send to Repair</button>
     <button class="ctx-item" onclick="ctxSendToOpenSearch()" style="color:#5b21b6;font-weight:600;"><span class="ctx-dot" style="background:#5b21b6"></span>Open Search</button>
-    <button class="ctx-item" onclick="ctxMoveToSold()" style="color:var(--accent-bright);font-weight:600;"><span class="ctx-dot" style="background:var(--accent-bright)"></span>Mark as Sold ✓</button>
+    <button class="ctx-item" onclick="ctxMoveToSold()" style="color:#1d4ed8;font-weight:600;"><span class="ctx-dot" style="background:#1d4ed8"></span>Move to Awaiting Paperwork</button>
+    <button class="ctx-item" onclick="ctxMarkSoldFinalize()" style="color:var(--accent-bright);font-weight:600;"><span class="ctx-dot" style="background:var(--accent-bright)"></span>Mark Sold ✓ (finalize)</button>
   `;
   document.body.appendChild(ctxMenu);
   let ctxTargetId = null;
@@ -6087,9 +6108,10 @@
     if (!r) return;
     pendingPsiReqId = r.id;
     const defaultCar = r.psiCar || [r.make, r.model].filter(v => v && v !== '—').join(' ') || '';
-    document.getElementById('pm-car').value   = defaultCar;
-    document.getElementById('pm-miles').value = (r.psiMiles  != null && r.psiMiles  !== '') ? r.psiMiles      : '';
-    document.getElementById('pm-sale').value  = (r.psiSalePrice != null && r.psiSalePrice !== '') ? r.psiSalePrice : '';
+    document.getElementById('pm-car').value     = defaultCar;
+    document.getElementById('pm-miles').value   = (r.psiMiles  != null && r.psiMiles  !== '') ? r.psiMiles      : '';
+    document.getElementById('pm-purchase').value = (r.psiPurchasePrice != null && r.psiPurchasePrice !== '') ? r.psiPurchasePrice : '';
+    document.getElementById('pm-sale').value    = (r.psiSalePrice != null && r.psiSalePrice !== '') ? r.psiSalePrice : '';
     document.getElementById('psi-modal').classList.add('open');
     document.getElementById('pm-car').focus();
   }
@@ -6104,20 +6126,23 @@
   function savePsi() {
     const r = requests.find(x => x.id === pendingPsiReqId);
     if (!r) { document.getElementById('psi-modal').classList.remove('open'); return; }
-    const car   = document.getElementById('pm-car').value.trim();
-    const miles = parseInt(document.getElementById('pm-miles').value, 10);
-    const sale  = parseFloat(document.getElementById('pm-sale').value);
+    const car      = document.getElementById('pm-car').value.trim();
+    const miles    = parseInt(document.getElementById('pm-miles').value, 10);
+    const purchase = parseFloat(document.getElementById('pm-purchase').value);
+    const sale     = parseFloat(document.getElementById('pm-sale').value);
     if (!car)              { alert('Enter the car we bought.');        document.getElementById('pm-car').focus();   return; }
     if (!Number.isFinite(miles) || miles < 0) { alert('Enter the current mileage.'); document.getElementById('pm-miles').focus(); return; }
+    if (!Number.isFinite(purchase) || purchase < 0) { alert('Enter the auction purchase price.'); document.getElementById('pm-purchase').focus(); return; }
     if (!Number.isFinite(sale)  || sale  <= 0){ alert('Enter the sale price.');       document.getElementById('pm-sale').focus();  return; }
 
     r.status = 'psi';
     r.psiCar = car;
     r.psiMiles = miles;
+    r.psiPurchasePrice = purchase;
     r.psiSalePrice = sale;
     if (!r.psiStartedAt) r.psiStartedAt = new Date().toISOString();
     save();
-    dbPut('requests', { id: r.id, status: 'psi', psiCar: r.psiCar, psiMiles: r.psiMiles, psiSalePrice: r.psiSalePrice, psiStartedAt: r.psiStartedAt });
+    dbPut('requests', { id: r.id, status: 'psi', psiCar: r.psiCar, psiMiles: r.psiMiles, psiPurchasePrice: r.psiPurchasePrice, psiSalePrice: r.psiSalePrice, psiStartedAt: r.psiStartedAt });
 
     document.getElementById('psi-modal').classList.remove('open');
     pendingPsiReqId = null;
@@ -6186,7 +6211,9 @@
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
             <span class="status-pill status-psi" style="white-space:nowrap;"><span class="dot dot-psi"></span>PSI: ${dayLabel}</span>
-            <div class="repair-card-actions">
+            <div class="repair-card-actions" style="flex-wrap:wrap;justify-content:flex-end;">
+              <button class="filter-btn" onclick="openRepairModal(requests.find(x=>x.id===${r.id}))" style="background:var(--amber);color:#fff;border-color:var(--amber);" title="Open Repair modal for this car">→ Repair</button>
+              <button class="filter-btn" onclick="openSaleModal(requests.find(x=>x.id===${r.id}))" style="background:#1d4ed8;color:#fff;border-color:#1d4ed8;" title="Skip repair and go straight to Awaiting Paperwork">→ Awaiting Paperwork</button>
               <button class="filter-btn" onclick="openPsiModal(requests.find(x=>x.id===${r.id}))">Edit</button>
               <button class="filter-btn" onclick="openDetailView(${r.id})">View</button>
             </div>
@@ -6617,8 +6644,13 @@
       const vehicle = prefillReq.psiCar || [prefillReq.yearFrom !== prefillReq.yearTo ? prefillReq.yearFrom + '–' + prefillReq.yearTo : prefillReq.yearFrom, prefillReq.make, prefillReq.model !== '—' ? prefillReq.model : ''].filter(Boolean).join(' ');
       document.getElementById('sm-client').value = name;
       document.getElementById('sm-vehicle').value = vehicle;
-      // Carry over mileage + sale price captured when the car entered PSI.
+      // Carry over the financial bundle captured at PSI: miles, what we
+      // paid at auction, and what the client is paying. Mirrors the user's
+      // ask that the Awaiting Paperwork form be "pre-filled with everything
+      // already known about the car previously" so staff only fill in
+      // anything that wasn't captured at PSI (typically the date sold + VIN).
       if (prefillReq.psiMiles != null && prefillReq.psiMiles !== '') document.getElementById('sm-miles').value = prefillReq.psiMiles;
+      if (prefillReq.psiPurchasePrice != null && prefillReq.psiPurchasePrice !== '') document.getElementById('sm-purchase').value = prefillReq.psiPurchasePrice;
       if (prefillReq.psiSalePrice != null && prefillReq.psiSalePrice !== '') document.getElementById('sm-sale').value = prefillReq.psiSalePrice;
 
       // Auto-fill repair costs (labor + parts) from the matching repair record.
@@ -6683,16 +6715,49 @@
     const r = requests.find(req => req.id === ctxTargetId);
     ctxMenu.classList.remove('open');
     if (r) {
-      // Open the sale-log modal first; status flips to 'sold' inside saveSale()
-      // so a cancel doesn't make the row vanish without capturing details.
+      // v164: Despite the legacy name, this no longer goes straight to
+      // Sold — it opens the deal-capture modal which now lands the row in
+      // Awaiting Paperwork. The actual Sold flip happens in
+      // markRequestSoldFromAwaiting().
       openSaleModal(r);
     }
+  }
+
+  // ── Awaiting Paperwork → Sold finalization ─────────────────────────
+  // One-click status flip for rows already in Awaiting Paperwork. The
+  // sales row was already created when staff hit Save in the Awaiting
+  // Paperwork modal; this just moves the request itself across the
+  // finish line. No extra data captured here.
+  function markRequestSoldFromAwaiting(reqId) {
+    const r = requests.find(x => x.id === reqId);
+    if (!r) return;
+    if (r.status !== 'awaiting_paperwork') {
+      alert('This client isn\'t in Awaiting Paperwork yet. Capture the deal info first.');
+      return;
+    }
+    if (!confirm(`Mark ${r.firstName || ''} ${r.lastName || ''} as Sold? This is the final step.`)) return;
+    r.status = 'sold';
+    save();
+    if (typeof syncRequest === 'function') syncRequest(r, ['status']);
+    renderDashboard();
+    // Drop them onto the Awaiting Paperwork filter so the next pending
+    // row is immediately visible — leaves staff in their workflow.
+    if (typeof filterRequests === 'function') {
+      const awaitBtn = document.querySelector('.sidebar-item[onclick*="awaiting_paperwork"]');
+      filterRequests('awaiting_paperwork', awaitBtn);
+    }
+  }
+
+  function ctxMarkSoldFinalize() {
+    const id = ctxTargetId;
+    ctxMenu.classList.remove('open');
+    if (id != null) markRequestSoldFromAwaiting(id);
   }
 
   function closeSaleModal(e) {
     if (e.target === document.getElementById('sale-modal')) {
       document.getElementById('sale-modal').classList.remove('open');
-      pendingSoldReqId = null; // canceled — don't flip to sold
+      pendingSoldReqId = null; // canceled — leaves request status untouched
     }
   }
 
@@ -6785,16 +6850,17 @@
       if (!r.ok) console.warn('[Sheets] sync returned', r.status);
     }).catch(e => console.warn('[Sheets] sync error:', e && e.message));
 
-    // Now flip the originating request to 'sold' so it leaves the active list.
-    // This happens AFTER the sale is captured, so a canceled modal (closed
-    // without saving) leaves the request on its previous status — no vanishing.
+    // v164: this modal now lands the deal in **Awaiting Paperwork** — not
+    // direct to Sold. Staff finalize via the "Mark Sold ✓" action on the
+    // awaiting-paperwork row once tags, title, and physical handoff are
+    // done. soldSaleId still gets stamped here so the eventual Mark Sold
+    // already knows which sales row to keep linked.
     if (pendingSoldReqId) {
       const r = requests.find(x => x.id === pendingSoldReqId);
       if (r) {
-        r.status = 'sold';
+        r.status = 'awaiting_paperwork';
         r.soldSaleId = newSale.id;
         save();
-        // soldSaleId has no DB column — local-only link to the sales row.
         if (typeof syncRequest === 'function') syncRequest(r, ['status']);
         renderDashboard();
       }
@@ -6803,22 +6869,25 @@
 
     document.getElementById('sale-modal').classList.remove('open');
 
-    // Switch to the Sales view so the staff can see the row they just logged
+    // Stay on the Requests view and filter to Awaiting Paperwork so the
+    // staff sees the row they just landed and the Mark Sold button is one
+    // click away. No detour through the Sales view — that happens after
+    // finalization, not now.
     document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
-    const salesView = document.getElementById('view-sales');
-    const salesNav  = document.getElementById('nav-sales');
-    if (salesView) salesView.classList.add('active');
-    if (salesNav)  salesNav.classList.add('active');
-    // Match showView('sales'): unhide panel-sold (it's hidden by default) and
-    // make sure the Repair / Open-Search panels are tucked away.
-    ['panel-requests','panel-repair','panel-opensearch'].forEach(id => {
+    const dashView = document.getElementById('view-dashboard');
+    const dashNav  = document.getElementById('nav-dashboard');
+    if (dashView) dashView.classList.add('active');
+    if (dashNav)  dashNav.classList.add('active');
+    ['panel-repair','panel-opensearch','panel-psi','panel-sold'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
-    const soldPanel = document.getElementById('panel-sold');
-    if (soldPanel) soldPanel.style.display = 'block';
-    if (typeof updateWeekLabel === 'function') updateWeekLabel();
-    renderSoldTable();
+    const reqPanel = document.getElementById('panel-requests');
+    if (reqPanel) reqPanel.style.display = 'block';
+    if (typeof filterRequests === 'function') {
+      const awaitBtn = document.querySelector('.sidebar-item[onclick*="awaiting_paperwork"]');
+      filterRequests('awaiting_paperwork', awaitBtn);
+    }
     syncNavBadges();
   }
 
