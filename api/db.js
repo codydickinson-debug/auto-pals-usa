@@ -5,7 +5,19 @@
 // but in production these MUST be set (and the hardcoded values should be rotated).
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://phbdpvfdnxvzxpybfgbr.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoYmRwdmZkbnh2enhweWJmZ2JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODc4NDAsImV4cCI6MjA5MTI2Mzg0MH0.ne0pU9m-SkN-yBA4qczyiwfWGKgmRHi_lTSnxFBoq1k';
+// v165: prefer the service-role key (same chain api/portal-sign.js uses).
+// All db.js endpoints are server-side and gated either by isPublicOp or
+// the staff token, so RLS isn't the security boundary here — the API auth
+// is. Switching keys lets staff-only writes on `sales` and `repair_cars`
+// land instead of silently 401'ing under the anon role's restrictive RLS
+// (only requests / messages / bookings had anon_insert policies). The
+// anon-key fallback stays as a last resort so legacy/dev environments
+// without the service role set still work, just with the prior limits.
+const SUPABASE_KEY = process.env.SUPABASE_KEY
+  || process.env.SUPABASE_SERVICE_ROLE_KEY
+  || process.env.SUPABASE_ANON_KEY
+  || process.env.SUPABASE_ANNON_KEY
+  || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoYmRwdmZkbnh2enhweWJmZ2JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODc4NDAsImV4cCI6MjA5MTI2Mzg0MH0.ne0pU9m-SkN-yBA4qczyiwfWGKgmRHi_lTSnxFBoq1k';
 
 async function query(table, method = 'GET', body = null, params = '') {
   const url = `${SUPABASE_URL}/rest/v1/${table}${params}`;

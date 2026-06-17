@@ -1553,7 +1553,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v164 · 2026-06-16</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v165 · 2026-06-17</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3156,11 +3156,19 @@
       requests = mapped.map(r => ({ ...localById[r.id], ...r }));
       localStorage.setItem('am_requests', JSON.stringify(requests));
     }
-    if (dbRepairs?.length >= 0) {
+    // v165: only sync down from the server when it has at least one row.
+    // The prior `?.length >= 0` was true for an empty array, which meant
+    // a transient sync hiccup or RLS deny on read silently WIPED the
+    // local cache. The user lost two sold cars to this exact path — the
+    // POSTs were 401'ing under anon RLS (fixed in db.js v165), the DB
+    // stayed empty, then a tab switch fired loadFromDB and trashed
+    // localStorage. Real deletes still flow through dbDelete + tombstones
+    // so we don't actually need empty-server to mean "wipe local."
+    if (Array.isArray(dbRepairs) && dbRepairs.length > 0) {
       repairCars = dbRepairs;
       localStorage.setItem('am_repair', JSON.stringify(repairCars));
     }
-    if (dbSales?.length >= 0) {
+    if (Array.isArray(dbSales) && dbSales.length > 0) {
       // Normalize snake_case → camelCase so existing code (calcSaleProfit,
       // sales table render) keeps working without per-row .repair_profit
       // fallbacks. The DB column was added in v163; pre-v163 rows have
@@ -6585,8 +6593,11 @@
   })();
 
   function saveSales() {
+    // v165: dropped the stray dbPut loop that fanned the top-5 sales out
+    // every time. db.js has no sales PUT handler — those requests all hit
+    // the "Unknown table" fallback and 400'd. saveSale + dbPost are the
+    // canonical persist path; this just keeps localStorage in sync.
     localStorage.setItem('am_sales', JSON.stringify(sales));
-    sales.slice(0, 5).forEach(s => dbPut('sales', { id: s.id, ...s }));
   }
 
   // Export all sales (current view) as CSV — drop straight into Google Sheets
@@ -6792,7 +6803,7 @@
     }
   }
 
-  function saveSale() {
+  async function saveSale() {
     const client   = document.getElementById('sm-client').value.trim();
     const vehicle  = document.getElementById('sm-vehicle').value.trim();
     const vinEl    = document.getElementById('sm-vin');
@@ -6836,8 +6847,17 @@
       notes: document.getElementById('sm-notes').value.trim()
     };
     sales.unshift(newSale);
-    dbPost('sales', newSale);
     saveSales();
+    // v165: await + alert on POST failure. Pre-v165 this was fire-and-
+    // forget, so an anon-RLS 401 (or any other server reject) left the
+    // row in localStorage only and the next loadFromDB() silently wiped
+    // it. Now we tell the user immediately and they can retry instead of
+    // discovering the loss after a tab switch.
+    const postResult = await dbPost('sales', newSale);
+    if (postResult == null) {
+      alert('Saved locally, but the server sync failed for this sale. Please check your connection and try saving again. Your entry is preserved on this device until then.');
+      return;
+    }
 
     // Append to the team's Google Sheet — best-effort. If the sheet env vars
     // aren't set, the endpoint demo-modes and returns ok. If it actually fails
