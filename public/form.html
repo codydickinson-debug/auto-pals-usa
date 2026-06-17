@@ -1553,7 +1553,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v165 · 2026-06-17</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v166 · 2026-06-17</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -5399,8 +5399,9 @@
       const carCost = car.repairs.reduce((a, r) => a + (Number(r.cost) || 0), 0);
       const carHours = car.repairs.reduce((a, r) => a + (Number(r.hours) || 0), 0);
       const carCharge = car.repairs.reduce((a, r) => a + repairItemCharge(r), 0); // bundled (cost × tier + hours × rate)
+      const itemsDone = car.repairs.reduce((a, r) => a + (r.done ? 1 : 0), 0);
       const fmtUsd = (n) => n ? '$' + Number(n).toLocaleString(undefined, {maximumFractionDigits:2}) : '—';
-      const rows = car.repairs.length ? car.repairs.map(r => {
+      const rows = car.repairs.length ? car.repairs.map((r, idx) => {
         const hrs = Number(r.hours) || 0;
         const cost = Number(r.cost) || 0;
         const charge = repairItemCharge(r);
@@ -5416,7 +5417,16 @@
         const chargeCell = (charge > 0)
           ? `${fmtUsd(charge)}${breakdown}`
           : '<span style="color:var(--text-muted);">—</span>';
-        return `<tr><td>${r.desc}</td><td>${fmtUsd(r.cost)}</td><td>${chargeCell}</td><td>${profitCell}</td><td>${r.hours ? r.hours + 'h' : '—'}</td><td><span class="repair-tag">${r.status || 'Pending'}</span></td></tr>`;
+        // Internal-only "done" checkbox — flipped on the shop side as each
+        // line item is finished. NEVER shown to the client; the receipt /
+        // portal quote skip this field entirely.
+        const doneCell = `<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:system-ui,sans-serif;font-size:12px;color:${r.done ? 'var(--green)' : 'var(--text-muted)'};font-weight:600;">`
+          + `<input type="checkbox" ${r.done ? 'checked' : ''} onchange="toggleRepairItemDone(${car.id}, ${idx}, this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--green);">`
+          + (r.done ? '<span>Done</span>' : '<span>Pending</span>')
+          + `</label>`;
+        const rowStyle = r.done ? 'opacity:0.55;' : '';
+        const descStyle = r.done ? 'text-decoration:line-through;color:var(--text-muted);' : '';
+        return `<tr style="${rowStyle}"><td style="${descStyle}">${r.desc}</td><td>${fmtUsd(r.cost)}</td><td>${chargeCell}</td><td>${profitCell}</td><td>${r.hours ? r.hours + 'h' : '—'}</td><td>${doneCell}</td></tr>`;
       }).join('') : '<tr><td colspan="6" style="color:var(--text-muted);padding:8px 10px;">No repair items added yet.</td></tr>';
 
       const parts = car.parts || [];
@@ -5439,6 +5449,10 @@
         </tr>`).join('') : '';
 
       const isDone = !!car.doneAt;
+      const totalItems = car.repairs.length;
+      const progressBadge = totalItems
+        ? `<span style="display:inline-block;margin-left:6px;padding:2px 10px;border-radius:99px;background:${itemsDone === totalItems ? 'var(--green-light,#dcfce7)' : '#fef3c7'};color:${itemsDone === totalItems ? 'var(--green,#166534)' : '#92400e'};font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">${itemsDone}/${totalItems} items done</span>`
+        : '';
       const doneBadge = isDone
         ? `<span style="display:inline-block;padding:2px 10px;border-radius:99px;background:#dbeafe;color:#1d4ed8;font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">✓ Done · awaiting paperwork</span>`
         : '';
@@ -5449,7 +5463,7 @@
         <div class="repair-card" style="${isDone ? 'opacity:0.85;' : ''}">
           <div class="repair-card-header">
             <div>
-              <div class="repair-card-title">${car.vehicle} ${doneBadge}</div>
+              <div class="repair-card-title">${car.vehicle} ${progressBadge} ${doneBadge}</div>
               <div class="repair-card-sub">${car.client}${car.vin ? ` · <span style="font-family:monospace;letter-spacing:0.05em;font-size:11px;">${car.vin}</span>` : ''}</div>
             </div>
             <div class="repair-card-actions">
@@ -5461,7 +5475,7 @@
 
           <!-- Repair items -->
           <table class="repair-items-table">
-            <thead><tr><th>Repair Item</th><th title="Wholesale — internal only">Your Cost</th><th title="What the client pays">Client Charge</th><th>Profit</th><th>Time</th><th>Status</th></tr></thead>
+            <thead><tr><th>Repair Item</th><th title="Wholesale — internal only">Your Cost</th><th title="What the client pays">Client Charge</th><th>Profit</th><th>Time</th><th title="Internal-only — check off as each item is finished. Never shown to the client.">Done</th></tr></thead>
             <tbody>${rows}</tbody>
           </table>
           <div class="repair-totals">
@@ -5550,6 +5564,22 @@
     if (!car || !car.parts) return;
     car.parts[index].status = status;
     saveRepairData();
+    renderRepairPanel();
+  }
+
+  // Toggle the internal "done" flag on a single repair line item. Persists
+  // the whole repairs array back via dbPut so the next loadFromDB doesn't
+  // overwrite the checkmark. NEVER exposed to the client side — the
+  // reconditioning quote email + portal view don't read this field.
+  function toggleRepairItemDone(carId, index, done) {
+    const car = repairCars.find(c => c.id === carId);
+    if (!car || !car.repairs || !car.repairs[index]) return;
+    car.repairs[index].done = !!done;
+    saveRepairData();
+    if (typeof dbPut === 'function') {
+      dbPut('repair_cars', { id: car.id, repairs: car.repairs }).catch(err =>
+        console.warn('[repair-item-done] sync failed', err && err.message));
+    }
     renderRepairPanel();
   }
 
@@ -5730,7 +5760,7 @@
     list.appendChild(row);
   }
 
-  function saveRepairCar() {
+  async function saveRepairCar() {
     const client   = document.getElementById('rm-client').value.trim();
     const vehicle  = document.getElementById('rm-vehicle').value.trim();
     const vin      = document.getElementById('rm-vin').value.trim().toUpperCase();
@@ -5748,7 +5778,7 @@
         desc,
         cost: _wholesale,         // internal — what your shop pays
         hours: _hrs,              // billed at LABOR_RATE on the client receipt
-        status: 'Pending'
+        done: false               // internal-only completion flag, toggled in the dashboard
       });
     });
     const parts = getModalParts();
@@ -5769,7 +5799,16 @@
       const originReqId = pendingRepairReqId || null;
       repairCars.unshift({ id: Date.now(), client, vehicle, vin, repairs, parts, requestId: originReqId, notes: document.getElementById('rm-notes').value.trim() });
       const newCar = repairCars[0];
-      dbPost('repair_cars', newCar);
+      // v166: await + alert on POST failure, same safety net we added to
+      // saveSale. Pre-v165 these were fire-and-forget so a server reject
+      // silently left the row in localStorage and the next loadFromDB
+      // (under the old wipe-on-empty guard) trashed it. Now we tell the
+      // user and let them retry instead of losing the entry.
+      const repairPostResult = await dbPost('repair_cars', newCar);
+      if (repairPostResult == null) {
+        alert('Saved locally, but the server sync failed for this repair. Please check your connection and try saving again. Your entry is preserved on this device until then.');
+        return;
+      }
       // Sending a car to repair → originating request moves to "In Repair".
       if (originReqId) {
         const req = (Array.isArray(requests) ? requests : []).find(r => r.id === originReqId);
