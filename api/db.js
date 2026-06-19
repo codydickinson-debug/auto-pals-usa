@@ -100,7 +100,7 @@ async function safeSendEmail(type, data) {
   }
 }
 
-// Fire-and-forget SMS — never block the DB response on Twilio.
+// Fire-and-forget SMS — never block the DB response on the SMS provider.
 function fireSms(type, data) {
   try {
     Promise.resolve(sms.send(type, data)).catch(err =>
@@ -263,8 +263,8 @@ module.exports = async function handler(req, res) {
 
         // Build notification fires. Await ALL of them (Promise.allSettled)
         // before responding — Vercel terminates the lambda right after res.json()
-        // and would kill in-flight SendGrid/Twilio HTTP requests if we let
-        // them dangle as fire-and-forget.
+        // and would kill in-flight SendGrid / SMS-provider HTTP requests if we
+        // let them dangle as fire-and-forget.
         const fires = [];
 
         if (row.status !== 'rejected') {
@@ -440,8 +440,9 @@ module.exports = async function handler(req, res) {
 
         // Deposit just flipped: notify staff (email + SMS) and the client
         // (email receipt + contract-available SMS). Email is the always-arrives
-        // half while Twilio A2P is still pending TCR approval — without it,
-        // nobody actually hears about a paid deposit.
+        // half while the SMS provider is being swapped in (Twilio removed
+        // 2026-06-19, GHL pending) — without it, nobody actually hears
+        // about a paid deposit.
         const wasPaid = !!(priorRow && priorRow.deposit_paid);
         const nowPaid = !!mapped.deposit_paid;
         if (!wasPaid && nowPaid && priorRow) {
@@ -656,8 +657,9 @@ module.exports = async function handler(req, res) {
             } else if (row.from_role === 'client') {
               const clientName = `${r0.first_name || ''} ${r0.last_name || ''}`.trim() || 'A client';
               msgFires.push(sms.send('staff_portal_message', { clientName }));
-              // Email is the always-arrives half — SMS is still blocked by
-              // Twilio A2P, so without this, staff get nothing on client replies.
+              // Email is the always-arrives half — SMS is in demo mode until
+              // the GHL provider is wired in, so without this, staff get
+              // nothing on client replies.
               msgFires.push(safeSendEmail('staffPortalMessage', {
                 clientName,
                 clientEmail: r0.email,

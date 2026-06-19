@@ -375,7 +375,7 @@ module.exports = async function handler(req, res) {
   }
 
   // Notification fan-out. Awaited via Promise.allSettled so Vercel doesn't
-  // kill in-flight SendGrid/Twilio requests when we res.json().
+  // kill in-flight SendGrid / SMS-provider requests when we res.json().
   const clientName = `${row.first_name || ''} ${row.last_name || ''}`.trim();
   const vehicleStr = vehicleString(row);
   const signedAtLabel = new Date(nowIso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' }) + ' ET';

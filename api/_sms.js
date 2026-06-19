@@ -1,20 +1,27 @@
-// ── _sms.js — Internal Twilio helper ────────────────────────────────
-// Shared SMS sender used by api/sms.js (HTTP endpoint for staff dashboard)
-// and by other server-side endpoints (db.js, booking.js, cron.js) which
-// require() this directly to avoid making an HTTP hop.
+// ── _sms.js — Internal SMS helper (provider-agnostic) ──────────────
+// Shared SMS sender used by api/sms.js (HTTP endpoint for the staff
+// dashboard) and by other server-side endpoints (db.js, booking.js,
+// cron.js, portal-sign.js) which require() this directly to avoid the
+// HTTP hop.
 //
-// Required env vars:
-//   TWILIO_ACCOUNT_SID
-//   TWILIO_AUTH_TOKEN
-//   TWILIO_PHONE_NUMBER       Twilio sender (E.164, e.g. +15551234567)
-//   STAFF_PHONE_NUMBERS       Comma-separated E.164 numbers for staff fan-out
-//                             (Cody, Alex, Josh). Falls back to TEAM_PHONE_NUMBER
-//                             if STAFF_PHONE_NUMBERS is unset.
-//   PORTAL_URL                Public client-portal URL (defaults to autopalsusa.com)
-//   BOOKING_URL               Public booking URL (defaults to autopalsusa.com)
+// Twilio was removed on 2026-06-19 in favor of GoHighLevel (GHL).
+// Until GHL is wired in, every send is a no-op that logs intent to
+// stdout — same demo-mode behavior the legacy code fell back to when
+// Twilio creds were missing. NOTHING in the rest of the codebase
+// needs to change to migrate providers: when GHL credentials land,
+// only `sendOne()` needs a body. Templates, consent gating, staff
+// fan-out, and the HTTP layer (api/sms.js) all stay as-is.
 //
-// If Twilio creds are missing, every send is a no-op that logs to console
-// (demo mode) — same behavior the legacy sms.js had.
+// To wire GHL in:
+//   1. Add env vars: GHL_PIT_TOKEN, GHL_LOCATION_ID, and optionally
+//      GHL_FROM_NUMBER (the SMS-capable sender in that sub-account).
+//   2. Replace the body of sendOne() with a POST to
+//      https://services.leadconnectorhq.com/conversations/messages
+//      with `Authorization: Bearer <PIT>`, `Version: 2021-04-15`, and
+//      body { type: 'SMS', contactId: <resolved-from-phone>,
+//      message: <body> }. (GHL resolves the contact by phone if the
+//      contactId isn't known — see /contacts/lookup.)
+//   3. Done — no other file changes needed.
 
 const PORTAL_URL  = process.env.PORTAL_URL  || 'https://autopalsusa.com/portal.html';
 const BOOKING_URL = process.env.BOOKING_URL || 'https://autopalsusa.com/booking.html';
@@ -39,50 +46,15 @@ function normalize(num) {
   return s;
 }
 
+// Single send to one number. While the provider is unset this is a
+// no-op that logs the intent so existing call sites keep working
+// without crashing. Returns { ok: true, demo: true } so fire-and-
+// forget callers don't blow up on missing fields.
 async function sendOne(to, body) {
-  const sid    = process.env.TWILIO_ACCOUNT_SID;
-  const token  = process.env.TWILIO_AUTH_TOKEN;
-  const svcSid = process.env.TWILIO_MESSAGING_SERVICE_SID;  // preferred for A2P 10DLC
-  const from   = process.env.TWILIO_PHONE_NUMBER;            // fallback if no service
-  const dest   = normalize(to);
-
-  // Demo mode if Twilio creds missing or no sender configured at all.
-  if (!sid || !token || (!svcSid && !from)) {
-    console.log('[SMS DEMO]', dest || '<no-to>', '←', body.replace(/\n/g, ' | '));
-    return { ok: true, demo: true };
-  }
+  const dest = normalize(to);
   if (!dest) return { ok: false, error: 'no_destination' };
-
-  // Prefer MessagingServiceSid — that's the path the A2P 10DLC campaign
-  // attaches to, so carriers see the campaign attribution. Fall back to a
-  // raw From number if the service env var isn't set yet.
-  const params = { To: dest, Body: body };
-  if (svcSid) params.MessagingServiceSid = svcSid;
-  else        params.From = from;
-
-  try {
-    const credentials = Buffer.from(`${sid}:${token}`).toString('base64');
-    const r = await fetch(
-      `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${credentials}`,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: new URLSearchParams(params)
-      }
-    );
-    const data = await r.json();
-    if (!r.ok) {
-      console.error('[SMS] Twilio error', dest, r.status, data);
-      return { ok: false, status: r.status, error: data.message };
-    }
-    return { ok: true, sid: data.sid };
-  } catch (err) {
-    console.error('[SMS] fetch failed', dest, err.message);
-    return { ok: false, error: err.message };
-  }
+  console.log('[SMS DEMO]', dest, '←', body.replace(/\n/g, ' | '));
+  return { ok: true, demo: true };
 }
 
 async function sendToStaff(body) {
@@ -173,12 +145,12 @@ async function send(type, data = {}) {
   const body = fn(data);
   if (STAFF_TYPES.has(type)) return sendToStaff(body);
   if (CLIENT_TYPES.has(type)) {
-    // A2P 10DLC consent gate. `false` is an explicit opt-out from the
-    // form's SMS consent checkbox → hard block. `undefined` / `null` /
-    // `true` all pass: legacy rows submitted before the checkbox keep
-    // receiving transactional SMS under their original implicit
-    // consent. Caller (api/db.js, booking.js, portal-sign.js) must
-    // forward `smsConsent` from the request row when available.
+    // Consent gate. `false` is an explicit opt-out from the form's SMS
+    // consent checkbox → hard block. `undefined` / `null` / `true` all
+    // pass: legacy rows submitted before the checkbox keep receiving
+    // transactional SMS under their original implicit consent. Caller
+    // (api/db.js, booking.js, portal-sign.js) must forward `smsConsent`
+    // from the request row when available.
     if (data.smsConsent === false) {
       console.log('[SMS] skipped — sms_consent=false for', type, data.phone || '');
       return { ok: false, skipped: true, reason: 'sms_consent_false' };

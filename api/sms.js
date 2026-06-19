@@ -1,8 +1,11 @@
-// ── sms.js — Twilio SMS HTTP endpoint (staff-only) ─────────────────
+// ── sms.js — SMS HTTP endpoint (staff-only) ────────────────────────
 // Authenticated entry point for the staff dashboard to fire one-off SMS
-// notifications. Server-side callers (db.js, booking.js, cron.js) should
-// require('./_sms.js') directly and call send()/sendToStaff()/sendToClient()
-// to skip the HTTP hop and the auth check.
+// notifications. Provider-agnostic — the actual send goes through
+// _sms.js, which is currently a no-op stub awaiting the GoHighLevel
+// integration (Twilio was removed on 2026-06-19). Server-side callers
+// (db.js, booking.js, cron.js) should require('./_sms.js') directly and
+// call send()/sendToStaff()/sendToClient() to skip the HTTP hop and the
+// auth check.
 
 const sms = require('./_sms.js');
 const { verifyToken } = require('./auth.js');
