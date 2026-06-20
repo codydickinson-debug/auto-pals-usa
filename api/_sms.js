@@ -1,27 +1,28 @@
-// ── _sms.js — Internal SMS helper (provider-agnostic) ──────────────
+// ── _sms.js — Internal SMS helper (GoHighLevel provider) ───────────
 // Shared SMS sender used by api/sms.js (HTTP endpoint for the staff
 // dashboard) and by other server-side endpoints (db.js, booking.js,
 // cron.js, portal-sign.js) which require() this directly to avoid the
 // HTTP hop.
 //
-// Twilio was removed on 2026-06-19 in favor of GoHighLevel (GHL).
-// Until GHL is wired in, every send is a no-op that logs intent to
-// stdout — same demo-mode behavior the legacy code fell back to when
-// Twilio creds were missing. NOTHING in the rest of the codebase
-// needs to change to migrate providers: when GHL credentials land,
-// only `sendOne()` needs a body. Templates, consent gating, staff
-// fan-out, and the HTTP layer (api/sms.js) all stay as-is.
+// Provider: GoHighLevel (LeadConnector v2 Conversations API). Cut over
+// from Twilio on 2026-06-19 after the TCR brand/campaign approval
+// process turned into a wall; GHL's location-level A2P 10DLC was
+// already approved for the Automotivation Enterprises sub-account so
+// sends start working the moment the env vars land.
 //
-// To wire GHL in:
-//   1. Add env vars: GHL_PIT_TOKEN, GHL_LOCATION_ID, and optionally
-//      GHL_FROM_NUMBER (the SMS-capable sender in that sub-account).
-//   2. Replace the body of sendOne() with a POST to
-//      https://services.leadconnectorhq.com/conversations/messages
-//      with `Authorization: Bearer <PIT>`, `Version: 2021-04-15`, and
-//      body { type: 'SMS', contactId: <resolved-from-phone>,
-//      message: <body> }. (GHL resolves the contact by phone if the
-//      contactId isn't known — see /contacts/lookup.)
-//   3. Done — no other file changes needed.
+// Required env vars:
+//   GHL_PIT_TOKEN   Private Integration Token from
+//                   Settings → Private Integrations in the GHL UI.
+//                   Scopes needed: conversations.write,
+//                   conversations/message.write, contacts.readonly,
+//                   contacts.write.
+//   GHL_LOCATION_ID The sub-account ID (visible in the URL path:
+//                   /v2/location/<ID>/...).
+//   STAFF_PHONE_NUMBERS / TEAM_PHONE_NUMBER  Comma-separated E.164
+//                   numbers for staff fan-out (Cody, Alex, Josh).
+//
+// If GHL creds are missing, every send is a no-op that logs to console
+// (demo mode) — preserves the legacy fallback so dev / CI keep working.
 
 const PORTAL_URL  = process.env.PORTAL_URL  || 'https://autopalsusa.com/portal.html';
 const BOOKING_URL = process.env.BOOKING_URL || 'https://autopalsusa.com/booking.html';
@@ -46,15 +47,88 @@ function normalize(num) {
   return s;
 }
 
-// Single send to one number. While the provider is unset this is a
-// no-op that logs the intent so existing call sites keep working
-// without crashing. Returns { ok: true, demo: true } so fire-and-
-// forget callers don't blow up on missing fields.
+// GoHighLevel Conversations API base + version (LeadConnector — same
+// endpoint regardless of subdomain). The Version header is required for
+// every v2 call and is pinned to the date the integration was wired so
+// future GHL schema changes don't silently break us.
+const GHL_BASE = 'https://services.leadconnectorhq.com';
+const GHL_API_VERSION = '2021-04-15';
+
+function ghlHeaders() {
+  const pit = process.env.GHL_PIT_TOKEN;
+  if (!pit) return null;
+  return {
+    'Authorization': `Bearer ${pit}`,
+    'Version': GHL_API_VERSION,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  };
+}
+
+// Resolve or create a GHL contact for a given phone number. The
+// Conversations API requires a contactId, so we upsert first: if a
+// contact with this phone already exists in the location it's returned
+// untouched; otherwise GHL creates a phone-only contact we can address.
+// Returns the contactId on success, null on failure.
+async function ghlUpsertContact(phoneE164) {
+  const headers = ghlHeaders();
+  const locationId = process.env.GHL_LOCATION_ID;
+  if (!headers || !locationId) return null;
+  try {
+    const r = await fetch(`${GHL_BASE}/contacts/upsert`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ phone: phoneE164, locationId })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      console.error('[SMS GHL] upsert failed', phoneE164, r.status, (data.message || data.error || '').toString().slice(0, 200));
+      return null;
+    }
+    return (data.contact && data.contact.id) || data.id || null;
+  } catch (err) {
+    console.error('[SMS GHL] upsert error', phoneE164, err && err.message);
+    return null;
+  }
+}
+
+// Single send to one number via GoHighLevel. Demo-mode logs (and
+// returns ok: true, demo: true) when credentials aren't configured —
+// keeps existing call sites working in dev / CI without a real send.
 async function sendOne(to, body) {
   const dest = normalize(to);
   if (!dest) return { ok: false, error: 'no_destination' };
-  console.log('[SMS DEMO]', dest, '←', body.replace(/\n/g, ' | '));
-  return { ok: true, demo: true };
+
+  const headers = ghlHeaders();
+  const locationId = process.env.GHL_LOCATION_ID;
+  if (!headers || !locationId) {
+    console.log('[SMS DEMO]', dest, '←', body.replace(/\n/g, ' | '));
+    return { ok: true, demo: true };
+  }
+
+  const contactId = await ghlUpsertContact(dest);
+  if (!contactId) return { ok: false, error: 'contact_upsert_failed' };
+
+  try {
+    const r = await fetch(`${GHL_BASE}/conversations/messages`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        type: 'SMS',
+        contactId,
+        message: body
+      })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      console.error('[SMS GHL] send failed', dest, r.status, (data.message || data.error || '').toString().slice(0, 200));
+      return { ok: false, status: r.status, error: data.message || 'send_failed' };
+    }
+    return { ok: true, messageId: data.messageId || data.id, conversationId: data.conversationId };
+  } catch (err) {
+    console.error('[SMS GHL] fetch failed', dest, err && err.message);
+    return { ok: false, error: err.message };
+  }
 }
 
 async function sendToStaff(body) {
