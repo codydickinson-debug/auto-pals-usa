@@ -18,6 +18,12 @@
 //                   contacts.write.
 //   GHL_LOCATION_ID The sub-account ID (visible in the URL path:
 //                   /v2/location/<ID>/...).
+//   GHL_FROM_NUMBER Optional. E.164 (e.g. +15618347996) of a dedicated
+//                   A2P-verified number to use as the sender for ALL
+//                   automated sends. Lets us keep our reps' personal
+//                   GHL numbers (which are the location's Default)
+//                   uncluttered by system traffic. If unset, GHL routes
+//                   the message through the location's Default Number.
 //   STAFF_PHONE_NUMBERS / TEAM_PHONE_NUMBER  Comma-separated E.164
 //                   numbers for staff fan-out (Cody, Alex, Josh).
 //
@@ -110,14 +116,17 @@ async function sendOne(to, body) {
   if (!contactId) return { ok: false, error: 'contact_upsert_failed' };
 
   try {
+    // GHL routes the message through the location's Default Number unless
+    // we pin fromNumber explicitly. Production has GHL_FROM_NUMBER set to
+    // the dedicated "Auto Pals USA SMS number" so automated traffic doesn't
+    // pollute Josh's customer-facing line.
+    const payload = { type: 'SMS', contactId, message: body };
+    const fromNumber = process.env.GHL_FROM_NUMBER;
+    if (fromNumber) payload.fromNumber = fromNumber;
     const r = await fetch(`${GHL_BASE}/conversations/messages`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        type: 'SMS',
-        contactId,
-        message: body
-      })
+      body: JSON.stringify(payload)
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
