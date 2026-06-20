@@ -24,6 +24,14 @@
 //                   GHL numbers (which are the location's Default)
 //                   uncluttered by system traffic. If unset, GHL routes
 //                   the message through the location's Default Number.
+//   GHL_USER_ID     Required for actual delivery. The GHL user ID that
+//                   sends are attributed to. Without it, GHL accepts the
+//                   API call (200 + messageId) but silently drops the
+//                   send at the carrier handoff — manual UI sends work
+//                   because they auto-attribute to the logged-in user.
+//                   We use a dedicated "Auto Pals System" user (created
+//                   under Settings → My Staff) so automated traffic
+//                   doesn't skew Alex/Josh's per-rep message stats.
 //   STAFF_PHONE_NUMBERS / TEAM_PHONE_NUMBER  Comma-separated E.164
 //                   numbers for staff fan-out (Cody, Alex, Josh).
 //
@@ -120,9 +128,18 @@ async function sendOne(to, body) {
     // we pin fromNumber explicitly. Production has GHL_FROM_NUMBER set to
     // the dedicated "Auto Pals USA SMS number" so automated traffic doesn't
     // pollute Josh's customer-facing line.
+    //
+    // GHL_USER_ID attributes the send to a real staff user (we made a
+    // dedicated "Auto Pals System" user for this). Without a userId, GHL
+    // accepts the message into the conversation (returns 200 + messageId)
+    // but silently drops it at the carrier handoff — manual UI sends work
+    // because they auto-attribute to the logged-in staff member. This was
+    // the missing piece on 2026-06-20.
     const payload = { type: 'SMS', contactId, message: body };
     const fromNumber = process.env.GHL_FROM_NUMBER;
     if (fromNumber) payload.fromNumber = fromNumber;
+    const userId = process.env.GHL_USER_ID;
+    if (userId) payload.userId = userId;
     const r = await fetch(`${GHL_BASE}/conversations/messages`, {
       method: 'POST',
       headers,
