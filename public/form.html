@@ -1553,7 +1553,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v167 · 2026-06-20</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v168 · 2026-06-20</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2195,6 +2195,7 @@
                 <th>Sale Price</th>
                 <th>Fees</th>
                 <th>Repairs</th>
+                <th title="Net margin on shipping (optional — can be added after the sale via Edit)">Shipping</th>
                 <th>Finder Fee</th>
                 <th>Net Profit</th>
                 <th>Date Sold</th>
@@ -2202,7 +2203,7 @@
               </tr>
             </thead>
             <tbody id="sold-tbody">
-              <tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">No sales logged yet. Click &ldquo;+ Log a Sale&rdquo; to add one.</td></tr>
+              <tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">No sales logged yet. Click &ldquo;+ Log a Sale&rdquo; to add one.</td></tr>
             </tbody>
           </table>
         </div>
@@ -2564,6 +2565,11 @@
         <label style="font-size:12px;">Repair Markup — charged to client on top ($)</label>
         <input type="number" id="sm-repair-profit" placeholder="e.g. 700" oninput="calcSaleProfit()">
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Profit margin on repairs (client pays this on top of your wholesale cost). Auto-filled from Repairs when the car was tracked there.</div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label style="font-size:12px;">Shipping Profit — if any ($) <span style="color:var(--text-muted);font-weight:400;">— optional, leave blank if no shipping</span></label>
+        <input type="number" id="sm-shipping-profit" placeholder="e.g. 200" oninput="calcSaleProfit()">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Net margin on shipping (what the client paid for shipping minus what we paid). Skip now and come back later via Edit — folds into Net Profit and all the averages the moment it's saved.</div>
       </div>
       <div class="form-group" style="margin-bottom:14px;">
         <label style="font-size:12px;">Finder Fee (charged to client) ($) <span style="color:var(--text-muted);font-weight:400;">— defaults to $850</span></label>
@@ -3177,7 +3183,8 @@
       // null and just look like a missing markup, which is correct.
       sales = dbSales.map(s => ({
         ...s,
-        repairProfit: (s.repair_profit != null ? Number(s.repair_profit) : (s.repairProfit != null ? Number(s.repairProfit) : 0))
+        repairProfit:   (s.repair_profit   != null ? Number(s.repair_profit)   : (s.repairProfit   != null ? Number(s.repairProfit)   : 0)),
+        shippingProfit: (s.shipping_profit != null ? Number(s.shipping_profit) : (s.shippingProfit != null ? Number(s.shippingProfit) : 0))
       }));
       localStorage.setItem('am_sales', JSON.stringify(sales));
     }
@@ -6693,7 +6700,7 @@
   }
 
   function _openSaleModalCore(prefillReq) {
-    ['sm-client','sm-vehicle','sm-vin','sm-purchase','sm-sale','sm-repair','sm-repair-profit','sm-notes','sm-miles'].forEach(id => {
+    ['sm-client','sm-vehicle','sm-vin','sm-purchase','sm-sale','sm-repair','sm-repair-profit','sm-shipping-profit','sm-notes','sm-miles'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
@@ -6858,6 +6865,7 @@
     setVal('sm-sale',     s.sale ?? '');
     setVal('sm-repair',   s.repair ?? '');
     setVal('sm-repair-profit', s.repairProfit ?? '');
+    setVal('sm-shipping-profit', s.shippingProfit ?? '');
     setVal('sm-finder',   s.finder ?? '');
     setVal('sm-notes',    s.notes || '');
     // Hide the PSI-prefill banner (it's a new-sale UX cue, doesn't apply when editing)
@@ -6871,16 +6879,17 @@
   }
 
   function calcSaleProfit() {
-    const purchase     = parseFloat(document.getElementById('sm-purchase').value)     || 0;
-    const sale         = parseFloat(document.getElementById('sm-sale').value)         || 0;
-    const repair       = parseFloat(document.getElementById('sm-repair').value)       || 0;
-    const repairProfit = parseFloat(document.getElementById('sm-repair-profit')?.value) || 0;
-    const finder       = parseFloat(document.getElementById('sm-finder').value)       || 0;
+    const purchase       = parseFloat(document.getElementById('sm-purchase').value)         || 0;
+    const sale           = parseFloat(document.getElementById('sm-sale').value)             || 0;
+    const repair         = parseFloat(document.getElementById('sm-repair').value)           || 0;
+    const repairProfit   = parseFloat(document.getElementById('sm-repair-profit')?.value)   || 0;
+    const shippingProfit = parseFloat(document.getElementById('sm-shipping-profit')?.value) || 0;
+    const finder         = parseFloat(document.getElementById('sm-finder').value)           || 0;
     if (sale > 0 || purchase > 0) {
-      // profit = (sale - purchase) + finder + repairProfit - repair
+      // profit = (sale - purchase) + finder + repairProfit + shippingProfit - repair
       // sale already includes the repair markup + finder fee that the client paid;
-      // we subtract our actual repair cost and the auction purchase to get net.
-      const profit = sale + finder + repairProfit - purchase - repair;
+      // shippingProfit is the net margin on shipping (optional, often added later).
+      const profit = sale + finder + repairProfit + shippingProfit - purchase - repair;
       const preview = document.getElementById('sm-profit-preview');
       const val = document.getElementById('sm-profit-val');
       preview.style.display = 'block';
@@ -6933,16 +6942,20 @@
       return;
     }
 
-    const repair       = parseFloat(document.getElementById('sm-repair').value)       || 0;
-    const repairProfit = parseFloat(document.getElementById('sm-repair-profit')?.value) || 0;
-    const finder       = parseFloat(document.getElementById('sm-finder').value)       || 0;
-    const profit = sale + finder + repairProfit - purchase - repair;
+    const repair         = parseFloat(document.getElementById('sm-repair').value)           || 0;
+    const repairProfit   = parseFloat(document.getElementById('sm-repair-profit')?.value)   || 0;
+    const shippingProfit = parseFloat(document.getElementById('sm-shipping-profit')?.value) || 0;
+    const finder         = parseFloat(document.getElementById('sm-finder').value)           || 0;
+    // Net profit = sale revenue + finder fee + repair markup + shipping margin
+    //              − auction purchase − wholesale repair cost.
+    // shippingProfit is optional; defaults to 0 when blank.
+    const profit = sale + finder + repairProfit + shippingProfit - purchase - repair;
 
     const isEdit = editingSaleId != null;
     const newSale = {
       id: isEdit ? editingSaleId : Date.now(),
       client, vehicle, vin, miles, date,
-      purchase, sale, repair, repairProfit, finder, profit,
+      purchase, sale, repair, repairProfit, shippingProfit, finder, profit,
       notes: document.getElementById('sm-notes').value.trim()
     };
 
@@ -7176,7 +7189,7 @@
 
     const tbody = document.getElementById('sold-tbody');
     if (!displayed.length) {
-      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">${weekFilterOn ? 'No sales in this period.' : 'No sales logged yet. Click &ldquo;+ Log a Sale&rdquo; to add one.'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">${weekFilterOn ? 'No sales in this period.' : 'No sales logged yet. Click &ldquo;+ Log a Sale&rdquo; to add one.'}</td></tr>`;
       return;
     }
     tbody.innerHTML = displayed.map(s => {
@@ -7184,6 +7197,9 @@
       const profitStr = (s.profit >= 0 ? '+$' : '-$') + Math.abs(s.profit).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
       const dateStr = new Date(s.date + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
       const fmtV = v => '$' + v.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0});
+      const shippingCell = (Number(s.shippingProfit) > 0)
+        ? `<span style="color:var(--green);font-weight:600;">${fmtV(Number(s.shippingProfit))}</span>`
+        : '<span style="color:var(--text-muted);">—</span>';
       return `<tr>
         <td><strong>${s.client}</strong></td>
         <td>${s.vehicle}</td>
@@ -7192,6 +7208,7 @@
         <td>${fmtV(s.sale)}</td>
         <td>${s.fees ? fmtV(s.fees) : '—'}</td>
         <td>${s.repair ? fmtV(s.repair) : '—'}</td>
+        <td>${shippingCell}</td>
         <td>${s.finder ? fmtV(s.finder) : '—'}</td>
         <td style="font-weight:bold;color:${profitColor}">${profitStr}</td>
         <td style="color:var(--text-muted)">${dateStr}</td>

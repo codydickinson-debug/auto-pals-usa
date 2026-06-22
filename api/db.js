@@ -586,20 +586,21 @@ module.exports = async function handler(req, res) {
         // spread the body verbatim, so unknown keys made the whole INSERT
         // 4xx and the row silently disappeared from the next loadFromDB().
         const row = {
-          id:            body.id || Date.now(),
-          client:        body.client || null,
-          vehicle:       body.vehicle || null,
-          vin:           body.vin || null,
-          miles:         body.miles ?? null,
-          date:          body.date || null,
-          purchase:      body.purchase ?? null,
-          sale:          body.sale ?? null,
-          fees:          body.fees ?? null,
-          repair:        body.repair ?? null,
-          repair_profit: body.repair_profit ?? body.repairProfit ?? null,
-          finder:        body.finder ?? null,
-          profit:        body.profit ?? null,
-          notes:         body.notes || null
+          id:              body.id || Date.now(),
+          client:          body.client || null,
+          vehicle:         body.vehicle || null,
+          vin:             body.vin || null,
+          miles:           body.miles ?? null,
+          date:            body.date || null,
+          purchase:        body.purchase ?? null,
+          sale:            body.sale ?? null,
+          fees:            body.fees ?? null,
+          repair:          body.repair ?? null,
+          repair_profit:   body.repair_profit ?? body.repairProfit ?? null,
+          shipping_profit: body.shipping_profit ?? body.shippingProfit ?? null,
+          finder:          body.finder ?? null,
+          profit:          body.profit ?? null,
+          notes:           body.notes || null
         };
         const data = await query('sales', 'POST', row);
         return res.json(data);
@@ -611,19 +612,20 @@ module.exports = async function handler(req, res) {
         const id = body.id;
         if (!id) return res.status(400).json({ error: 'missing_id' });
         const updates = {
-          client:        body.client ?? null,
-          vehicle:       body.vehicle ?? null,
-          vin:           body.vin ?? null,
-          miles:         body.miles ?? null,
-          date:          body.date ?? null,
-          purchase:      body.purchase ?? null,
-          sale:          body.sale ?? null,
-          fees:          body.fees ?? null,
-          repair:        body.repair ?? null,
-          repair_profit: body.repair_profit ?? body.repairProfit ?? null,
-          finder:        body.finder ?? null,
-          profit:        body.profit ?? null,
-          notes:         body.notes ?? null
+          client:          body.client ?? null,
+          vehicle:         body.vehicle ?? null,
+          vin:             body.vin ?? null,
+          miles:           body.miles ?? null,
+          date:            body.date ?? null,
+          purchase:        body.purchase ?? null,
+          sale:            body.sale ?? null,
+          fees:            body.fees ?? null,
+          repair:          body.repair ?? null,
+          repair_profit:   body.repair_profit ?? body.repairProfit ?? null,
+          shipping_profit: body.shipping_profit ?? body.shippingProfit ?? null,
+          finder:          body.finder ?? null,
+          profit:          body.profit ?? null,
+          notes:           body.notes ?? null
         };
         await query('sales', 'PATCH', updates, `?id=eq.${id}`);
         return res.json({ ok: true });
