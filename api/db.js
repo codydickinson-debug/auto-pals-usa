@@ -604,6 +604,30 @@ module.exports = async function handler(req, res) {
         const data = await query('sales', 'POST', row);
         return res.json(data);
       }
+      if (req.method === 'PUT') {
+        // v167: edit-in-place from the Sold Cars table. Whitelist + normalize
+        // identical to the POST mapping so unknown keys can never break the
+        // update (same footgun that bit us in v163 on insert).
+        const id = body.id;
+        if (!id) return res.status(400).json({ error: 'missing_id' });
+        const updates = {
+          client:        body.client ?? null,
+          vehicle:       body.vehicle ?? null,
+          vin:           body.vin ?? null,
+          miles:         body.miles ?? null,
+          date:          body.date ?? null,
+          purchase:      body.purchase ?? null,
+          sale:          body.sale ?? null,
+          fees:          body.fees ?? null,
+          repair:        body.repair ?? null,
+          repair_profit: body.repair_profit ?? body.repairProfit ?? null,
+          finder:        body.finder ?? null,
+          profit:        body.profit ?? null,
+          notes:         body.notes ?? null
+        };
+        await query('sales', 'PATCH', updates, `?id=eq.${id}`);
+        return res.json({ ok: true });
+      }
       if (req.method === 'DELETE') {
         await query('sales', 'DELETE', null, `?id=eq.${body.id}`);
         return res.json({ ok: true });

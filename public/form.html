@@ -1553,7 +1553,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v166 · 2026-06-17</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v167 · 2026-06-20</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2198,10 +2198,11 @@
                 <th>Finder Fee</th>
                 <th>Net Profit</th>
                 <th>Date Sold</th>
+                <th style="text-align:right;">Actions</th>
               </tr>
             </thead>
             <tbody id="sold-tbody">
-              <tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">No sales logged yet. Click &ldquo;+ Log a Sale&rdquo; to add one.</td></tr>
+              <tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">No sales logged yet. Click &ldquo;+ Log a Sale&rdquo; to add one.</td></tr>
             </tbody>
           </table>
         </div>
@@ -2512,8 +2513,8 @@
   <div class="detail-panel">
     <button class="detail-close" onclick="document.getElementById('sale-modal').classList.remove('open');pendingSoldReqId=null;">&#x2715; Close</button>
     <br><br>
-    <div class="detail-name">Move to Awaiting Paperwork</div>
-    <div class="detail-sub" style="margin-bottom:20px;">Capture all the deal details now. Saving lands the client in Awaiting Paperwork — once tags &amp; title are done, click <strong>Mark Sold ✓</strong> there to finalize.</div>
+    <div class="detail-name" id="sm-title">Move to Awaiting Paperwork</div>
+    <div class="detail-sub" id="sm-subtitle" style="margin-bottom:20px;">Capture all the deal details now. Saving lands the client in Awaiting Paperwork — once tags &amp; title are done, click <strong>Mark Sold ✓</strong> there to finalize.</div>
     <div id="sm-prefill-banner" style="display:none;margin-bottom:16px;padding:10px 14px;background:var(--accent-light);border:1px solid var(--accent-border);border-radius:var(--radius);font-family:system-ui,sans-serif;font-size:12px;color:var(--accent-bright);font-weight:600;">
       ✓ Pre-filled from PSI — review and fill in anything missing below.
     </div>
@@ -2580,7 +2581,7 @@
       <textarea class="notes-area" id="sm-notes" placeholder="Any notes about this deal..."></textarea>
     </div>
 
-    <button class="submit-btn" onclick="saveSale()" style="margin-top:8px;">Save → Awaiting Paperwork</button>
+    <button class="submit-btn" id="sm-save-btn" onclick="saveSale()" style="margin-top:8px;">Save → Awaiting Paperwork</button>
   </div>
 </div>
 
@@ -3016,14 +3017,15 @@
   }
 
   async function dbPut(table, body) {
-    if (isLocal) return;
+    if (isLocal) return true;
     try {
       const res = await fetch(`${DB_BASE}?table=${table}`, {
         method: 'PUT', headers: dbHeaders(),
         body: JSON.stringify(body)
       });
-      if (res.status === 401) handleSessionExpired();
-    } catch {}
+      if (res.status === 401) { handleSessionExpired(); return false; }
+      return res.ok;
+    } catch { return false; }
   }
 
   async function dbDelete(table, id) {
@@ -6673,8 +6675,24 @@
 
   // Tracks the request being closed out so saveSale() can flip its status to 'sold'.
   let pendingSoldReqId = null;
+  // v167: when set, saveSale() updates the existing sales row in place
+  // (PUT) instead of inserting a new one (POST). Cleared by openSaleModal
+  // for the new-sale path and by editSale for the edit path.
+  let editingSaleId = null;
 
   function openSaleModal(prefillReq) {
+    editingSaleId = null;
+    // Restore the new-sale modal text (editSale swaps it for edit mode).
+    const t1 = document.getElementById('sm-title');
+    const t2 = document.getElementById('sm-subtitle');
+    const t3 = document.getElementById('sm-save-btn');
+    if (t1) t1.textContent = 'Move to Awaiting Paperwork';
+    if (t2) t2.innerHTML = 'Capture all the deal details now. Saving lands the client in Awaiting Paperwork — once tags &amp; title are done, click <strong>Mark Sold ✓</strong> there to finalize.';
+    if (t3) t3.textContent = 'Save → Awaiting Paperwork';
+    _openSaleModalCore(prefillReq);
+  }
+
+  function _openSaleModalCore(prefillReq) {
     ['sm-client','sm-vehicle','sm-vin','sm-purchase','sm-sale','sm-repair','sm-repair-profit','sm-notes','sm-miles'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
@@ -6808,7 +6826,48 @@
     if (e.target === document.getElementById('sale-modal')) {
       document.getElementById('sale-modal').classList.remove('open');
       pendingSoldReqId = null; // canceled — leaves request status untouched
+      editingSaleId = null;
     }
+  }
+
+  // v167: edit an already-logged sale in place. Loads the existing values
+  // into the Sale Modal, switches the modal text to "edit" mode, and sets
+  // editingSaleId so saveSale() PUTs instead of POSTing.
+  function editSale(id) {
+    const s = sales.find(x => x.id === id);
+    if (!s) return;
+    editingSaleId = id;
+    // Swap modal copy + button label for edit mode
+    const t1 = document.getElementById('sm-title');
+    const t2 = document.getElementById('sm-subtitle');
+    const t3 = document.getElementById('sm-save-btn');
+    if (t1) t1.textContent = 'Edit Sale';
+    if (t2) t2.innerHTML = 'Update the deal details. Saving overwrites this sale only — no client status changes, no duplicate row.';
+    if (t3) t3.textContent = 'Update Sale';
+    // Pre-fill every field from the existing row
+    const setVal = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.value = v == null ? '' : v;
+    };
+    setVal('sm-client',   s.client || '');
+    setVal('sm-vehicle',  s.vehicle || '');
+    setVal('sm-vin',      s.vin || '');
+    setVal('sm-miles',    s.miles ?? '');
+    setVal('sm-date',     s.date || '');
+    setVal('sm-purchase', s.purchase ?? '');
+    setVal('sm-sale',     s.sale ?? '');
+    setVal('sm-repair',   s.repair ?? '');
+    setVal('sm-repair-profit', s.repairProfit ?? '');
+    setVal('sm-finder',   s.finder ?? '');
+    setVal('sm-notes',    s.notes || '');
+    // Hide the PSI-prefill banner (it's a new-sale UX cue, doesn't apply when editing)
+    const banner = document.getElementById('sm-prefill-banner');
+    if (banner) banner.style.display = 'none';
+    // Stamp the live profit preview so staff see it immediately
+    if (typeof calcSaleProfit === 'function') calcSaleProfit();
+    // No pendingSoldReqId — editing a sale never touches a request's status
+    pendingSoldReqId = null;
+    document.getElementById('sale-modal').classList.add('open');
   }
 
   function calcSaleProfit() {
@@ -6879,12 +6938,34 @@
     const finder       = parseFloat(document.getElementById('sm-finder').value)       || 0;
     const profit = sale + finder + repairProfit - purchase - repair;
 
+    const isEdit = editingSaleId != null;
     const newSale = {
-      id: Date.now(),
+      id: isEdit ? editingSaleId : Date.now(),
       client, vehicle, vin, miles, date,
       purchase, sale, repair, repairProfit, finder, profit,
       notes: document.getElementById('sm-notes').value.trim()
     };
+
+    if (isEdit) {
+      // ── Edit path (v167) ─────────────────────────────────────────
+      // Update the in-memory row, persist locally, PUT to Supabase,
+      // re-render Sold Cars, close modal, exit. Don't touch request
+      // status, don't navigate to Awaiting Paperwork.
+      const idx = sales.findIndex(x => x.id === editingSaleId);
+      if (idx >= 0) sales[idx] = newSale;
+      saveSales();
+      const putResult = await dbPut('sales', newSale);
+      if (putResult === false) {
+        alert('Updated locally, but the server sync failed for this edit. Please check your connection and try saving again.');
+        return;
+      }
+      editingSaleId = null;
+      document.getElementById('sale-modal').classList.remove('open');
+      renderSoldTable();
+      return;
+    }
+
+    // ── New-sale path ────────────────────────────────────────────
     sales.unshift(newSale);
     saveSales();
     // v165: await + alert on POST failure. Pre-v165 this was fire-and-
@@ -7095,7 +7176,7 @@
 
     const tbody = document.getElementById('sold-tbody');
     if (!displayed.length) {
-      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">${weekFilterOn ? 'No sales in this period.' : 'No sales logged yet. Click &ldquo;+ Log a Sale&rdquo; to add one.'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">${weekFilterOn ? 'No sales in this period.' : 'No sales logged yet. Click &ldquo;+ Log a Sale&rdquo; to add one.'}</td></tr>`;
       return;
     }
     tbody.innerHTML = displayed.map(s => {
@@ -7114,8 +7195,28 @@
         <td>${s.finder ? fmtV(s.finder) : '—'}</td>
         <td style="font-weight:bold;color:${profitColor}">${profitStr}</td>
         <td style="color:var(--text-muted)">${dateStr}</td>
+        <td style="white-space:nowrap;">
+          <button class="filter-btn" onclick="editSale(${s.id})" title="Edit this sale's numbers in place">Edit</button>
+          <button class="filter-btn" onclick="deleteSale(${s.id})" style="color:var(--red);border-color:var(--red);background:#fff;" title="Permanently delete this sale">Delete</button>
+        </td>
       </tr>`;
     }).join('');
+  }
+
+  // v167: hard-delete a sale row from both local cache and Supabase.
+  // Used from the Sold Cars table when staff needs to remove a mistaken
+  // entry (typo, duplicate, voided deal). Confirms first since this is
+  // not reversible.
+  async function deleteSale(id) {
+    const s = sales.find(x => x.id === id);
+    if (!s) return;
+    if (!confirm(`Delete this sale for ${s.client || 'this client'} (${s.vehicle || 'vehicle'})? This can't be undone.`)) return;
+    sales = sales.filter(x => x.id !== id);
+    saveSales();
+    if (typeof dbDelete === 'function') {
+      try { await dbDelete('sales', id); } catch (e) { console.warn('[sales] delete sync failed', e && e.message); }
+    }
+    renderSoldTable();
   }
 
   // Patch filterRequests to also show requests panel
