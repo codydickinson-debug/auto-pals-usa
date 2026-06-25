@@ -1,49 +1,42 @@
-// ── _sms.js — Internal SMS helper (GoHighLevel provider) ───────────
+// ── _sms.js — Internal SMS helper (provider-agnostic, demo mode) ───
 // Shared SMS sender used by api/sms.js (HTTP endpoint for the staff
 // dashboard) and by other server-side endpoints (db.js, booking.js,
-// cron.js, portal-sign.js) which require() this directly to avoid the
-// HTTP hop.
+// cron.js, portal-sign.js) which require() this directly to avoid
+// the HTTP hop.
 //
-// Provider: GoHighLevel (LeadConnector v2 Conversations API). Cut over
-// from Twilio on 2026-06-19 after the TCR brand/campaign approval
-// process turned into a wall; GHL's location-level A2P 10DLC was
-// already approved for the Automotivation Enterprises sub-account so
-// sends start working the moment the env vars land.
+// Provider history:
+//   - Twilio   — removed 2026-06-19 after the TCR A2P 10DLC campaign
+//                bounced twice with error 30923.
+//   - GoHighLevel — wired 2026-06-19, removed 2026-06-25 after the
+//                   GHL sub-account's billing/PIT gate kept silently
+//                   dropping API-initiated sends. Lead + status sync
+//                   moved to Pipedrive (see api/_pipedrive.js).
 //
-// Required env vars:
-//   GHL_PIT_TOKEN   Private Integration Token from
-//                   Settings → Private Integrations in the GHL UI.
-//                   Scopes needed: conversations.write,
-//                   conversations/message.write, contacts.readonly,
-//                   contacts.write.
-//   GHL_LOCATION_ID The sub-account ID (visible in the URL path:
-//                   /v2/location/<ID>/...).
-//   GHL_FROM_NUMBER Optional. E.164 (e.g. +15618347996) of a dedicated
-//                   A2P-verified number to use as the sender for ALL
-//                   automated sends. Lets us keep our reps' personal
-//                   GHL numbers (which are the location's Default)
-//                   uncluttered by system traffic. If unset, GHL routes
-//                   the message through the location's Default Number.
-//   GHL_USER_ID     Required for actual delivery. The GHL user ID that
-//                   sends are attributed to. Without it, GHL accepts the
-//                   API call (200 + messageId) but silently drops the
-//                   send at the carrier handoff — manual UI sends work
-//                   because they auto-attribute to the logged-in user.
-//                   We use a dedicated "Auto Pals System" user (created
-//                   under Settings → My Staff) so automated traffic
-//                   doesn't skew Alex/Josh's per-rep message stats.
-//   STAFF_PHONE_NUMBERS / TEAM_PHONE_NUMBER  Comma-separated E.164
-//                   numbers for staff fan-out (Cody, Alex, Josh).
+// Current state: NO SMS PROVIDER. sendOne() is a no-op that logs
+// intent to stdout so every existing call site (db.js,
+// booking.js, cron.js, portal-sign.js) keeps working without
+// crashing. Email continues to fire through SendGrid as the
+// always-arrives half.
 //
-// If GHL creds are missing, every send is a no-op that logs to console
-// (demo mode) — preserves the legacy fallback so dev / CI keep working.
+// To wire SMS back in, pick one of:
+//   1. Pipedrive Caller add-on (~$30/user/mo, native to the CRM,
+//      requires fresh A2P 10DLC registration).
+//   2. Salesmsg / SimpleTexting / similar Pipedrive marketplace
+//      app — handles A2P registration for you. Wire by hitting
+//      their REST API in sendOne().
+//   3. Twilio direct via a different agency that already has an
+//      approved A2P brand + campaign.
+//   4. Re-enable GHL once 1Now turns on SaaS Mode billing or a
+//      sub-account card is added.
+//
+// Whichever provider you pick, only sendOne() needs a real body.
+// Templates, consent gating, staff fan-out, and the api/sms.js
+// HTTP layer all stay as-is.
 
 const PORTAL_URL  = process.env.PORTAL_URL  || 'https://autopalsusa.com/portal.html';
 const BOOKING_URL = process.env.BOOKING_URL || 'https://autopalsusa.com/booking.html';
 
 function staffNumbers() {
-  // Either env var may hold a single number or a comma-separated list.
-  // STAFF_PHONE_NUMBERS wins if both are set.
   const raw = process.env.STAFF_PHONE_NUMBERS || process.env.TEAM_PHONE_NUMBER;
   if (!raw) return [];
   return raw.split(',').map(s => s.trim()).filter(Boolean);
@@ -61,100 +54,15 @@ function normalize(num) {
   return s;
 }
 
-// GoHighLevel Conversations API base + version (LeadConnector — same
-// endpoint regardless of subdomain). The Version header is required for
-// every v2 call and is pinned to the date the integration was wired so
-// future GHL schema changes don't silently break us.
-const GHL_BASE = 'https://services.leadconnectorhq.com';
-const GHL_API_VERSION = '2021-04-15';
-
-function ghlHeaders() {
-  const pit = process.env.GHL_PIT_TOKEN;
-  if (!pit) return null;
-  return {
-    'Authorization': `Bearer ${pit}`,
-    'Version': GHL_API_VERSION,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  };
-}
-
-// Resolve or create a GHL contact for a given phone number. The
-// Conversations API requires a contactId, so we upsert first: if a
-// contact with this phone already exists in the location it's returned
-// untouched; otherwise GHL creates a phone-only contact we can address.
-// Returns the contactId on success, null on failure.
-async function ghlUpsertContact(phoneE164) {
-  const headers = ghlHeaders();
-  const locationId = process.env.GHL_LOCATION_ID;
-  if (!headers || !locationId) return null;
-  try {
-    const r = await fetch(`${GHL_BASE}/contacts/upsert`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ phone: phoneE164, locationId })
-    });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      console.error('[SMS GHL] upsert failed', phoneE164, r.status, (data.message || data.error || '').toString().slice(0, 200));
-      return null;
-    }
-    return (data.contact && data.contact.id) || data.id || null;
-  } catch (err) {
-    console.error('[SMS GHL] upsert error', phoneE164, err && err.message);
-    return null;
-  }
-}
-
-// Single send to one number via GoHighLevel. Demo-mode logs (and
-// returns ok: true, demo: true) when credentials aren't configured —
-// keeps existing call sites working in dev / CI without a real send.
+// Demo-mode no-op. Returns { ok: true, demo: true } so fire-and-
+// forget callers don't blow up. Wire a real provider here when one
+// is chosen — keep the signature (to, body) → { ok, error?, sid? }
+// so call sites don't change.
 async function sendOne(to, body) {
   const dest = normalize(to);
   if (!dest) return { ok: false, error: 'no_destination' };
-
-  const headers = ghlHeaders();
-  const locationId = process.env.GHL_LOCATION_ID;
-  if (!headers || !locationId) {
-    console.log('[SMS DEMO]', dest, '←', body.replace(/\n/g, ' | '));
-    return { ok: true, demo: true };
-  }
-
-  const contactId = await ghlUpsertContact(dest);
-  if (!contactId) return { ok: false, error: 'contact_upsert_failed' };
-
-  try {
-    // GHL routes the message through the location's Default Number unless
-    // we pin fromNumber explicitly. Production has GHL_FROM_NUMBER set to
-    // the dedicated "Auto Pals USA SMS number" so automated traffic doesn't
-    // pollute Josh's customer-facing line.
-    //
-    // GHL_USER_ID attributes the send to a real staff user (we made a
-    // dedicated "Auto Pals System" user for this). Without a userId, GHL
-    // accepts the message into the conversation (returns 200 + messageId)
-    // but silently drops it at the carrier handoff — manual UI sends work
-    // because they auto-attribute to the logged-in staff member. This was
-    // the missing piece on 2026-06-20.
-    const payload = { type: 'SMS', contactId, message: body };
-    const fromNumber = process.env.GHL_FROM_NUMBER;
-    if (fromNumber) payload.fromNumber = fromNumber;
-    const userId = process.env.GHL_USER_ID;
-    if (userId) payload.userId = userId;
-    const r = await fetch(`${GHL_BASE}/conversations/messages`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload)
-    });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      console.error('[SMS GHL] send failed', dest, r.status, (data.message || data.error || '').toString().slice(0, 200));
-      return { ok: false, status: r.status, error: data.message || 'send_failed' };
-    }
-    return { ok: true, messageId: data.messageId || data.id, conversationId: data.conversationId };
-  } catch (err) {
-    console.error('[SMS GHL] fetch failed', dest, err && err.message);
-    return { ok: false, error: err.message };
-  }
+  console.log('[SMS DEMO]', dest, '←', body.replace(/\n/g, ' | '));
+  return { ok: true, demo: true };
 }
 
 async function sendToStaff(body) {
@@ -235,7 +143,6 @@ const TEMPLATES = {
     `Once signed, your 60-day search begins: ${d.portalUrl || PORTAL_URL}`
 };
 
-// Some templates target staff; others target a single client phone.
 const STAFF_TYPES = new Set(Object.keys(TEMPLATES).filter(k => k.startsWith('staff_')));
 const CLIENT_TYPES = new Set(Object.keys(TEMPLATES).filter(k => k.startsWith('client_')));
 
@@ -248,9 +155,7 @@ async function send(type, data = {}) {
     // Consent gate. `false` is an explicit opt-out from the form's SMS
     // consent checkbox → hard block. `undefined` / `null` / `true` all
     // pass: legacy rows submitted before the checkbox keep receiving
-    // transactional SMS under their original implicit consent. Caller
-    // (api/db.js, booking.js, portal-sign.js) must forward `smsConsent`
-    // from the request row when available.
+    // transactional SMS under their original implicit consent.
     if (data.smsConsent === false) {
       console.log('[SMS] skipped — sms_consent=false for', type, data.phone || '');
       return { ok: false, skipped: true, reason: 'sms_consent_false' };

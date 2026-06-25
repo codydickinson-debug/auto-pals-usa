@@ -457,9 +457,8 @@ module.exports = async function handler(req, res) {
 
         // Deposit just flipped: notify staff (email + SMS) and the client
         // (email receipt + contract-available SMS). Email is the always-arrives
-        // half while the SMS provider is being swapped in (Twilio removed
-        // 2026-06-19, GHL pending) — without it, nobody actually hears
-        // about a paid deposit.
+        // half; SMS is in demo mode pending a provider — without email,
+        // nobody actually hears about a paid deposit.
         const wasPaid = !!(priorRow && priorRow.deposit_paid);
         const nowPaid = !!mapped.deposit_paid;
         if (!wasPaid && nowPaid && priorRow) {
@@ -700,8 +699,8 @@ module.exports = async function handler(req, res) {
             } else if (row.from_role === 'client') {
               const clientName = `${r0.first_name || ''} ${r0.last_name || ''}`.trim() || 'A client';
               msgFires.push(sms.send('staff_portal_message', { clientName }));
-              // Email is the always-arrives half — SMS is in demo mode until
-              // the GHL provider is wired in, so without this, staff get
+              // Email is the always-arrives half — SMS is in demo mode
+              // until a provider is wired, so without this, staff get
               // nothing on client replies.
               msgFires.push(safeSendEmail('staffPortalMessage', {
                 clientName,

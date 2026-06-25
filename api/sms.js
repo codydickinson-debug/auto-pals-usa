@@ -1,10 +1,12 @@
 // ── sms.js — SMS HTTP endpoint (staff-only) ────────────────────────
 // Authenticated entry point for the staff dashboard to fire one-off SMS
-// notifications. The actual send goes through _sms.js, which talks to
-// GoHighLevel's v2 Conversations API (cut over from Twilio on
-// 2026-06-19). Server-side callers (db.js, booking.js, cron.js) should
-// require('./_sms.js') directly and call send()/sendToStaff()/
-// sendToClient() to skip the HTTP hop and the auth check.
+// notifications. Provider-agnostic — the actual send goes through
+// _sms.js, which is currently in demo mode pending a chosen provider
+// (Twilio removed 2026-06-19, GHL removed 2026-06-25, pivoted to
+// Pipedrive for CRM; SMS provider TBD). Server-side callers (db.js,
+// booking.js, cron.js) should require('./_sms.js') directly and call
+// send()/sendToStaff()/sendToClient() to skip the HTTP hop and the
+// auth check.
 
 const sms = require('./_sms.js');
 const { verifyToken } = require('./auth.js');
