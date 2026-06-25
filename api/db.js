@@ -45,6 +45,7 @@ const { verifyToken } = require('./auth.js');
 const sms = require('./_sms.js');
 const emailModule = require('./email.js');
 const sheets = require('./sheets.js');
+const pipedrive = require('./_pipedrive.js');
 
 const PORTAL_URL  = process.env.PORTAL_URL  || 'https://autopalsusa.com/portal.html';
 const BOOKING_URL = process.env.BOOKING_URL || 'https://autopalsusa.com/booking.html';
@@ -336,6 +337,11 @@ module.exports = async function handler(req, res) {
           }));
         }
 
+        // Mirror the lead into Pipedrive so the sales team can work the
+        // funnel in their tool. Best-effort — _pipedrive.syncNewRequest
+        // swallows its own errors and demo-modes when creds aren't set.
+        fires.push(pipedrive.syncNewRequest(row));
+
         const results = await Promise.allSettled(fires);
         results.forEach((r, i) => {
           if (r.status === 'rejected') console.error('[DB→notify]', i, r.reason && r.reason.message);
@@ -437,6 +443,17 @@ module.exports = async function handler(req, res) {
         }
 
         await query('requests', 'PATCH', mapped, `?id=eq.${b.id}`);
+
+        // Mirror status changes to Pipedrive. Only fire when the status
+        // actually changed (this PATCH set it AND it's different from
+        // priorRow.status). Fire-and-forget — _pipedrive swallows errors.
+        if (mapped.status && priorRow && mapped.status !== priorRow.status) {
+          // Pass the merged row shape so Pipedrive sync has email/phone
+          // to look up the right Person.
+          const merged = { ...priorRow, ...mapped };
+          pipedrive.syncStatusChange(merged, mapped.status).catch(err =>
+            console.warn('[pipedrive] PUT-sync failed', err && err.message));
+        }
 
         // Deposit just flipped: notify staff (email + SMS) and the client
         // (email receipt + contract-available SMS). Email is the always-arrives
