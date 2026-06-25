@@ -137,7 +137,8 @@ module.exports = async function handler(req, res) {
             }
           }
 
-          // ── SMS DRIP — 3 nudges over 3 days. Independent cadence from email.
+          // ── SMS DRIP — nudges to clients who haven't booked. Consent-gated:
+          // smsConsent is forwarded so opt-outs never receive a reminder.
           if (r.phone) {
             const smsSent = Array.isArray(r.client_sms_reminders_sent) ? r.client_sms_reminders_sent : [];
             for (let i = 0; i < BOOKING_SMS_REMINDER_HOURS.length; i++) {
@@ -147,6 +148,7 @@ module.exports = async function handler(req, res) {
                 const result = await sms.send(`client_book_call_reminder_${i + 1}`, {
                   firstName: r.first_name,
                   phone: r.phone,
+                  smsConsent: r.sms_consent,
                   bookingUrl: BOOKING_URL
                 });
                 if (result && result.ok) {

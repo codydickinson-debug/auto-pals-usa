@@ -445,14 +445,13 @@ module.exports = async function handler(req, res) {
         await query('requests', 'PATCH', mapped, `?id=eq.${b.id}`);
 
         // Mirror status changes to Pipedrive. Only fire when the status
-        // actually changed (this PATCH set it AND it's different from
-        // priorRow.status). Fire-and-forget — _pipedrive swallows errors.
+        // actually changed. Awaited so Vercel doesn't kill the lambda mid-
+        // PATCH; _pipedrive swallows its own errors and demo-modes when
+        // creds aren't set, so this never throws.
         if (mapped.status && priorRow && mapped.status !== priorRow.status) {
-          // Pass the merged row shape so Pipedrive sync has email/phone
-          // to look up the right Person.
           const merged = { ...priorRow, ...mapped };
-          pipedrive.syncStatusChange(merged, mapped.status).catch(err =>
-            console.warn('[pipedrive] PUT-sync failed', err && err.message));
+          await pipedrive.syncStatusChange(merged, mapped.status)
+            .catch(err => console.warn('[pipedrive] PUT-sync failed', err && err.message));
         }
 
         // Deposit just flipped: notify staff (email + SMS) and the client
