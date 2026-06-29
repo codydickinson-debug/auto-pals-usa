@@ -4221,13 +4221,33 @@
     return (Date.now() - t) >= 14 * 24 * 60 * 60 * 1000;
   }
 
+  // A request is "effectively sold" if there's a matching sale entry in the
+  // Sold Cars tab, even when the request row's status hasn't been flipped.
+  // The sales table has no FK back to requests, so we match by client name
+  // (case- and whitespace-insensitive). Used to keep the Awaiting Paperwork
+  // badge honest after staff records a sale but skips the "Mark Sold ✓"
+  // finalize click (or its fire-and-forget DB sync drops on a flaky network).
+  function requestHasRecordedSale(r) {
+    if (!r || !Array.isArray(sales) || !sales.length) return false;
+    const key = `${r.firstName || ''} ${r.lastName || ''}`.trim().toLowerCase();
+    if (!key) return false;
+    return sales.some(s => s && s.client && String(s.client).trim().toLowerCase() === key);
+  }
+
   function updateBadges() {
     // 'review' status still exists in the codebase (set via detail panel) and rolls
     // into the New + In Review action-queue card — we count it but no longer
     // surface a sidebar tab for it. 'searching' is the new sidebar tab.
     // 'dormant' is a derived view, counted separately.
     const counts = { all: requests.filter(r=>r.status!=='sold').length, new: 0, review: 0, qualified: 0, called: 0, searching: 0, psi: 0, in_repair: 0, awaiting_paperwork: 0, rejected: 0 };
-    requests.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+    requests.forEach(r => {
+      if (counts[r.status] === undefined) return;
+      // Skip awaiting_paperwork rows that already have a matching sale —
+      // they're finalized in staff's view of the world even if the status
+      // column never got flipped.
+      if (r.status === 'awaiting_paperwork' && requestHasRecordedSale(r)) return;
+      counts[r.status]++;
+    });
     counts.dormant = requests.filter(isDormantRequest).length;
     Object.entries(counts).forEach(([k,v]) => {
       const el = document.getElementById('badge-' + k);
@@ -4391,6 +4411,11 @@
       filtered = requests.filter(isDormantRequest);
     } else {
       filtered = currentFilter === 'all' ? requests.filter(r => r.status !== 'sold') : requests.filter(r => r.status === currentFilter);
+      // Mirror the badge logic — hide awaiting_paperwork rows that already
+      // have a matching sale, so the list and the sidebar count agree.
+      if (currentFilter === 'awaiting_paperwork') {
+        filtered = filtered.filter(r => !requestHasRecordedSale(r));
+      }
     }
 
     // Search filter — name, vehicle, phone, email, portal code
