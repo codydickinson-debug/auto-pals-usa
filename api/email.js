@@ -132,12 +132,12 @@ ${d.portalCode ? `<tr><td style="padding:0 40px 22px;">
 </td></tr>
 <tr><td style="padding:0 40px 12px;">
 <div style="font-family:Georgia,serif;font-size:15px;font-weight:700;color:${BRAND.navy};margin-bottom:10px;">📅 Next step — book a 30-min call</div>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 18px;">Pick a time that works. Monday through Saturday, 9am–5pm ET.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 18px;">Pick a time that works. Monday through Saturday, 9am–5pm EST.</p>
 ${button(d.bookingUrl, 'Book your call →')}
 ${d.portalUrl ? buttonSecondary(d.portalUrl, 'View portal') : ''}
 </td></tr>
 <tr><td style="padding:18px 40px 0;">
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;font-style:italic;"><strong style="color:${BRAND.ink};font-style:normal;">P.S.</strong> — We book calls Monday–Saturday 9–5 ET and the slots fill up fast. Grabbing one now is the quickest way to get matched.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;font-style:italic;"><strong style="color:${BRAND.ink};font-style:normal;">P.S.</strong> — We book calls Monday–Saturday 9–5 EST and the slots fill up fast. Grabbing one now is the quickest way to get matched.</p>
 </td></tr>
 ${footer(d)}`)
   }),
@@ -364,7 +364,7 @@ ${footer(d)}`)
 </td></tr>
 <tr><td style="padding:0 40px 12px;">${button(d.bookingUrl, 'Book your call →')}</td></tr>
 <tr><td style="padding:0 40px 8px;">
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;color:${BRAND.mutedSoft};line-height:1.6;margin:8px 0 0;">30 minutes &middot; Monday–Saturday, 9am–5pm ET</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;color:${BRAND.mutedSoft};line-height:1.6;margin:8px 0 0;">30 minutes &middot; Monday–Saturday, 9am–5pm EST</p>
 </td></tr>
 ${footer(d)}`)
   }),
@@ -406,7 +406,7 @@ ${footer(d)}`)
 <div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Hey ${d.firstName} — quick one.</div>
 </td></tr>
 <tr><td style="padding:0 40px 18px;">
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0;">Saw your request come in${vehicleClause}, but I haven't seen the call booked yet. I've got <strong style="color:${BRAND.ink};">${dayLabel} at 11am ET</strong> open if that works — most clients tell me mornings are easier anyway.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0;">Saw your request come in${vehicleClause}, but I haven't seen the call booked yet. I've got <strong style="color:${BRAND.ink};">${dayLabel} at 11am EST</strong> open if that works — most clients tell me mornings are easier anyway.</p>
 </td></tr>
 <tr><td style="padding:0 40px 14px;">${button(d.bookingUrl, `Book ${dayLabel} 11am →`)}</td></tr>
 <tr><td style="padding:0 40px 18px;">

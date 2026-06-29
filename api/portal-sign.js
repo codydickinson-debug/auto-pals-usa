@@ -378,7 +378,7 @@ module.exports = async function handler(req, res) {
   // kill in-flight SendGrid / SMS-provider requests when we res.json().
   const clientName = `${row.first_name || ''} ${row.last_name || ''}`.trim();
   const vehicleStr = vehicleString(row);
-  const signedAtLabel = new Date(nowIso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' }) + ' ET';
+  const signedAtLabel = new Date(nowIso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/New_York' }) + ' EST';
 
   const fires = [];
   // Staff: email fan-out + SMS fan-out
