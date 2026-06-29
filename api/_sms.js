@@ -101,7 +101,7 @@ const TEMPLATES = {
 
   staff_booking_made: (d) =>
     `📅 Call booked!\n${d.firstName || ''} ${d.lastName || ''}`.trim() +
-    `\n${d.dateLabel || d.date} at ${d.time}` +
+    `\n${d.dateLabel || d.date} at ${d.time} EST` +
     `\n📞 ${d.phone || 'no phone'}` +
     (d.email ? `\n📧 ${d.email}` : ''),
 

@@ -4335,7 +4335,7 @@
   function callBadge(r) {
     if (!r) return '';
     if (r.callCompletedAt) {
-      const d = new Date(r.callCompletedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const d = new Date(r.callCompletedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }) + ' EST';
       return `<span class="call-pill done" title="Call completed ${escapeHtml(d)}">📞 ${escapeHtml(d)}</span>`;
     }
     // Authoritative call time = Google Calendar (matched by attendee email).
@@ -4347,13 +4347,13 @@
       const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
       const eventET = start.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
       const cls = (eventET === todayET) ? 'today' : 'upcoming';
-      const tip = `Sales call · ${cal.dateLabel} at ${cal.timeLabel}`;
-      return `<span class="call-pill ${cls}" title="${escapeHtml(tip)}">📞 ${escapeHtml(cal.dateLabel)} · ${escapeHtml(cal.timeLabel)}</span>`;
+      const tip = `Sales call · ${cal.dateLabel} at ${cal.timeLabel} EST`;
+      return `<span class="call-pill ${cls}" title="${escapeHtml(tip)}">📞 ${escapeHtml(cal.dateLabel)} · ${escapeHtml(cal.timeLabel)} EST</span>`;
     }
     // Legacy fallback — booking row exists but the calendar didn't return a
     // match (event deleted, attendee email differs, calendar fetch failed).
     if (r.bookingConfirmedAt) {
-      const d = new Date(r.bookingConfirmedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const d = new Date(r.bookingConfirmedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }) + ' EST';
       return `<span class="call-pill upcoming" title="Booked ${escapeHtml(d)} — call time pending calendar sync">📞 booked</span>`;
     }
     return '';
@@ -4687,7 +4687,7 @@
     if (r.callCompletedAt) {
       document.getElementById('dv-call-pending').style.display = 'none';
       document.getElementById('dv-call-done').style.display = 'block';
-      document.getElementById('dv-call-date').textContent = '· ' + new Date(r.callCompletedAt).toLocaleDateString();
+      document.getElementById('dv-call-date').textContent = '· ' + new Date(r.callCompletedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' }) + ' EST';
     } else {
       document.getElementById('dv-call-pending').style.display = 'flex';
       document.getElementById('dv-call-done').style.display = 'none';
@@ -5139,7 +5139,7 @@
       if (callPending) callPending.style.display = 'none';
       if (callDone) callDone.style.display = 'block';
       if (callDate) {
-        const when = new Date(r.callCompletedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const when = new Date(r.callCompletedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' }) + ' EST';
         callDate.textContent = '· ' + when;
       }
     } else {

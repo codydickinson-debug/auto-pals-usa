@@ -519,7 +519,7 @@
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
         </svg>
       </div>
-      Monday – Saturday, 9am – 5pm ET
+      Monday – Saturday, 9am – 5pm EST
     </div>
     <div class="info-detail">
       <div class="info-detail-icon">
@@ -654,7 +654,7 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
-            <strong id="conf-time"></strong> ET
+            <strong id="conf-time"></strong> EST
           </div>
           <div class="confirmed-detail">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -852,7 +852,7 @@
     const booked = BOOKED[selectedDate] || [];
     container.innerHTML = SLOTS.map(slot => {
       const isBooked = booked.includes(slot);
-      return `<div class="time-slot${isBooked ? ' unavailable' : ''}" onclick="${isBooked ? '' : `selectTime('${slot}')`}">${slot}</div>`;
+      return `<div class="time-slot${isBooked ? ' unavailable' : ''}" data-slot="${slot}" onclick="${isBooked ? '' : `selectTime('${slot}')`}">${slot} EST</div>`;
     }).join('');
   }
 
@@ -860,14 +860,14 @@
     selectedTime = time;
     try { track('booking_slot_selected', { date: selectedDate, time }); } catch (e) {}
     document.querySelectorAll('.time-slot').forEach(el => {
-      el.classList.toggle('selected', el.textContent === time);
+      el.classList.toggle('selected', el.dataset.slot === time);
     });
     // Small delay so user sees selection, then go to step 2
     setTimeout(() => {
       const dateObj = new Date(selectedDate + 'T12:00:00');
       const dateLabel = dateObj.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
       document.getElementById('confirm-date').textContent = dateLabel;
-      document.getElementById('confirm-time').textContent = time + ' Eastern Time · 30 minutes';
+      document.getElementById('confirm-time').textContent = time + ' EST · 30 minutes';
       showStep(2);
     }, 300);
   }
@@ -1058,7 +1058,7 @@
       return `<button type="button" onclick="pickQuickSlot('${s.date}','${s.time.replace(/'/g, "\\'")}')" style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;border-radius:12px;cursor:pointer;font-family:'DM Sans',system-ui,sans-serif;text-align:left;transition:all 0.15s;${accent}" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
         <div>
           <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;opacity:0.75;margin-bottom:3px;">${pillText}</div>
-          <div style="font-size:15px;font-weight:700;line-height:1.3;">${dayName} ${dateBit} · ${s.time}</div>
+          <div style="font-size:15px;font-weight:700;line-height:1.3;">${dayName} ${dateBit} · ${s.time} EST</div>
         </div>
         <div style="font-size:13px;font-weight:600;opacity:0.85;">Book →</div>
       </button>`;
@@ -1074,7 +1074,7 @@
     const confDate = document.getElementById('confirm-date');
     const confTime = document.getElementById('confirm-time');
     if (confDate) confDate.textContent = dateLabel;
-    if (confTime) confTime.textContent = time;
+    if (confTime) confTime.textContent = time + ' EST · 30 minutes';
     showStep(2);
   }
 

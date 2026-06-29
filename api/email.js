@@ -782,7 +782,7 @@ ${footer(d)}`)
   // staff_booking_made SMS — and is the "always-arrives" half until A2P
   // approval lets the SMS flow through carriers.
   staffCallBooked: (d) => ({
-    subject: `📅 Call booked — ${d.clientName || 'client'} · ${d.dateLabel || d.date}`,
+    subject: `📅 Call booked — ${d.clientName || 'client'} · ${d.dateLabel || d.date} at ${d.time || '—'} EST`,
     html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">
 <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:8px;">Intro call booked</div>
@@ -791,7 +791,7 @@ ${footer(d)}`)
 <tr><td style="padding:0 40px 24px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:18px 22px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;">
-<tr><td style="padding:6px 0;color:${BRAND.muted};width:38%;">When</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.dateLabel || d.date || '—'} at ${d.time || '—'}</td></tr>
+<tr><td style="padding:6px 0;color:${BRAND.muted};width:38%;">When</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.dateLabel || d.date || '—'} at ${d.time || '—'} EST</td></tr>
 <tr><td style="padding:6px 0;color:${BRAND.muted};">Client</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientName || '—'}</td></tr>
 ${d.clientEmail ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Email</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientEmail}</td></tr>` : ''}
 ${d.clientPhone ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Phone</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.clientPhone}</td></tr>` : ''}
@@ -877,7 +877,7 @@ ${footer(d)}`)
   // Client-side "you booked a call" confirmation. Replaces the old inline
   // HTML in api/booking.js that was still branded Auto Motivation Enterprise.
   bookingConfirmation: (d) => ({
-    subject: `Call confirmed — ${d.dateLabel || d.date} at ${d.time}`,
+    subject: `Call confirmed — ${d.dateLabel || d.date} at ${d.time} EST`,
     html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.greenSoft};border-radius:10px;margin-bottom:20px;"><tr><td style="padding:16px 20px;">
@@ -892,7 +892,7 @@ ${footer(d)}`)
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:14px;">Your Appointment</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;">
 <tr><td style="padding:6px 0;color:${BRAND.muted};width:40%;">Date</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.dateLabel || d.date || '—'}</td></tr>
-<tr><td style="padding:6px 0;color:${BRAND.muted};">Time</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.time || '—'} Eastern Time</td></tr>
+<tr><td style="padding:6px 0;color:${BRAND.muted};">Time</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.time || '—'} EST</td></tr>
 <tr><td style="padding:6px 0;color:${BRAND.muted};">Duration</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">30 minutes</td></tr>
 <tr><td style="padding:6px 0;color:${BRAND.muted};">With</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">Alex or Josh</td></tr>
 </table>
