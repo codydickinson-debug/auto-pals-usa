@@ -16,6 +16,7 @@ const PORTAL_URL = process.env.PORTAL_URL || 'https://autopalsusa.com/portal.htm
 
 const email = require('./email.js');
 const sms   = require('./_sms.js');
+const pipedrive = require('./_pipedrive.js');
 
 function vehicleString(row) {
   if (!row || !row.make) return 'Open Search';
@@ -363,11 +364,22 @@ module.exports = async function handler(req, res) {
     patchBody.status = 'searching';
   }
 
+  // Race-safe transition: only PATCH rows where contract_signed_at is still
+  // null. Two concurrent signs (double-click on the sign button, or two
+  // browser tabs) both pass the idempotency check above; the second one
+  // gets 0 rows back here and we bail without re-firing notifications.
+  let contractSignWon = false;
   try {
-    const patch = await sb('PATCH', `requests?id=eq.${row.id}`, patchBody);
+    const patch = await sb('PATCH', `requests?id=eq.${row.id}&contract_signed_at=is.null`, patchBody);
     if (!patch.ok) {
       console.error('[portal-sign] patch failed', patch.status, patch.body);
       return res.status(500).json({ error: 'save_failed' });
+    }
+    contractSignWon = Array.isArray(patch.body) && patch.body.length === 1;
+    if (!contractSignWon) {
+      // Lost the race — another writer just signed. Treat as "already signed"
+      // for the caller so the UX is identical.
+      return res.status(200).json({ ok: true, already_signed: true, contractSignedAt: nowIso });
     }
   } catch (err) {
     console.error('[portal-sign] patch error', err && err.message);
@@ -400,6 +412,17 @@ module.exports = async function handler(req, res) {
       email:     row.email,
       portalUrl: PORTAL_URL
     }));
+  }
+  // Mirror the status flip to Pipedrive so the deal moves out of "Qualified"
+  // and into the sourcing stage. Only fires if patchBody actually set a
+  // new status (i.e. the row wasn't already in an advanced stage). Errors
+  // are swallowed — Pipedrive outage should never fail a contract signing.
+  if (patchBody.status && patchBody.status !== row.status) {
+    fires.push(
+      pipedrive
+        .syncStatusChange({ ...row, ...patchBody }, patchBody.status)
+        .catch(err => console.warn('[pipedrive] contract-sign sync failed', err && err.message))
+    );
   }
   const results = await Promise.allSettled(fires);
   results.forEach((r, i) => {

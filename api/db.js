@@ -41,6 +41,35 @@ async function query(table, method = 'GET', body = null, params = '') {
   return text ? JSON.parse(text) : null;
 }
 
+// Race-safe conditional PATCH. Applies `body` to rows in `table` matching
+// `filter` — a PostgREST filter fragment like "id=eq.123&deposit_paid=is.false".
+// Uses Prefer: return=representation so we can see WHICH rows were actually
+// updated. Returns the array (empty = we lost the race, N=1 = we won).
+// Used for deposit / call-complete / contract-signed state transitions where
+// two concurrent PATCHes could otherwise both pass a check-then-write guard
+// and each fire the whole downstream fan-out.
+async function patchConditional(table, body, filter) {
+  const url = `${SUPABASE_URL}/rest/v1/${table}?${filter}`;
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    console.error(`[DB] Conditional PATCH ${table}?${filter} → ${res.status}: ${err}`);
+    throw new Error(`Supabase error ${res.status}: ${err}`);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
 const { verifyToken } = require('./auth.js');
 const sms = require('./_sms.js');
 const emailModule = require('./email.js');
@@ -418,11 +447,38 @@ module.exports = async function handler(req, res) {
         try {
           const prior = await query('requests', 'GET', null, `?id=eq.${b.id}&limit=1`);
           if (prior && prior.length) priorRow = prior[0];
-        } catch (e) { /* best-effort */ }
+        } catch (e) {
+          console.warn('[DB] priorRow fetch failed for id=' + b.id, e && e.message);
+        }
+
+        // Race-safe transitions. Two staff clicking "mark deposit paid" (or a
+        // double-click) both see priorRow.deposit_paid = false and both would
+        // otherwise fire the full deposit fan-out. Split each transition out
+        // of the main PATCH and apply it via patchConditional() so only ONE
+        // writer wins and only that writer fires the downstream side effects.
+        const wantsDepositFlip = mapped.deposit_paid === true && priorRow && !priorRow.deposit_paid;
+        const wantsCallFlip    = !!mapped.call_completed_at && priorRow && !priorRow.call_completed_at;
+
+        const depositFlipFields = wantsDepositFlip ? {} : null;
+        if (wantsDepositFlip) {
+          depositFlipFields.deposit_paid = true;
+          if (mapped.deposit_date !== undefined) depositFlipFields.deposit_date = mapped.deposit_date;
+          if (mapped.deposit_ref  !== undefined) depositFlipFields.deposit_ref  = mapped.deposit_ref;
+          delete mapped.deposit_paid;
+          delete mapped.deposit_date;
+          delete mapped.deposit_ref;
+        }
+        const callFlipFields = wantsCallFlip ? { call_completed_at: mapped.call_completed_at } : null;
+        if (wantsCallFlip) {
+          delete mapped.call_completed_at;
+        }
 
         // ── Auto-status transitions ────────────────────────────────
         // Only fire when staff didn't already pick a status in this PATCH —
         // we never override an intentional staff selection.
+        // NOTE: `mapped.deposit_paid` and `mapped.booking_confirmed_at` may
+        // have been stripped above (moved into depositFlipFields) — so we
+        // gate on the wants* intent flags, not the stripped fields.
         if (mapped.status === undefined && priorRow) {
           const priorStatus = priorRow.status;
           // 1. First booking confirmation: 'new'/'review' → 'qualified'
@@ -432,14 +488,47 @@ module.exports = async function handler(req, res) {
           }
           // 2. Deposit just flipped paid: bump to 'searching' unless they've
           //    already progressed further (e.g. into 'in_repair' / sold).
+          //    Idempotent — if the losing writer also sets 'searching' it
+          //    matches, so both writers end up with the same status.
           const advancedStatuses = ['searching', 'psi', 'in_repair', 'awaiting_paperwork', 'sold'];
-          if (mapped.deposit_paid && !priorRow.deposit_paid
-              && !advancedStatuses.includes(priorStatus)) {
+          if (wantsDepositFlip && !advancedStatuses.includes(priorStatus)) {
             mapped.status = 'searching';
           }
         }
 
         await query('requests', 'PATCH', mapped, `?id=eq.${b.id}`);
+
+        // Race-safe transition writes. Each patchConditional only affects
+        // rows where the target field is still in its pre-transition state.
+        // wonDepositRace / wonCallRace = true only for the writer that
+        // actually flipped the value — that's the one that fires downstream
+        // notifications. Losing writers silently no-op.
+        let wonDepositRace = false;
+        if (wantsDepositFlip) {
+          try {
+            const updated = await patchConditional(
+              'requests',
+              depositFlipFields,
+              `id=eq.${b.id}&deposit_paid=is.false`
+            );
+            wonDepositRace = Array.isArray(updated) && updated.length === 1;
+          } catch (e) {
+            console.error('[DB] deposit conditional PATCH failed', e && e.message);
+          }
+        }
+        let wonCallRace = false;
+        if (wantsCallFlip) {
+          try {
+            const updated = await patchConditional(
+              'requests',
+              callFlipFields,
+              `id=eq.${b.id}&call_completed_at=is.null`
+            );
+            wonCallRace = Array.isArray(updated) && updated.length === 1;
+          } catch (e) {
+            console.error('[DB] call_completed conditional PATCH failed', e && e.message);
+          }
+        }
 
         // Mirror status changes to Pipedrive. Only fire when the status
         // actually changed. Awaited so Vercel doesn't kill the lambda mid-
@@ -451,18 +540,17 @@ module.exports = async function handler(req, res) {
             .catch(err => console.warn('[pipedrive] PUT-sync failed', err && err.message));
         }
 
-        // Deposit just flipped: notify staff (email + SMS) and the client
-        // (email receipt + contract-available SMS). Email is the always-arrives
-        // half; SMS is in demo mode pending a provider — without email,
-        // nobody actually hears about a paid deposit.
-        const wasPaid = !!(priorRow && priorRow.deposit_paid);
-        const nowPaid = !!mapped.deposit_paid;
-        if (!wasPaid && nowPaid && priorRow) {
+        // Deposit just flipped (this writer won the race): notify staff
+        // (email + SMS) and the client (email receipt + deposit-confirmed
+        // SMS pushing contract signature).
+        if (wonDepositRace && priorRow) {
           const _name     = `${priorRow.first_name || ''} ${priorRow.last_name || ''}`.trim();
           const _vehStr   = vehicleStr(priorRow);
           const _budgStr  = budgetStr(priorRow);
-          const _depRef   = mapped.deposit_ref  || priorRow.deposit_ref  || '';
-          const _depDate  = mapped.deposit_date || priorRow.deposit_date || new Date().toISOString().slice(0, 10);
+          // deposit_ref / deposit_date were moved into depositFlipFields
+          // above so the main PATCH wouldn't apply them — read from there.
+          const _depRef   = (depositFlipFields && depositFlipFields.deposit_ref)  || priorRow.deposit_ref  || '';
+          const _depDate  = (depositFlipFields && depositFlipFields.deposit_date) || priorRow.deposit_date || new Date().toISOString().slice(0, 10);
 
           const depositFires = [
             sms.send('staff_deposit_received', {
@@ -505,21 +593,18 @@ module.exports = async function handler(req, res) {
           await Promise.allSettled(depositFires);
         }
 
-        // Call just got marked complete: fire the immediate post-call deposit
-        // nudge (refund guarantee + inline Zelle + portal link) so the client
-        // gets a clear next step while the call is still fresh. Distinct from
-        // the depositReminderN drip below which fires from the daily cron.
-        // Skip the email when:
+        // Call just got marked complete (this writer won the race): fire the
+        // immediate post-call deposit nudge (refund guarantee + inline Zelle +
+        // portal link) so the client gets a clear next step while the call is
+        // still fresh. Distinct from the depositReminderN drip which fires
+        // from the daily cron. Skip when:
         //   - this is a skip-the-line request (no actual call happened; the
         //     call_completed_at is auto-set at form submit)
         //   - the deposit is already paid (rare edge case where call gets
         //     marked complete after payment)
-        //   - the client has no email on file
-        const wasCalled    = !!(priorRow && priorRow.call_completed_at);
-        const nowCalled    = !!mapped.call_completed_at;
         const isSkipLine   = !!(priorRow && priorRow.skip_the_line);
         const wasDeposited = !!(priorRow && priorRow.deposit_paid);
-        if (!wasCalled && nowCalled && !isSkipLine && !wasDeposited && priorRow) {
+        if (wonCallRace && !isSkipLine && !wasDeposited && priorRow) {
           const postCallFires = [];
           if (priorRow.email) {
             postCallFires.push(safeSendEmail('postCallNudge', {
@@ -811,15 +896,14 @@ module.exports = async function handler(req, res) {
         return res.json(data || []);
       }
       if (req.method === 'POST') {
-        // First check if day is already at cap (5 bookings)
+        // Day-full check is app-level (fast, cheap, gives clean error). The
+        // per-slot uniqueness is enforced by a DB UNIQUE INDEX
+        // (bookings_date_time_unique) so simultaneous POSTs for the same
+        // (date, time) can't both succeed. The insert below catches the
+        // resulting 23505 and returns 409 slot_taken.
         const existing = await query('bookings', 'GET', null, `?date=eq.${body.date}`);
         if (existing && existing.length >= 5) {
           return res.status(409).json({ error: 'day_full', count: existing.length });
-        }
-        // Check if specific time slot is taken
-        const slotTaken = existing && existing.find(b => b.time === body.time);
-        if (slotTaken) {
-          return res.status(409).json({ error: 'slot_taken' });
         }
         const row = {
           id: Date.now(),
@@ -832,10 +916,26 @@ module.exports = async function handler(req, res) {
           vehicle: body.vehicle || '',
           ts: new Date().toISOString()
         };
-        const data = await query('bookings', 'POST', row);
+        let data;
+        try {
+          data = await query('bookings', 'POST', row);
+        } catch (err) {
+          const msg = (err && err.message) || '';
+          // 23505 = PostgreSQL unique_violation. Only path that hits this is
+          // two clients racing for the same (date, time) — the DB serializes
+          // and one loses. Translate to the same 409 the app-level check
+          // would have returned.
+          if (/23505|duplicate key/i.test(msg)) {
+            return res.status(409).json({ error: 'slot_taken' });
+          }
+          throw err;
+        }
 
-        // Cross-link: if the booker's email matches a pending request, mark that
-        // request as booked so the cron stops sending booking reminders.
+        // Cross-link: if the booker's email matches a pending request, mark
+        // that request as booked so the cron stops sending booking reminders.
+        // Fires Pipedrive syncStatusChange on the status flip so the CRM stays
+        // in sync — was previously skipped, causing deals to sit at "New Lead"
+        // in Pipedrive even after the client booked.
         if (body.email) {
           try {
             const matches = await query(
@@ -845,9 +945,8 @@ module.exports = async function handler(req, res) {
               `?email=eq.${encodeURIComponent(body.email)}&booking_confirmed_at=is.null&order=submitted.desc&limit=1`
             );
             if (matches && matches.length) {
-              // Auto-status: bump from 'new'/'review' → 'qualified' on first booking
-              // (don't override anything later in the pipeline).
-              const matchStatus = matches[0].status;
+              const priorMatch  = matches[0];
+              const matchStatus = priorMatch.status;
               const bookingPatch = { booking_confirmed_at: new Date().toISOString() };
               if (matchStatus === 'new' || matchStatus === 'review') {
                 bookingPatch.status = 'qualified';
@@ -856,10 +955,19 @@ module.exports = async function handler(req, res) {
                 'requests',
                 'PATCH',
                 bookingPatch,
-                `?id=eq.${matches[0].id}`
+                `?id=eq.${priorMatch.id}`
               );
+              // Mirror to Pipedrive if the status actually changed. Swallowed
+              // errors — a Pipedrive outage should never block a booking.
+              if (bookingPatch.status && bookingPatch.status !== matchStatus) {
+                await pipedrive
+                  .syncStatusChange({ ...priorMatch, ...bookingPatch }, bookingPatch.status)
+                  .catch(err => console.warn('[pipedrive] booking-cross-link sync failed', err && err.message));
+              }
             }
-          } catch(e) { /* best-effort, don't fail booking on this */ }
+          } catch (e) {
+            console.warn('[DB] booking cross-link failed', e && e.message);
+          }
         }
 
         return res.json(data);

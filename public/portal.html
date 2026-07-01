@@ -1298,21 +1298,11 @@
     const errorEl = document.getElementById('portal-login-error');
     errorEl.style.display = 'none';
 
-    // Master key — staff access
-    if (input === 'PALS69') {
-      document.getElementById('portal-login').style.display = 'none';
-      document.getElementById('portal-content').style.display = 'block';
-      window.scrollTo({ top: 0, behavior: 'instant' });
-      const s = stages['new'];
-      const banner = document.getElementById('status-banner');
-      if (banner && s) {
-        banner.className = 'hero-status status-banner ' + s.bannerClass;
-        document.getElementById('status-icon').innerHTML = s.icon;
-        document.getElementById('status-title').textContent = s.title;
-        document.getElementById('status-desc').textContent = s.desc;
-      }
-      return;
-    }
+    // Client-side backdoor removed 2026-07-01. Previously a hardcoded literal
+    // string opened the portal without matching any real portal_code — visible
+    // to anyone who viewed page source. Portal access is now Supabase-only via
+    // the portal_code lookup below. Staff needing to inspect a client's portal
+    // should use their actual portal_code (visible in the staff dashboard).
 
     // Try Supabase first — server-side filters by portal_code so the response
     // contains only this one client's row (or empty). Previously we fetched the
