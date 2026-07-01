@@ -269,12 +269,10 @@ module.exports = async function handler(req, res) {
         const fires = [];
 
         if (row.status !== 'rejected') {
-          fires.push(sms.send('staff_new_request', {
-            firstName: row.first_name, lastName: row.last_name,
-            email: row.email, phone: row.phone,
-            make: row.make, model: row.model,
-            budgetMin: row.budget_min, budgetMax: row.budget_max
-          }));
+          // Per 2026-07-01 spec: no staff SMS on new sign-ups — email is
+          // the sole staff channel for lead intake. Staff SMS now limited
+          // to call-booked + portal-reply (+ deposit and contract-signed
+          // as "money in the door" alerts).
           fires.push(safeSendEmail('staffNewRequest', {
             clientName:  _name,
             clientEmail: row.email,
@@ -307,10 +305,9 @@ module.exports = async function handler(req, res) {
             }));
           }
         } else {
-          fires.push(sms.send('staff_rejected', {
-            firstName: row.first_name, lastName: row.last_name,
-            budgetMax: row.budget_max
-          }));
+          // Auto-rejection is rare + already covered by the rejected email.
+          // No staff SMS per 2026-07-01 spec (owner asked for email-only on
+          // sign-ups; rejection is a sign-up variant).
           if (row.email) {
             fires.push(safeSendEmail('rejected', {
               firstName: row.first_name,
@@ -484,8 +481,14 @@ module.exports = async function handler(req, res) {
             })
           ];
           if (priorRow.phone) {
-            depositFires.push(sms.send('client_contract_available', {
-              firstName: priorRow.first_name, phone: priorRow.phone,
+            // Single client SMS on deposit received: confirms receipt +
+            // pushes for the contract signature. Replaces the old
+            // client_contract_available (which said "your contract is ready"
+            // without acknowledging the deposit).
+            depositFires.push(sms.send('client_deposit_confirmed', {
+              firstName:  priorRow.first_name,
+              phone:      priorRow.phone,
+              portalUrl:  PORTAL_URL,
               smsConsent: priorRow.sms_consent
             }));
           }
@@ -516,15 +519,43 @@ module.exports = async function handler(req, res) {
         const nowCalled    = !!mapped.call_completed_at;
         const isSkipLine   = !!(priorRow && priorRow.skip_the_line);
         const wasDeposited = !!(priorRow && priorRow.deposit_paid);
-        if (!wasCalled && nowCalled && !isSkipLine && !wasDeposited && priorRow && priorRow.email) {
-          await safeSendEmail('postCallNudge', {
-            firstName: priorRow.first_name,
-            lastName:  priorRow.last_name,
-            email:     priorRow.email,
-            make:      priorRow.make,
-            model:     priorRow.model,
-            portalUrl: PORTAL_URL
-          });
+        if (!wasCalled && nowCalled && !isSkipLine && !wasDeposited && priorRow) {
+          const postCallFires = [];
+          if (priorRow.email) {
+            postCallFires.push(safeSendEmail('postCallNudge', {
+              firstName: priorRow.first_name,
+              lastName:  priorRow.last_name,
+              email:     priorRow.email,
+              make:      priorRow.make,
+              model:     priorRow.model,
+              portalUrl: PORTAL_URL
+            }));
+          }
+          // Instant post-call SMS — Follow-Up #1 style ("great talking with
+          // you"). Continues with +24h/+48h/+72h from the daily cron
+          // (labels post1/post2/post3). Stamp post0 into
+          // client_sms_reminders_sent so cron's post-call loop knows the
+          // instant fire already happened and doesn't re-fire it if the
+          // row is edited within 24h.
+          if (priorRow.phone) {
+            postCallFires.push(sms.send('client_postcall_followup_1', {
+              firstName:  priorRow.first_name,
+              make:       priorRow.make,
+              model:      priorRow.model,
+              phone:      priorRow.phone,
+              smsConsent: priorRow.sms_consent
+            }));
+            const priorSmsSent = Array.isArray(priorRow.client_sms_reminders_sent)
+              ? priorRow.client_sms_reminders_sent : [];
+            if (!priorSmsSent.includes('post0')) {
+              const nextSmsSent = [...priorSmsSent, 'post0'];
+              postCallFires.push(
+                query('requests', 'PATCH', { client_sms_reminders_sent: nextSmsSent }, `?id=eq.${priorRow.id}`)
+                  .catch(err => console.warn('[DB] post0 stamp failed', err && err.message))
+              );
+            }
+          }
+          if (postCallFires.length) await Promise.allSettled(postCallFires);
         }
 
         return res.json({ ok: true });
@@ -679,10 +710,16 @@ module.exports = async function handler(req, res) {
             const msgFires = [];
             if (row.from_role === 'team' || row.from_role === 'staff') {
               if (r0.phone) {
+                // Pass the actual message text so the SMS preview shows the
+                // client what was said (truncated in the template to ~90
+                // chars). Portal URL is passed so the "View in portal"
+                // link points at the right base host.
                 msgFires.push(sms.send('client_portal_message', {
-                  phone: r0.phone,
-                  staffName: body.staffName || 'Auto Pals USA',
-                  smsConsent: r0.sms_consent
+                  phone:       r0.phone,
+                  staffName:   body.staffName || 'Auto Pals USA',
+                  messageText: row.text,
+                  portalUrl:   PORTAL_URL,
+                  smsConsent:  r0.sms_consent
                 }));
               }
               if (r0.email) {

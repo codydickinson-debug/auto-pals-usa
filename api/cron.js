@@ -1,13 +1,29 @@
 // ── cron.js — Scheduled reminder processor ─────────────────────
-// Runs daily (configured in vercel.json) to send booking and deposit reminders.
+// Runs daily (configured in vercel.json) to send booking, deposit, and SMS
+// follow-up drips.
 //
-// Booking reminders (3 nudges): client submitted form but hasn't booked a call
-//   - 24h, 72h, 7 days after submission
+// EMAIL DRIPS
+//   Booking reminders (5 nudges): 24 / 48 / 72 / 96 / 168h after form submit
+//     if client hasn't booked a call.
+//   Deposit reminders (3 nudges): 24 / 48 / 72h after call_completed_at if
+//     deposit still unpaid.
+//   Dormant re-engagement (3 nudges): 14d / 44d / 104d after signup if the
+//     client never deposited. Auto-stops on deposit_paid.
 //
-// Deposit reminders (2 nudges): staff marked call complete but deposit not paid
-//   - 24h, 72h after call completion
+// SMS DRIPS
+//   Pre-call follow-ups (4 msgs): Follow-Up #1-#4 at 24 / 48 / 72 / 96h if
+//     the client hasn't booked a call. Labels pre1-pre4.
+//   Post-call follow-ups (3 msgs from cron + 1 instant from db.js):
+//     Follow-Up #1 fires instant from api/db.js on call_completed_at
+//     (label post0). Cron then fires Follow-Up #2/#3/#4 at +24/+48/+72h
+//     (labels post1/post2/post3). Auto-stops on deposit_paid or when
+//     skip_the_line is true (no real call happened).
 //
-// Protected by CRON_SECRET env var (Vercel auto-sends this as Authorization header).
+// Both SMS drips are consent-gated (smsConsent forwarded to _sms.js) and
+// share the client_sms_reminders_sent JSONB array via disjoint label
+// namespaces (pre*/post*) so they never collide.
+//
+// Protected by CRON_SECRET env var (Vercel auto-sends as Authorization header).
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://phbdpvfdnxvzxpybfgbr.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoYmRwdmZkbnh2enhweWJmZ2JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODc4NDAsImV4cCI6MjA5MTI2Mzg0MH0.ne0pU9m-SkN-yBA4qczyiwfWGKgmRHi_lTSnxFBoq1k';
@@ -21,8 +37,16 @@ const PORTAL_URL   = process.env.PORTAL_URL  || 'https://auto-pals-usa.vercel.ap
 // deposit_paid flips, per the gating in this file.
 const BOOKING_REMINDER_HOURS = [24, 48, 72, 96, 168];
 const DEPOSIT_REMINDER_HOURS = [24, 48, 72];
-// SMS drip after signup: 2 nudges, 24h apart. (Was 3 — cut the final one.)
-const BOOKING_SMS_REMINDER_HOURS = [24, 48];
+// Pre-call SMS drip after signup: 4 nudges, one per day for 4 days.
+// Auto-stops the moment booking_confirmed_at / call_completed_at flips.
+// Labels stored in client_sms_reminders_sent as pre1/pre2/pre3/pre4.
+const BOOKING_SMS_REMINDER_HOURS = [24, 48, 72, 96];
+// Post-call SMS drip: 3 nudges at +24h/+48h/+72h after call_completed_at.
+// The instant post-call SMS (Follow-Up #1) fires from api/db.js the moment
+// call_completed_at is stamped, and PATCHes 'post0' into the same
+// client_sms_reminders_sent array so the labels never collide. Auto-stops
+// the moment deposit_paid flips true.
+const POSTCALL_SMS_REMINDER_HOURS = [24, 48, 72];
 // Long-term re-engagement for clients who go dormant (no deposit paid 14+ days
 // after signup). 14d, ~1mo after that (44d), ~3mo after the first (104d).
 // Stops the moment deposit_paid flips true.
@@ -137,17 +161,26 @@ module.exports = async function handler(req, res) {
             }
           }
 
-          // ── SMS DRIP — nudges to clients who haven't booked. Consent-gated:
-          // smsConsent is forwarded so opt-outs never receive a reminder.
+          // ── PRE-CALL SMS DRIP ─────────────────────────────────
+          // 4 follow-ups (Follow-Up #1-#4) at 24/48/72/96h if no call is
+          // ever booked. Consent-gated via forwarded smsConsent. Labels
+          // pre1/pre2/pre3/pre4 in client_sms_reminders_sent — separate
+          // namespace from post-call labels (post0/post1/post2/post3) so
+          // the two drips share one column without stepping on each other.
+          // First name + vehicle passed so the templates can render
+          // "Hi Sarah — great talking with you. Quick recap of what we'd do:
+          // source the Toyota 4Runner you're after..."
           if (r.phone) {
             const smsSent = Array.isArray(r.client_sms_reminders_sent) ? r.client_sms_reminders_sent : [];
             for (let i = 0; i < BOOKING_SMS_REMINDER_HOURS.length; i++) {
               const threshold = BOOKING_SMS_REMINDER_HOURS[i];
-              const label = `r${i + 1}`;
+              const label = `pre${i + 1}`;
               if (h >= threshold && !smsSent.includes(label)) {
-                const result = await sms.send(`client_book_call_reminder_${i + 1}`, {
-                  firstName: r.first_name,
-                  phone: r.phone,
+                const result = await sms.send(`client_precall_followup_${i + 1}`, {
+                  firstName:  r.first_name,
+                  make:       r.make,
+                  model:      r.model,
+                  phone:      r.phone,
                   smsConsent: r.sms_consent,
                   bookingUrl: BOOKING_URL
                 });
@@ -156,7 +189,43 @@ module.exports = async function handler(req, res) {
                   await sb('requests', 'PATCH', { client_sms_reminders_sent: smsSent }, `?id=eq.${r.id}`);
                   summary.smsRemindersSent++;
                 }
-                break; // one SMS per request per run
+                break; // one pre-call SMS per request per run
+              }
+            }
+          }
+        }
+
+        // ── POST-CALL SMS DRIP ────────────────────────────────────
+        // Fires 3 nudges (Follow-Up #2-#4) at +24h/+48h/+72h after
+        // call_completed_at. Follow-Up #1 is the "instant" post-call SMS
+        // and fires from api/db.js the moment call_completed_at is set,
+        // stamping 'post0' into client_sms_reminders_sent for us to see.
+        // Auto-stops the moment deposit_paid flips true. Same consent
+        // gate + status guards as the pre-call drip. Skip-the-line clients
+        // are excluded because their call_completed_at is auto-set at
+        // form submit (there was no real call) — sending them "great
+        // talking with you" would misfire.
+        if (r.call_completed_at && !r.deposit_paid && !r.skip_the_line && r.status !== 'dormant' && r.phone) {
+          const hCall = hoursSince(r.call_completed_at);
+          if (hCall !== null) {
+            const smsSent = Array.isArray(r.client_sms_reminders_sent) ? r.client_sms_reminders_sent : [];
+            for (let i = 0; i < POSTCALL_SMS_REMINDER_HOURS.length; i++) {
+              const threshold = POSTCALL_SMS_REMINDER_HOURS[i];
+              const label = `post${i + 1}`;
+              if (hCall >= threshold && !smsSent.includes(label)) {
+                const result = await sms.send(`client_postcall_followup_${i + 2}`, {
+                  firstName:  r.first_name,
+                  make:       r.make,
+                  model:      r.model,
+                  phone:      r.phone,
+                  smsConsent: r.sms_consent
+                });
+                if (result && result.ok) {
+                  smsSent.push(label);
+                  await sb('requests', 'PATCH', { client_sms_reminders_sent: smsSent }, `?id=eq.${r.id}`);
+                  summary.smsRemindersSent++;
+                }
+                break; // one post-call SMS per request per run
               }
             }
           }

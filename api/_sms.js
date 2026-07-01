@@ -201,61 +201,135 @@ function vehicleStr(d) {
   return 'Open Search';
 }
 
-const TEMPLATES = {
-  // Staff fan-out
-  staff_new_request: (d) =>
-    `🚗 New Auto Pals request!\n${d.firstName || ''} ${d.lastName || ''}`.trim() +
-    `\n${vehicleStr(d)}` +
-    (d.budgetMin || d.budgetMax ? `\nBudget: $${fmtMoney(d.budgetMin)}–$${fmtMoney(d.budgetMax)}` : '') +
-    `\n📞 ${d.phone || 'no phone'}\n📧 ${d.email || '—'}`,
+// Placeholder resolution for "the [vehicle] you're after" in follow-up copy.
+// Specific search → "Toyota 4Runner". Open search (no make) → "car".
+function vehicleRef(d) {
+  if (!d) return 'car';
+  if (d.make && d.model && String(d.model).trim() !== '—') {
+    return `${d.make} ${d.model}`.trim();
+  }
+  if (d.make) return String(d.make).trim();
+  return 'car';
+}
 
+// Truncate a portal message to fit inside an SMS preview slot. Salesmsg bills
+// per 160-char credit; keeping the preview at ~90 chars lets the whole SMS
+// stay in 1-2 credits regardless of who wrote what.
+function shortPreview(text, max = 90) {
+  if (!text) return '';
+  const t = String(text).replace(/\s+/g, ' ').trim();
+  if (t.length <= max) return t;
+  return t.slice(0, max - 1).trimEnd() + '…';
+}
+
+const TEMPLATES = {
+  // ═══ STAFF FAN-OUT (goes to every phone in TEAM_PHONE_NUMBER) ═══════
+  // Per 2026-07-01 spec: staff SMS is limited to (a) call booked and
+  // (b) client replied in the portal. Sign-ups go via email only.
+  // staff_deposit_received and staff_contract_signed are kept for now as
+  // "money in the door" + "deal locked" alerts — owner can flag them for
+  // removal if he wants those channels quieted too.
   staff_booking_made: (d) =>
     `📅 Call booked!\n${d.firstName || ''} ${d.lastName || ''}`.trim() +
     `\n${d.dateLabel || d.date} at ${d.time} EST` +
     `\n📞 ${d.phone || 'no phone'}` +
     (d.email ? `\n📧 ${d.email}` : ''),
 
+  // Fires when a client posts to their portal thread. Owner explicitly
+  // requested this alongside call-booked as the only staff SMS types.
+  staff_portal_message: (d) =>
+    `💬 Auto Pals USA: ${d.clientName || 'A client'} just sent you a message in the portal. Open the dashboard to reply.`,
+
+  // Kept as a "big-event" fire — deposit landed. Cut this key if the owner
+  // wants staff-side SMS narrower than call+portal.
   staff_deposit_received: (d) =>
     `💰 Deposit received!\n${d.firstName || ''} ${d.lastName || ''}`.trim() +
     ` just paid $850\nRef: ${d.depositRef || '—'}\nSearch window starts now.`,
 
-  staff_rejected: (d) =>
-    `❌ Request auto-rejected\n${d.firstName || ''} ${d.lastName || ''}`.trim() +
-    ` — budget too low ($${fmtMoney(d.budgetMax)})\nRejection email sent automatically.`,
+  // Also a big-event fire — contract signed. Same "cut if owner wants."
+  staff_contract_signed: (d) =>
+    `🖊 Auto Pals USA: ${d.clientName || 'A client'} just signed the contract. 60-day search window is officially live.`,
 
-  // Client-direct. The FIRST message a client receives (client_book_call)
-  // includes the full compliance suffix registered with TCR: STOP + HELP +
-  // "Msg & data rates may apply." Follow-up transactional messages carry a
-  // shorter "Reply STOP to opt out" reminder — matches the language pattern
-  // Salesmsg + carriers expect for an approved Account Notification campaign.
+  // ═══ CLIENT-DIRECT ═════════════════════════════════════════════════
+  // First message a client receives — includes the full TCR-registered
+  // compliance suffix (STOP + HELP + "Msg & data rates may apply.").
+  // Subsequent transactional messages carry a shorter "Reply STOP to opt
+  // out." reminder to match the pattern carriers expect for an approved
+  // Account Notification campaign.
   client_book_call: (d) =>
     `Hi ${d.firstName || 'there'} — Alex & Josh at Auto Pals USA. Thanks for opting in to SMS updates about your vehicle request! ` +
     `Book your free 30-min intro call so we can start sourcing your vehicle: ${d.bookingUrl || BOOKING_URL} ` +
     `Reply STOP to unsubscribe, HELP for help. Msg & data rates may apply.`,
 
-  client_book_call_reminder_1: (d) =>
-    `Hi ${d.firstName || 'there'}, friendly nudge from Auto Pals USA — we can't start sourcing until we've talked. ` +
-    `Grab a quick 30-min call when you're free: ${d.bookingUrl || BOOKING_URL} Reply STOP to opt out.`,
+  // ─── PRE-CALL 4-DAY FOLLOW-UP DRIP ───────────────────────────────
+  // Fires from the daily cron for leads that have submitted the form but
+  // haven't booked a call yet. Auto-stops the moment booking_confirmed_at
+  // or call_completed_at is set. Consent + phone-null gated in _sms.js.
+  //
+  // Each message is intentionally different from the post-call drip:
+  // pre-call is a SALES push (hammer savings + push to book the call),
+  // post-call is a WARM follow-up. The angles here are:
+  //   #1 savings hook  — lead with the 25% number so the value is on the table
+  //   #2 urgency       — auction timing pushes "book now"
+  //   #3 de-risk       — approval-before-purchase removes their objection
+  //   #4 final push    — recap + last clear ask
+  client_precall_followup_1: (d) =>
+    `Hi ${d.firstName || 'there'}, quick follow-up on your ${vehicleRef(d)} request. Here's how we do it: source at auction wholesale prices, run every candidate past our in-house mechanic, and pull an AutoCheck report — so you get a solid car below what retail dealers charge. A 30-min intro call is all it takes to walk through your budget and start hunting. Book here: ${d.bookingUrl || BOOKING_URL} ` +
+    `Reply STOP to opt out.`,
 
-  client_book_call_reminder_2: (d) =>
-    `Hi ${d.firstName || 'there'} — heads up from Auto Pals USA: we can't start sourcing until we have your deposit. ` +
-    `Pick a quick 30-min call to get rolling: ${d.bookingUrl || BOOKING_URL} Reply STOP to opt out.`,
+  client_precall_followup_2: (d) =>
+    `Hi ${d.firstName || 'there'}, auctions run every week and inventory moves fast. Every week without a clear target on your ${vehicleRef(d)} is another cycle of missed wholesale pricing. Give us 30 minutes to lock in your criteria and we'll start hunting the next auction: ${d.bookingUrl || BOOKING_URL} ` +
+    `Reply STOP to opt out.`,
 
-  client_portal_message: (d) =>
-    `Auto Pals USA: New message in your portal from ${d.staffName || 'our team'}. ` +
-    `Open: ${d.portalUrl || PORTAL_URL} Reply STOP to opt out.`,
+  client_precall_followup_3: (d) =>
+    `Hi ${d.firstName || 'there'}, one thing worth knowing about how we work — before we bid on any car, we send you the full details, AutoCheck report, and our mechanic's inspection. You approve every candidate before we buy it, so you always know exactly what you're getting. If any concern's holding you back, tell us on the intro call and we'll walk you through it: ${d.bookingUrl || BOOKING_URL} ` +
+    `Reply STOP to opt out.`,
 
-  // Sent to staff when a CLIENT replies in their portal — so we don't miss it.
-  staff_portal_message: (d) =>
-    `💬 Auto Pals USA: ${d.clientName || 'A client'} just sent you a message in the portal. Open the dashboard to reply.`,
+  client_precall_followup_4: (d) =>
+    `Hi ${d.firstName || 'there'}, we'll leave it here. Bottom line: 25% average savings, mechanic-inspected, AutoCheck verified, and you approve every car before we bid. If any of that still appeals for the ${vehicleRef(d)}, book the intro call anytime: ${d.bookingUrl || BOOKING_URL} Otherwise no worries — we appreciate you considering us. ` +
+    `Reply STOP to opt out.`,
 
-  // Sent to staff when a client signs the contract in their portal.
-  staff_contract_signed: (d) =>
-    `🖊 Auto Pals USA: ${d.clientName || 'A client'} just signed the contract. 60-day search window is officially live.`,
+  // ─── POST-CALL 4-MESSAGE DRIP ────────────────────────────────────
+  // Fires instant on call_completed_at (from api/db.js), then +24h/+48h/+72h
+  // from cron. Auto-stops the moment deposit_paid flips true. Same 4
+  // template texts as the pre-call drip — the owner asked for "same style"
+  // and Follow-Up #1's "great talking with you" opener fits the moment
+  // right after the call ends.
+  client_postcall_followup_1: (d) =>
+    `Hi ${d.firstName || 'there'}, great talking with you. Quick recap of what we'd do: source the ${vehicleRef(d)} you're after through our Auction resources at wholesale prices, run it past our in-house mechanic and pull an AutoCheck before we ever bid, so you get the right car for well under retail price. Our clients save around 25% on average. Whenever you're ready, just send over the year/make/model and your budget and we'll start hunting. No pressure at all. ` +
+    `Reply STOP to opt out.`,
 
-  client_contract_available: (d) =>
-    `Hi ${d.firstName || 'there'} — your Auto Pals USA contract is ready to sign in your portal. ` +
-    `Once signed, your 60-day search begins: ${d.portalUrl || PORTAL_URL} Reply STOP to opt out.`
+  client_postcall_followup_2: (d) =>
+    `Hi ${d.firstName || 'there'}, circling back. Auctions run every week, so inventory is always turning over. The sooner we know exactly what you want and your budget, the sooner we can lock onto the right one when it crosses the block. Happy to answer any questions in the meantime. ` +
+    `Reply STOP to opt out.`,
+
+  client_postcall_followup_3: (d) =>
+    `Hi ${d.firstName || 'there'}, checking back in. We know trusting a new dealer with a car purchase is a big step, and that's fair. We're a licensed Florida dealer (Automotivation Enterprises LLC), so feel free to look us up and cross-reference with state dealer records anytime. We also don't collect vehicle funds until we've found a specific car, sent you the details, AutoCheck, and our mechanic's inspection, and you've approved it. If something's holding you back, tell us and we'll walk you through it. ` +
+    `Reply STOP to opt out.`,
+
+  client_postcall_followup_4: (d) =>
+    `Hi ${d.firstName || 'there'}, we'll leave it here so we're not crowding you. If the timing isn't right, no worries at all. If you'd still like us to find you the right car at the right price, just reply anytime and we'll pick back up. Either way, we appreciate you considering us. ` +
+    `Reply STOP to opt out.`,
+
+  // ─── DEPOSIT RECEIVED → PUSH CONTRACT SIGNATURE ─────────────────
+  // Replaces the old client_contract_available. Fires the moment deposit
+  // flips false→true (from api/db.js). Confirms receipt + pushes the
+  // signature link in a single message.
+  client_deposit_confirmed: (d) =>
+    `Hi ${d.firstName || 'there'} — deposit received, thank you! Your Auto Pals USA contract is waiting for your signature in the portal. Once you sign, your 60-day search officially begins: ${d.portalUrl || PORTAL_URL} ` +
+    `Reply STOP to opt out.`,
+
+  // ─── PORTAL MESSAGE (client-facing) ─────────────────────────────
+  // Now includes a preview of the actual message so the client knows why
+  // to open the portal, plus the direct link. Preview truncated to ~90
+  // chars to keep the SMS in 1-2 credits.
+  client_portal_message: (d) => {
+    const from = d.staffName || 'Auto Pals USA';
+    const preview = shortPreview(d.messageText, 90);
+    const previewPart = preview ? ` — "${preview}"` : '';
+    return `Auto Pals USA: ${from} sent you a message${previewPart} View in portal: ${d.portalUrl || PORTAL_URL} ` +
+      `Reply STOP to opt out.`;
+  }
 };
 
 const STAFF_TYPES = new Set(Object.keys(TEMPLATES).filter(k => k.startsWith('staff_')));
