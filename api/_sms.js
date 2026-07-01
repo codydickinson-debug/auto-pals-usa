@@ -285,6 +285,7 @@ module.exports = {
   sendToStaff,
   sendToClient,
   sendOne,
+  activeToken,
   staffNumbers,
   normalize,
   TEMPLATES,
