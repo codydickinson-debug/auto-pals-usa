@@ -1,40 +1,42 @@
-// ── _sms.js — Internal SMS helper (provider-agnostic, demo mode) ───
+// ── _sms.js — Internal SMS helper (Salesmsg REST v2.3) ─────────────
 // Shared SMS sender used by api/sms.js (HTTP endpoint for the staff
 // dashboard) and by other server-side endpoints (db.js, booking.js,
 // cron.js, portal-sign.js) which require() this directly to avoid
 // the HTTP hop.
 //
 // Provider history:
-//   - Twilio   — removed 2026-06-19 after the TCR A2P 10DLC campaign
-//                bounced twice with error 30923.
-//   - GoHighLevel — wired 2026-06-19, removed 2026-06-25 after the
-//                   GHL sub-account's billing/PIT gate kept silently
-//                   dropping API-initiated sends. Lead + status sync
-//                   moved to Pipedrive (see api/_pipedrive.js).
+//   - Twilio       — removed 2026-06-19 after TCR A2P 10DLC bounced.
+//   - GoHighLevel  — removed 2026-06-25 after silent-drop billing
+//                    issues at the sub-account level.
+//   - Salesmsg     — wired 2026-06-30 after A2P 10DLC approval on
+//                    Automotivation Enterprises LLC. Number:
+//                    (561) 709-3747. See api/_sms.js history for the
+//                    full migration story.
 //
-// Current state: NO SMS PROVIDER. sendOne() is a no-op that logs
-// intent to stdout so every existing call site (db.js,
-// booking.js, cron.js, portal-sign.js) keeps working without
-// crashing. Email continues to fire through SendGrid as the
-// always-arrives half.
+// Required env vars (Production):
+//   SALESMSG_API_KEY   Personal Access Token from Salesmsg (Profile
+//                      → Personal Access Tokens → Create Token).
+//                      Scope needed: messages:write.
+//   SALESMSG_TEAM_ID   Integer team/inbox id for the (561) 709-3747
+//                      number. Retrievable with:
+//                        curl -H "Authorization: Bearer $KEY" \
+//                          https://api.salesmessage.com/pub/v2.3/teams
+//                      (Auto Pals is a single-inbox org so there's
+//                      one team.) Kept as an env var so a future
+//                      inbox change doesn't require a code push.
 //
-// To wire SMS back in, pick one of:
-//   1. Pipedrive Caller add-on (~$30/user/mo, native to the CRM,
-//      requires fresh A2P 10DLC registration).
-//   2. Salesmsg / SimpleTexting / similar Pipedrive marketplace
-//      app — handles A2P registration for you. Wire by hitting
-//      their REST API in sendOne().
-//   3. Twilio direct via a different agency that already has an
-//      approved A2P brand + campaign.
-//   4. Re-enable GHL once 1Now turns on SaaS Mode billing or a
-//      sub-account card is added.
+// If either env var is missing, sendOne() falls back to demo mode
+// (no-op that logs) so dev/preview/CI environments and any pre-key
+// deploys keep working without crashing on real request flows.
 //
-// Whichever provider you pick, only sendOne() needs a real body.
-// Templates, consent gating, staff fan-out, and the api/sms.js
-// HTTP layer all stay as-is.
+// Signature contract: sendOne(to, body) → { ok, error?, sid? }.
+// Every call site (staff fan-out, client sends, drip cron) depends
+// on this shape; keep it stable when swapping providers again.
 
 const PORTAL_URL  = process.env.PORTAL_URL  || 'https://autopalsusa.com/portal.html';
 const BOOKING_URL = process.env.BOOKING_URL || 'https://autopalsusa.com/booking.html';
+
+const SALESMSG_BASE = 'https://api.salesmessage.com/pub/v2.3';
 
 function staffNumbers() {
   const raw = process.env.STAFF_PHONE_NUMBERS || process.env.TEAM_PHONE_NUMBER;
@@ -54,15 +56,44 @@ function normalize(num) {
   return s;
 }
 
-// Demo-mode no-op. Returns { ok: true, demo: true } so fire-and-
-// forget callers don't blow up. Wire a real provider here when one
-// is chosen — keep the signature (to, body) → { ok, error?, sid? }
-// so call sites don't change.
 async function sendOne(to, body) {
   const dest = normalize(to);
   if (!dest) return { ok: false, error: 'no_destination' };
-  console.log('[SMS DEMO]', dest, '←', body.replace(/\n/g, ' | '));
-  return { ok: true, demo: true };
+
+  const key    = process.env.SALESMSG_API_KEY;
+  const teamId = process.env.SALESMSG_TEAM_ID;
+  if (!key || !teamId) {
+    // Preserve legacy demo-mode behavior for dev/preview and any
+    // deploys that landed before the key was set.
+    console.log('[SMS DEMO]', dest, '←', body.replace(/\n/g, ' | '));
+    return { ok: true, demo: true };
+  }
+
+  // POST /messages accepts query-string params (per OpenAPI v2.3).
+  const url = new URL(`${SALESMSG_BASE}/messages`);
+  url.searchParams.set('number',  dest);
+  url.searchParams.set('team_id', String(teamId));
+  url.searchParams.set('message', body);
+
+  try {
+    const res = await fetch(url.toString(), {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${key}`,
+        'Accept':        'application/json'
+      }
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = (j && (j.message || j.error)) || `http_${res.status}`;
+      console.warn('[Salesmsg] send failed', res.status, dest, err);
+      return { ok: false, error: err, status: res.status };
+    }
+    return { ok: true, sid: j && j.id, status: j && j.status };
+  } catch (e) {
+    console.error('[Salesmsg] send exception', dest, e && e.message);
+    return { ok: false, error: e && e.message ? e.message : 'unknown_error' };
+  }
 }
 
 async function sendToStaff(body) {
@@ -113,22 +144,27 @@ const TEMPLATES = {
     `❌ Request auto-rejected\n${d.firstName || ''} ${d.lastName || ''}`.trim() +
     ` — budget too low ($${fmtMoney(d.budgetMax)})\nRejection email sent automatically.`,
 
-  // Client-direct
+  // Client-direct. The FIRST message a client receives (client_book_call)
+  // includes the full compliance suffix registered with TCR: STOP + HELP +
+  // "Msg & data rates may apply." Follow-up transactional messages carry a
+  // shorter "Reply STOP to opt out" reminder — matches the language pattern
+  // Salesmsg + carriers expect for an approved Account Notification campaign.
   client_book_call: (d) =>
-    `Hi ${d.firstName || 'there'} — Alex & Josh at Auto Pals USA. Thanks for your request! ` +
-    `Book your free 30-min intro call so we can start sourcing your vehicle: ${d.bookingUrl || BOOKING_URL}`,
+    `Hi ${d.firstName || 'there'} — Alex & Josh at Auto Pals USA. Thanks for opting in to SMS updates about your vehicle request! ` +
+    `Book your free 30-min intro call so we can start sourcing your vehicle: ${d.bookingUrl || BOOKING_URL} ` +
+    `Reply STOP to unsubscribe, HELP for help. Msg & data rates may apply.`,
 
   client_book_call_reminder_1: (d) =>
     `Hi ${d.firstName || 'there'}, friendly nudge from Auto Pals USA — we can't start sourcing until we've talked. ` +
-    `Grab a quick 30-min call when you're free: ${d.bookingUrl || BOOKING_URL}`,
+    `Grab a quick 30-min call when you're free: ${d.bookingUrl || BOOKING_URL} Reply STOP to opt out.`,
 
   client_book_call_reminder_2: (d) =>
     `Hi ${d.firstName || 'there'} — heads up from Auto Pals USA: we can't start sourcing until we have your deposit. ` +
-    `Pick a quick 30-min call to get rolling: ${d.bookingUrl || BOOKING_URL}`,
+    `Pick a quick 30-min call to get rolling: ${d.bookingUrl || BOOKING_URL} Reply STOP to opt out.`,
 
   client_portal_message: (d) =>
     `Auto Pals USA: New message in your portal from ${d.staffName || 'our team'}. ` +
-    `Open: ${d.portalUrl || PORTAL_URL}`,
+    `Open: ${d.portalUrl || PORTAL_URL} Reply STOP to opt out.`,
 
   // Sent to staff when a CLIENT replies in their portal — so we don't miss it.
   staff_portal_message: (d) =>
@@ -140,7 +176,7 @@ const TEMPLATES = {
 
   client_contract_available: (d) =>
     `Hi ${d.firstName || 'there'} — your Auto Pals USA contract is ready to sign in your portal. ` +
-    `Once signed, your 60-day search begins: ${d.portalUrl || PORTAL_URL}`
+    `Once signed, your 60-day search begins: ${d.portalUrl || PORTAL_URL} Reply STOP to opt out.`
 };
 
 const STAFF_TYPES = new Set(Object.keys(TEMPLATES).filter(k => k.startsWith('staff_')));

@@ -1,9 +1,10 @@
 // ── sms.js — SMS HTTP endpoint (staff-only) ────────────────────────
 // Authenticated entry point for the staff dashboard to fire one-off SMS
 // notifications. Provider-agnostic — the actual send goes through
-// _sms.js, which is currently in demo mode pending a chosen provider
-// (Twilio removed 2026-06-19, GHL removed 2026-06-25, pivoted to
-// Pipedrive for CRM; SMS provider TBD). Server-side callers (db.js,
+// _sms.js, which is wired to Salesmsg REST v2.3 (as of 2026-06-30 after
+// A2P 10DLC approval on Automotivation Enterprises LLC / (561) 709-3747).
+// Falls back to demo-mode logging when SALESMSG_API_KEY / SALESMSG_TEAM_ID
+// aren't set (dev, preview, pre-key deploys). Server-side callers (db.js,
 // booking.js, cron.js) should require('./_sms.js') directly and call
 // send()/sendToStaff()/sendToClient() to skip the HTTP hop and the
 // auth check.
