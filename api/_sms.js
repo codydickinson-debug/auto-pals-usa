@@ -38,6 +38,65 @@ const BOOKING_URL = process.env.BOOKING_URL || 'https://autopalsusa.com/booking.
 
 const SALESMSG_BASE = 'https://api.salesmessage.com/pub/v2.3';
 
+// Personal Access Tokens expire ONE HOUR after being issued (per the
+// Salesmsg UI warning: "all new Personal Access Tokens created now expire
+// one hour after being received. You can use the new API method to update
+// these tokens."). To keep sends working without babysitting env vars, we:
+//   1. Track the "active" token in module memory (survives warm-Lambda
+//      invocations, which handle the bulk of traffic on Vercel).
+//   2. Before every send, if the active token is close to expiry, call
+//      POST /oauth/personal-token/refresh with the current token as Bearer
+//      to get a fresh 1-hour token.
+//   3. On a 401 from /messages (proves the token just aged out mid-flight
+//      or the refresh clock we track is off), refresh once and retry the
+//      send. Never retry more than once — infinite loops on a stuck seed
+//      would burn the rate limit.
+//
+// Cold starts: the seed token comes from SALESMSG_API_KEY. As long as the
+// seed isn't older than ~1 hour when the Lambda spins up, the first send
+// refreshes it and everything after uses the module-cached refreshed token.
+// If the site is quiet for > 1 hour and the module cache is gone, we fall
+// back to demo mode on that request (seed dead, no way to recover without
+// a human) — better than crashing user-visible flows. api/cron.js includes
+// a keep-alive refresh that runs daily; a more aggressive schedule can be
+// added if long dormant periods become a problem.
+let _tokenCache = { value: null, expiresAt: 0 };
+
+async function refreshSalesmsgToken(currentToken) {
+  const res = await fetch(`${SALESMSG_BASE}/oauth/personal-token/refresh`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${currentToken}`,
+      'Accept':        'application/json'
+    }
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || !j.access_token) {
+    console.warn('[Salesmsg] token refresh failed', res.status, JSON.stringify(j).slice(0, 200));
+    return null;
+  }
+  // expires_in is seconds. Cap our refresh horizon at 55 min so we always
+  // refresh comfortably before the token actually dies.
+  const secs = Number(j.expires_in) || 3600;
+  const horizonMs = Math.min(secs, 3600) * 1000 - 5 * 60 * 1000;
+  _tokenCache = { value: j.access_token, expiresAt: Date.now() + horizonMs };
+  console.log('[Salesmsg] token refreshed, valid ~', Math.round(horizonMs / 60000), 'min');
+  return j.access_token;
+}
+
+async function activeToken() {
+  const seed = process.env.SALESMSG_API_KEY;
+  if (!seed) return null;
+  if (_tokenCache.value && Date.now() < _tokenCache.expiresAt) {
+    return _tokenCache.value;
+  }
+  // Cache empty or expired — refresh using whatever we last had, falling
+  // back to the seed on cold starts.
+  const base = _tokenCache.value || seed;
+  const refreshed = await refreshSalesmsgToken(base);
+  return refreshed || seed;
+}
+
 function staffNumbers() {
   const raw = process.env.STAFF_PHONE_NUMBERS || process.env.TEAM_PHONE_NUMBER;
   if (!raw) return [];
@@ -56,40 +115,60 @@ function normalize(num) {
   return s;
 }
 
-async function sendOne(to, body) {
-  const dest = normalize(to);
-  if (!dest) return { ok: false, error: 'no_destination' };
-
-  const key    = process.env.SALESMSG_API_KEY;
-  const teamId = process.env.SALESMSG_TEAM_ID;
-  if (!key || !teamId) {
-    // Preserve legacy demo-mode behavior for dev/preview and any
-    // deploys that landed before the key was set.
-    console.log('[SMS DEMO]', dest, '←', body.replace(/\n/g, ' | '));
-    return { ok: true, demo: true };
-  }
-
-  // POST /messages accepts query-string params (per OpenAPI v2.3).
+async function postSalesmsgMessage(token, dest, teamId, body) {
   const url = new URL(`${SALESMSG_BASE}/messages`);
   url.searchParams.set('number',  dest);
   url.searchParams.set('team_id', String(teamId));
   url.searchParams.set('message', body);
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Accept':        'application/json'
+    }
+  });
+  const j = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, body: j };
+}
+
+async function sendOne(to, body) {
+  const dest = normalize(to);
+  if (!dest) return { ok: false, error: 'no_destination' };
+
+  const seed   = process.env.SALESMSG_API_KEY;
+  const teamId = process.env.SALESMSG_TEAM_ID;
+  if (!seed || !teamId) {
+    // Preserve legacy demo-mode behavior for dev/preview and any deploys
+    // that land before the env vars are set.
+    console.log('[SMS DEMO]', dest, '←', body.replace(/\n/g, ' | '));
+    return { ok: true, demo: true };
+  }
 
   try {
-    const res = await fetch(url.toString(), {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${key}`,
-        'Accept':        'application/json'
-      }
-    });
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const err = (j && (j.message || j.error)) || `http_${res.status}`;
-      console.warn('[Salesmsg] send failed', res.status, dest, err);
-      return { ok: false, error: err, status: res.status };
+    let token = await activeToken();
+    if (!token) {
+      console.warn('[Salesmsg] no active token — falling back to demo');
+      console.log('[SMS DEMO]', dest, '←', body.replace(/\n/g, ' | '));
+      return { ok: true, demo: true };
     }
-    return { ok: true, sid: j && j.id, status: j && j.status };
+
+    let r = await postSalesmsgMessage(token, dest, teamId, body);
+
+    // 401 → the token aged out (or we got unlucky with cache timing).
+    // Force a refresh and retry once.
+    if (r.status === 401) {
+      console.log('[Salesmsg] 401 on send — refreshing token + retrying');
+      _tokenCache = { value: null, expiresAt: 0 };
+      token = await activeToken();
+      if (token) r = await postSalesmsgMessage(token, dest, teamId, body);
+    }
+
+    if (!r.ok) {
+      const err = (r.body && (r.body.message || r.body.error)) || `http_${r.status}`;
+      console.warn('[Salesmsg] send failed', r.status, dest, err);
+      return { ok: false, error: err, status: r.status };
+    }
+    return { ok: true, sid: r.body && r.body.id, status: r.body && r.body.status };
   } catch (e) {
     console.error('[Salesmsg] send exception', dest, e && e.message);
     return { ok: false, error: e && e.message ? e.message : 'unknown_error' };
