@@ -175,20 +175,27 @@ async function createCalendarEvent(token, booking) {
     attendees: [
       { email: booking.email, displayName: `${booking.firstName} ${booking.lastName}` }
     ],
+    // No event-level reminders (2026-07-02, owner request). The previous
+    // overrides (email 60min + popup 15min) fired for everyone watching the
+    // shared team calendar — at 10 calls/day that flooded staff with up to
+    // 30 pings a day. Staff who want reminders can set per-calendar defaults
+    // on their own Google account; the client's nudge comes from our own
+    // email/SMS drip, not Google.
     reminders: {
       useDefault: false,
-      overrides: [
-        { method: 'email', minutes: 60 },
-        { method: 'popup', minutes: 15 }
-      ]
+      overrides: []
     },
     conferenceData: {
       createRequest: { requestId: `ame-${Date.now()}`, conferenceSolutionKey: { type: 'hangoutsMeet' } }
     }
   };
 
+  // sendUpdates=externalOnly (was =all): the client — an external attendee —
+  // still receives their Google invite with the Meet link, but workspace-
+  // internal watchers of the team calendar no longer get an email per
+  // booking created.
   const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(process.env.GOOGLE_CALENDAR_ID)}/events?conferenceDataVersion=1&sendUpdates=all`,
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(process.env.GOOGLE_CALENDAR_ID)}/events?conferenceDataVersion=1&sendUpdates=externalOnly`,
     {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
