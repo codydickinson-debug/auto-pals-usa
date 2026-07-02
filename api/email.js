@@ -3,6 +3,15 @@
 // with graceful degradation in Outlook (uses tables, avoids flex/grid).
 //
 // Required env vars: SENDGRID_API_KEY, FROM_EMAIL
+// Optional overrides: DEPOSIT_AMOUNT_USD, SEARCH_WINDOW_DAYS (see _constants.js)
+
+const {
+  DEPOSIT_STR,
+  DEPOSIT_STR_WITH_CENTS,
+  SEARCH_WINDOW_ADJ,
+  SEARCH_WINDOW_NOUN,
+  SEARCH_WINDOW_DAYS
+} = require('./_constants.js');
 
 const BRAND = {
   name: 'Auto Pals USA',
@@ -99,7 +108,7 @@ function refundGuarantee() {
 </td>
 <td valign="top">
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;font-weight:700;color:${BRAND.green};margin-bottom:3px;line-height:1.3;">60-Day Refund Guarantee</div>
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;color:${BRAND.ink};line-height:1.55;">If we don't land your match within 60 days, the full $850 comes back. No fees, no fine print.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;color:${BRAND.ink};line-height:1.55;">If we don't land your match within ${SEARCH_WINDOW_NOUN}, the full ${DEPOSIT_STR} comes back. No fees, no fine print.</div>
 </td>
 </tr></table>
 </td></tr></table>`;
@@ -143,13 +152,13 @@ ${footer(d)}`)
   }),
 
   // Client confirmation when they sign the contract. Welcomes them in,
-  // confirms the 60-day search window is live.
+  // confirms the ${SEARCH_WINDOW_ADJ} search window is live.
   contractSigned: (d) => ({
     subject: `Contract signed — your search starts now, ${d.firstName}`,
     html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">
 <div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Welcome aboard, ${d.firstName}.</div>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">Your service agreement is signed and your deposit is in. Your 60-day search window is officially live — our team starts hunting auctions for your match today.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">Your service agreement is signed and your deposit is in. Your ${SEARCH_WINDOW_ADJ} search window is officially live — our team starts hunting auctions for your match today.</p>
 </td></tr>
 <tr><td style="padding:0 40px 24px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.greenSoft};border-left:3px solid ${BRAND.green};border-radius:0 8px 8px 0;"><tr><td style="padding:16px 20px;">
@@ -269,23 +278,23 @@ ${footer(d)}`)
     html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">
 <div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:10px;">Deposit received, ${d.firstName}.</div>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">Thanks — your 60-day search officially starts now. Here's your receipt for the records. We'll be actively hunting starting today.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">Thanks — your ${SEARCH_WINDOW_ADJ} search officially starts now. Here's your receipt for the records. We'll be actively hunting starting today.</p>
 </td></tr>
 <tr><td style="padding:0 40px 24px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:22px 26px;">
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:16px;">Receipt</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;">
-<tr><td style="padding:8px 0;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">Amount</td><td style="padding:8px 0;color:${BRAND.ink};font-weight:600;text-align:right;border-bottom:1px solid ${BRAND.border};">$850.00</td></tr>
+<tr><td style="padding:8px 0;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">Amount</td><td style="padding:8px 0;color:${BRAND.ink};font-weight:600;text-align:right;border-bottom:1px solid ${BRAND.border};">${DEPOSIT_STR_WITH_CENTS}</td></tr>
 <tr><td style="padding:8px 0;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">Date</td><td style="padding:8px 0;color:${BRAND.ink};font-weight:600;text-align:right;border-bottom:1px solid ${BRAND.border};">${d.depositDate || '—'}</td></tr>
 <tr><td style="padding:8px 0;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">Reference</td><td style="padding:8px 0;color:${BRAND.navy};font-weight:700;text-align:right;font-size:12px;border-bottom:1px solid ${BRAND.border};">${d.depositRef || '—'}</td></tr>
-<tr><td style="padding:8px 0;color:${BRAND.muted};">Search window</td><td style="padding:8px 0;color:${BRAND.ink};font-weight:600;text-align:right;">60 days</td></tr>
-<tr><td style="padding:14px 0 0;color:${BRAND.ink};font-weight:700;font-size:15px;border-top:2px solid ${BRAND.border};">Total paid</td><td style="padding:14px 0 0;color:${BRAND.navy};font-weight:700;font-size:16px;text-align:right;border-top:2px solid ${BRAND.border};">$850.00</td></tr>
+<tr><td style="padding:8px 0;color:${BRAND.muted};">Search window</td><td style="padding:8px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${SEARCH_WINDOW_NOUN}</td></tr>
+<tr><td style="padding:14px 0 0;color:${BRAND.ink};font-weight:700;font-size:15px;border-top:2px solid ${BRAND.border};">Total paid</td><td style="padding:14px 0 0;color:${BRAND.navy};font-weight:700;font-size:16px;text-align:right;border-top:2px solid ${BRAND.border};">${DEPOSIT_STR_WITH_CENTS}</td></tr>
 </table>
 </td></tr></table>
 </td></tr>
 <tr><td style="padding:0 40px 24px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.greenSoft};border-left:3px solid ${BRAND.green};border-radius:0 8px 8px 0;"><tr><td style="padding:14px 20px;">
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.6;"><strong style="color:${BRAND.green};">What happens next:</strong> We start searching auctions today. As soon as we find a match, you'll hear from us — most searches end within the 60-day window.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.6;"><strong style="color:${BRAND.green};">What happens next:</strong> We start searching auctions today. As soon as we find a match, you'll hear from us — most searches end within the ${SEARCH_WINDOW_ADJ} window.</div>
 </td></tr></table>
 </td></tr>
 <tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'Track your search →')}</td></tr>
@@ -497,7 +506,7 @@ ${footer(d)}`)
 </td></tr>
 <tr><td style="padding:0 40px 20px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-left:3px solid ${BRAND.navy};border-radius:0 8px 8px 0;"><tr><td style="padding:16px 20px;">
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.7;">No commitment until you decide to put down the $850 deposit — and that's fully refundable if we don't find a match in 60 days.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.7;">No commitment until you decide to put down the ${DEPOSIT_STR} deposit — and that's fully refundable if we don't find a match in ${SEARCH_WINDOW_NOUN}.</div>
 </td></tr></table>
 </td></tr>
 <tr><td style="padding:0 40px 12px;">${button(d.bookingUrl, 'Book your call →')}</td></tr>
@@ -542,14 +551,14 @@ ${footer(d)}`)
 </td></tr>
 <tr><td style="padding:0 40px 20px;">${refundGuarantee()}</td></tr>
 <tr><td style="padding:0 40px 18px;">
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0;">As promised, here's everything you need to lock in your 60-day search for the <strong style="color:${BRAND.ink};">${vehicle}</strong>. Send the $850 deposit via Zelle to the address below and your search goes live the same day.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0;">As promised, here's everything you need to lock in your ${SEARCH_WINDOW_ADJ} search for the <strong style="color:${BRAND.ink};">${vehicle}</strong>. Send the ${DEPOSIT_STR} deposit via Zelle to the address below and your search goes live the same day.</p>
 </td></tr>
 <tr><td style="padding:0 40px 18px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border:1px solid ${BRAND.border};border-radius:10px;"><tr><td style="padding:18px 22px;">
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:6px;">Zelle Address</div>
 <div style="font-family:'SF Mono','Menlo','Consolas',monospace;font-size:16px;font-weight:700;color:${BRAND.navy};word-break:break-all;margin-bottom:14px;">automotivationent@gmail.com</div>
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:6px;">Amount</div>
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:16px;font-weight:700;color:${BRAND.navy};">$850.00</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:16px;font-weight:700;color:${BRAND.navy};">${DEPOSIT_STR_WITH_CENTS}</div>
 </td></tr></table>
 </td></tr>
 <tr><td style="padding:0 40px 14px;">${button(d.portalUrl, 'Open portal →')}</td></tr>
@@ -578,7 +587,7 @@ ${footer(d)}`)
 </td></tr>
 <tr><td style="padding:0 40px 20px;">${refundGuarantee()}</td></tr>
 <tr><td style="padding:0 40px 18px;">
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0;">As soon as the $850 deposit lands in our Zelle, your 60-day search for the <strong style="color:${BRAND.ink};">${vehicle}</strong> kicks off — same day. We start scanning dealer auctions immediately.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0;">As soon as the ${DEPOSIT_STR} deposit lands in our Zelle, your ${SEARCH_WINDOW_ADJ} search for the <strong style="color:${BRAND.ink};">${vehicle}</strong> kicks off — same day. We start scanning dealer auctions immediately.</p>
 </td></tr>
 <tr><td style="padding:0 40px 14px;">${button(d.portalUrl, 'Send your deposit →')}</td></tr>
 <tr><td style="padding:0 40px 8px;">
@@ -610,7 +619,7 @@ ${footer(d)}`)
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.55;font-weight:700;margin-bottom:3px;">Is Zelle safe?</div>
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin-bottom:14px;">Yes. It's bank-to-bank, no intermediary, and instant. Zero transaction fees, which is why we use it.</div>
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.55;font-weight:700;margin-bottom:3px;">What if I change my mind?</div>
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin-bottom:14px;">You have 60 days. If we don't land a match in that window, the full $850 comes back. Terms are in your portal contract.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin-bottom:14px;">You have ${SEARCH_WINDOW_NOUN}. If we don't land a match in that window, the full ${DEPOSIT_STR} comes back. Terms are in your portal contract.</div>
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.55;font-weight:700;margin-bottom:3px;">When does the search actually start?</div>
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;">The same day the deposit lands. Most matches show up within 2–4 weeks of bidding.</div>
 </td></tr></table>
@@ -641,7 +650,7 @@ ${footer(d)}`)
 <tr><td style="padding:0 40px 18px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:18px 22px;">
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.55;font-weight:700;margin-bottom:4px;">Still in the market? →</div>
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin-bottom:16px;">The Zelle address is in your portal. Once the $850 lands, your search is live within hours.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin-bottom:16px;">The Zelle address is in your portal. Once the ${DEPOSIT_STR} lands, your search is live within hours.</div>
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.55;font-weight:700;margin-bottom:4px;">Decided to pass? →</div>
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;">Totally fine. Just reply with "close it out" and I'll archive your file so we're not in your inbox.</div>
 </td></tr></table>
@@ -674,7 +683,7 @@ ${footer(d)}`)
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.9;">
 <span style="color:${BRAND.navy};">✓</span> Personal vehicle sourcing through dealer-only auctions<br>
 <span style="color:${BRAND.navy};">✓</span> Wholesale pricing, not retail<br>
-<span style="color:${BRAND.navy};">✓</span> 60-day search window, $850 deposit (fully refundable if no match)<br>
+<span style="color:${BRAND.navy};">✓</span> ${SEARCH_WINDOW_ADJ} search window, ${DEPOSIT_STR} deposit (fully refundable if no match)<br>
 <span style="color:${BRAND.navy};">✓</span> Free 30-minute intro call to kick everything off
 </div>
 </td></tr></table>

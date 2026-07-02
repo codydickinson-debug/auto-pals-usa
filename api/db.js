@@ -19,6 +19,13 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY
   || process.env.SUPABASE_ANNON_KEY
   || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoYmRwdmZkbnh2enhweWJmZ2JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODc4NDAsImV4cCI6MjA5MTI2Mzg0MH0.ne0pU9m-SkN-yBA4qczyiwfWGKgmRHi_lTSnxFBoq1k';
 
+if (!process.env.SUPABASE_KEY
+    && !process.env.SUPABASE_SERVICE_ROLE_KEY
+    && !process.env.SUPABASE_ANON_KEY
+    && !process.env.SUPABASE_ANNON_KEY) {
+  console.warn('[DB] WARNING: no SUPABASE_* env var set — using hardcoded anon-key fallback. Writes will be restricted to whatever the anon role can do under RLS. Set SUPABASE_SERVICE_ROLE_KEY in Vercel to get full-table access.');
+}
+
 async function query(table, method = 'GET', body = null, params = '') {
   const url = `${SUPABASE_URL}/rest/v1/${table}${params}`;
   const res = await fetch(url, {
@@ -75,6 +82,7 @@ const sms = require('./_sms.js');
 const emailModule = require('./email.js');
 const sheets = require('./sheets.js');
 const pipedrive = require('./_pipedrive.js');
+const { DEPOSIT_STR_BARE } = require('./_constants.js');
 
 const PORTAL_URL  = process.env.PORTAL_URL  || 'https://autopalsusa.com/portal.html';
 const BOOKING_URL = process.env.BOOKING_URL || 'https://autopalsusa.com/booking.html';
@@ -545,7 +553,7 @@ module.exports = async function handler(req, res) {
               clientEmail: priorRow.email,
               vehicleStr:  _vehStr,
               budgetStr:   _budgStr,
-              amount:      '850',
+              amount:      DEPOSIT_STR_BARE,
               depositRef:  _depRef,
               depositDate: _depDate,
               portalCode:  priorRow.portal_code

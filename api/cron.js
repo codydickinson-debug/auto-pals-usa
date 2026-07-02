@@ -26,7 +26,16 @@
 // Protected by CRON_SECRET env var (Vercel auto-sends as Authorization header).
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://phbdpvfdnxvzxpybfgbr.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoYmRwdmZkbnh2enhweWJmZ2JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODc4NDAsImV4cCI6MjA5MTI2Mzg0MH0.ne0pU9m-SkN-yBA4qczyiwfWGKgmRHi_lTSnxFBoq1k';
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+  || process.env.SUPABASE_KEY
+  || process.env.SUPABASE_ANON_KEY
+  || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoYmRwdmZkbnh2enhweWJmZ2JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2ODc4NDAsImV4cCI6MjA5MTI2Mzg0MH0.ne0pU9m-SkN-yBA4qczyiwfWGKgmRHi_lTSnxFBoq1k';
+
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY
+    && !process.env.SUPABASE_KEY
+    && !process.env.SUPABASE_ANON_KEY) {
+  console.warn('[CRON] WARNING: no SUPABASE_* env var set — using hardcoded anon-key fallback. Cron uses PATCH to stamp reminders_sent — this will 401 under anon RLS. Set SUPABASE_SERVICE_ROLE_KEY in Vercel.');
+}
 const BOOKING_URL  = process.env.BOOKING_URL || 'https://auto-pals-usa.vercel.app/booking.html';
 const PORTAL_URL   = process.env.PORTAL_URL  || 'https://auto-pals-usa.vercel.app/portal.html';
 
@@ -87,9 +96,19 @@ function hoursSince(iso) {
 }
 
 module.exports = async function handler(req, res) {
-  // Verify this is actually Vercel calling us (not some random visitor)
+  // Verify this is actually Vercel calling us (not some random visitor).
+  // Prior version soft-failed when CRON_SECRET was unset — anyone could
+  // trigger the drip and blow through Salesmsg credits + SendGrid quota.
+  // Now: hard-fail in production if the secret isn't configured.
   const expectedSecret = process.env.CRON_SECRET;
-  if (expectedSecret) {
+  const isProd = process.env.VERCEL_ENV === 'production';
+  if (!expectedSecret) {
+    if (isProd) {
+      console.error('[CRON] CRON_SECRET not configured — refusing to run in production');
+      return res.status(503).json({ error: 'cron_secret_not_configured' });
+    }
+    // dev / preview: allow so `curl localhost:3000/api/cron` still works.
+  } else {
     const auth = req.headers.authorization || '';
     if (auth !== `Bearer ${expectedSecret}`) {
       return res.status(401).json({ error: 'unauthorized' });

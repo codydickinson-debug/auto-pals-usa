@@ -36,6 +36,8 @@
 const PORTAL_URL  = process.env.PORTAL_URL  || 'https://autopalsusa.com/portal.html';
 const BOOKING_URL = process.env.BOOKING_URL || 'https://autopalsusa.com/booking.html';
 
+const { DEPOSIT_STR, SEARCH_WINDOW_ADJ } = require('./_constants.js');
+
 const SALESMSG_BASE = 'https://api.salesmessage.com/pub/v2.3';
 
 // Personal Access Tokens expire ONE HOUR after being issued (per the
@@ -244,11 +246,24 @@ const TEMPLATES = {
   // wants staff-side SMS narrower than call+portal.
   staff_deposit_received: (d) =>
     `💰 Deposit received!\n${d.firstName || ''} ${d.lastName || ''}`.trim() +
-    ` just paid $850\nRef: ${d.depositRef || '—'}\nSearch window starts now.`,
+    ` just paid ${DEPOSIT_STR}\nRef: ${d.depositRef || '—'}\nSearch window starts now.`,
 
   // Also a big-event fire — contract signed. Same "cut if owner wants."
   staff_contract_signed: (d) =>
-    `🖊 Auto Pals USA: ${d.clientName || 'A client'} just signed the contract. 60-day search window is officially live.`,
+    `🖊 Auto Pals USA: ${d.clientName || 'A client'} just signed the contract. ${SEARCH_WINDOW_ADJ} search window is officially live.`,
+
+  // Fires when a client uploads a document in their portal (driver's license,
+  // proof of funds, etc.). Distinct from staff_portal_message so the copy
+  // reads cleanly instead of "Sarah Chen — uploaded license just sent you a
+  // message in the portal."
+  staff_doc_uploaded: (d) =>
+    `📄 Auto Pals USA: ${d.clientName || 'A client'} uploaded ${d.docLabel || 'a document'} in the portal. Open the dashboard to view.`,
+
+  // Fires when a client approves a reconditioning quote in their portal.
+  // Distinct from staff_portal_message so the copy is honest — they didn't
+  // send a message, they clicked approve.
+  staff_quote_approved: (d) =>
+    `✅ Auto Pals USA: ${d.clientName || 'A client'} approved the reconditioning quote. Repair is greenlit.`,
 
   // ═══ CLIENT-DIRECT ═════════════════════════════════════════════════
   // First message a client receives — includes the full TCR-registered
@@ -316,7 +331,7 @@ const TEMPLATES = {
   // flips false→true (from api/db.js). Confirms receipt + pushes the
   // signature link in a single message.
   client_deposit_confirmed: (d) =>
-    `Hi ${d.firstName || 'there'} — deposit received, thank you! Your Auto Pals USA contract is waiting for your signature in the portal. Once you sign, your 60-day search officially begins: ${d.portalUrl || PORTAL_URL} ` +
+    `Hi ${d.firstName || 'there'} — deposit received, thank you! Your Auto Pals USA contract is waiting for your signature in the portal. Once you sign, your ${SEARCH_WINDOW_ADJ} search officially begins: ${d.portalUrl || PORTAL_URL} ` +
     `Reply STOP to opt out.`,
 
   // ─── PORTAL MESSAGE (client-facing) ─────────────────────────────

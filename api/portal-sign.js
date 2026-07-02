@@ -203,7 +203,10 @@ async function handleDocumentUpload(req, res, body) {
 
   // ── 4. Staff SMS (best-effort) ──────────────────────────────────
   try {
-    await sms.send('staff_portal_message', { clientName: `${clientName} — uploaded ${docLabel.toLowerCase()}` });
+    await sms.send('staff_doc_uploaded', {
+      clientName,
+      docLabel: docLabel.toLowerCase()
+    });
   } catch (e) { /* swallow */ }
 
   return res.status(200).json({
@@ -292,7 +295,7 @@ async function handleApproveQuote(req, res, body) {
 
   // Best-effort staff notification — same pattern as document upload.
   try {
-    await sms.send('staff_portal_message', { clientName: `${fullName} — approved reconditioning quote` });
+    await sms.send('staff_quote_approved', { clientName: fullName });
   } catch (e) { /* swallow */ }
 
   return res.status(200).json({ ok: true, approvedAt: nowIso });
