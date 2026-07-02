@@ -3456,7 +3456,7 @@
       const initials = escapeHtml(((r.firstName||'?')[0] + (r.lastName||'?')[0]).toUpperCase());
       const rawPreview = last ? last.text.slice(0, 45) + (last.text.length > 45 ? '…' : '') : 'No messages yet';
       const preview = escapeHtml(rawPreview);
-      const time = last ? new Date(last.ts).toLocaleDateString('en-US', { month:'short', day:'numeric' }) : '';
+      const time = last ? new Date(last.ts).toLocaleDateString('en-US', { timeZone: 'America/New_York', month:'short', day:'numeric' }) : '';
       const unread = msgs.filter(m => m.from === 'client' && !m.read).length;
       const isActive = r.id === activeMessageReqId;
       const dot = statusColor[r.status] || '#64748b';
@@ -3531,7 +3531,7 @@
       return;
     }
     thread.innerHTML = msgs.map(m => {
-      const time = new Date(m.ts).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+      const time = new Date(m.ts).toLocaleString('en-US', { timeZone: 'America/New_York', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' }) + ' EST';
       const safeText = escapeHtml(m.text);
       // Only allow image if it's a data URL we stored ourselves (not arbitrary external)
       const safeImg = (m.image && String(m.image).startsWith('data:image/')) ? m.image : null;
@@ -4449,7 +4449,7 @@
       const statusClass = { new: 'status-new', review: 'status-review', qualified: 'status-qualified', rejected: 'status-rejected', called: 'status-called', searching: 'status-searching', psi: 'status-psi', in_repair: 'status-in_repair', awaiting_paperwork: 'status-awaiting_paperwork', sold: 'status-sold' }[r.status] || 'status-new';
       const dotClass = { new: 'dot-new', review: 'dot-review', qualified: 'dot-qualified', rejected: 'dot-rejected', called: 'dot-called', searching: 'dot-searching', psi: 'dot-psi', in_repair: 'dot-in_repair', awaiting_paperwork: 'dot-awaiting_paperwork', sold: 'dot-sold' }[r.status] || 'dot-new';
       const statusLabel = statusLabels[r.status] || r.status || '—';
-      const date = new Date(r.submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const date = new Date(r.submitted).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
       const vehicle = [r.make, r.model].filter(v => v && v !== '—').join(' ') || '—';
       const budget = r.budgetMax ? '$' + Number(r.budgetMax).toLocaleString() : '—';
       const years = r.yearFrom === r.yearTo ? r.yearFrom : r.yearFrom + '–' + r.yearTo;
@@ -4526,7 +4526,7 @@
     document.getElementById('dv-name').innerHTML = `${escapeHtml(r.firstName + ' ' + r.lastName)}${callBadge(r)}${skipBadge}`;
     const dvStatusLabel = { new:'New', review:'In Review', qualified:'Qualified', called:'Called', searching:'Actively Searching', psi:'PSI Period', in_repair:'In Repair', awaiting_paperwork:'Awaiting Paperwork', rejected:'Rejected', sold:'Sold', dormant:'Dormant' }[r.status] || (r.status || 'new');
     const psiSub = r.status === 'psi' && r.psiCar ? ` · 🚗 ${escapeHtml(r.psiCar)}` : '';
-    document.getElementById('dv-sub').innerHTML = `Submitted ${new Date(r.submitted).toLocaleDateString()} · Status: ${escapeHtml(dvStatusLabel)}${psiSub}`;
+    document.getElementById('dv-sub').innerHTML = `Submitted ${new Date(r.submitted).toLocaleDateString('en-US', { timeZone: 'America/New_York' })} · Status: ${escapeHtml(dvStatusLabel)}${psiSub}`;
 
     // Awaiting Paperwork → Sold one-click finalize CTA.
     const awaitCta = document.getElementById('dv-awaiting-cta');
@@ -4625,7 +4625,7 @@
                + `<span style="font-size:12px;">${escapeHtml(label)} <em style="color:#94a3b8;">— not uploaded</em></span>`
                + `</div>`;
         }
-        const when = new Date(d.uploaded_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const when = new Date(d.uploaded_at).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' });
         const size = Number.isFinite(d.size_kb) ? `${d.size_kb} KB` : '';
         const filename = d.filename ? ` · ${escapeHtml(String(d.filename).slice(0, 40))}` : '';
         const isImage = d.mime_type && d.mime_type.startsWith('image/');
@@ -4698,7 +4698,7 @@
       document.getElementById('dv-deposit-pending').style.display = 'none';
       document.getElementById('dv-deposit-confirmed').style.display = 'block';
       const when = r.depositReceivedAt || r.depositDate;
-      if (when) document.getElementById('dv-deposit-date').textContent = '· ' + new Date(when).toLocaleDateString();
+      if (when) document.getElementById('dv-deposit-date').textContent = '· ' + new Date(when).toLocaleDateString('en-US', { timeZone: 'America/New_York' }) + ' EST';
     } else {
       document.getElementById('dv-deposit-pending').style.display = 'flex';
       document.getElementById('dv-deposit-confirmed').style.display = 'none';
@@ -4708,7 +4708,7 @@
     if (r.contractSignedAt) {
       document.getElementById('dv-contract-pending').style.display = 'none';
       document.getElementById('dv-contract-signed').style.display = 'block';
-      const meta = '· ' + new Date(r.contractSignedAt).toLocaleDateString() + (r.contractSignatureName ? ' by ' + r.contractSignatureName : '');
+      const meta = '· ' + new Date(r.contractSignedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' }) + ' EST' + (r.contractSignatureName ? ' by ' + r.contractSignatureName : '');
       document.getElementById('dv-contract-meta').textContent = meta;
     } else {
       document.getElementById('dv-contract-pending').style.display = 'block';

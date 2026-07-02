@@ -14,12 +14,15 @@
 // If creds are missing, every sync call is a no-op that logs intent —
 // preserves dev/CI/preview-without-env paths without breaking callers.
 
-const PIPEDRIVE_PIPELINE_ID = 1;  // "Pipeline" (the default + only)
+// Pipeline + stage ids are hardcoded defaults matching the current
+// Auto Pals Pipedrive layout, but env-overridable so a future pipeline
+// reorder doesn't silently misroute deals — set PIPEDRIVE_PIPELINE_ID
+// and/or PIPEDRIVE_STAGE_MAP_JSON in Vercel to override without a code
+// push. STAGE_MAP_JSON expects a JSON object mapping our status keys to
+// numeric stage ids, e.g. '{"new":11,"qualified":13,...}'.
+const PIPEDRIVE_PIPELINE_ID = Number(process.env.PIPEDRIVE_PIPELINE_ID) || 1;
 
-// Status → stage mapping. Our dashboard statuses are the keys; Pipedrive
-// stage ids are the values. Anything not listed stays at the deal's
-// current stage (so a manual move in Pipedrive isn't clobbered).
-const STATUS_TO_STAGE = {
+const DEFAULT_STATUS_TO_STAGE = {
   new:                 1,   // New Lead
   review:              1,   // (treat in-review same as new)
   qualified:           3,   // Qualified (Call Complete)
@@ -31,6 +34,19 @@ const STATUS_TO_STAGE = {
   sold:                5,   // (won — we also flip status:'won' on the deal)
   rejected:            6    // Lost / Disqualified
 };
+
+const STATUS_TO_STAGE = (() => {
+  const raw = process.env.PIPEDRIVE_STAGE_MAP_JSON;
+  if (!raw) return DEFAULT_STATUS_TO_STAGE;
+  try {
+    const parsed = JSON.parse(raw);
+    // Merge over defaults so a partial override doesn't nuke unset keys.
+    return { ...DEFAULT_STATUS_TO_STAGE, ...parsed };
+  } catch (e) {
+    console.warn('[pipedrive] PIPEDRIVE_STAGE_MAP_JSON parse failed, using defaults:', e && e.message);
+    return DEFAULT_STATUS_TO_STAGE;
+  }
+})();
 
 function base() {
   const dom = process.env.PIPEDRIVE_COMPANY_DOMAIN;
@@ -76,14 +92,16 @@ function buildDealPayload(req, personId) {
   };
 }
 
-// Create a Person if one doesn't exist for this phone/email, else
-// return the existing one. Idempotent — safe to call on repeated
-// syncs.
+// Create a Person if one doesn't exist for this phone/email, else return
+// the existing one. Idempotent — safe to call on repeated syncs. Dedupes
+// by email FIRST, then falls back to phone so a phone-only lead (no
+// email captured) doesn't spawn a duplicate Person on every subsequent
+// status change.
 async function findOrCreatePerson(req) {
   const url = base();
   const tok = tokenSuffix();
   if (!url || !tok) return null;
-  // 1) Search by email first (more reliable than phone for de-dupe)
+  // 1) Search by email (best dedupe key when we have it)
   if (req.email) {
     try {
       const sr = await fetch(`${url}/persons/search${tok}&term=${encodeURIComponent(req.email)}&fields=email&exact_match=true`);
@@ -91,10 +109,25 @@ async function findOrCreatePerson(req) {
       const existing = (sj.data && sj.data.items && sj.data.items[0] && sj.data.items[0].item) || null;
       if (existing && existing.id) return existing.id;
     } catch (e) {
-      console.warn('[pipedrive] person search failed', e && e.message);
+      console.warn('[pipedrive] person email-search failed', e && e.message);
     }
   }
-  // 2) Create new
+  // 2) Fall back to phone-based dedupe. Phone-only leads (form submitted
+  // without an email) would otherwise create a fresh Person on every
+  // status change, littering the CRM with duplicates. exact_match=false
+  // lets Pipedrive tolerate minor formatting differences (+15551234567
+  // vs 555-123-4567) since we don't normalize numbers at sync time.
+  if (req.phone) {
+    try {
+      const sr = await fetch(`${url}/persons/search${tok}&term=${encodeURIComponent(req.phone)}&fields=phone&exact_match=false`);
+      const sj = await sr.json().catch(() => ({}));
+      const existing = (sj.data && sj.data.items && sj.data.items[0] && sj.data.items[0].item) || null;
+      if (existing && existing.id) return existing.id;
+    } catch (e) {
+      console.warn('[pipedrive] person phone-search failed', e && e.message);
+    }
+  }
+  // 3) Create new
   try {
     const cr = await fetch(`${url}/persons${tok}`, {
       method: 'POST',

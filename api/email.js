@@ -276,8 +276,8 @@ ${footer(d)}`)
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};margin-bottom:16px;">Receipt</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;">
 <tr><td style="padding:8px 0;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">Amount</td><td style="padding:8px 0;color:${BRAND.ink};font-weight:600;text-align:right;border-bottom:1px solid ${BRAND.border};">$850.00</td></tr>
-<tr><td style="padding:8px 0;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">Date</td><td style="padding:8px 0;color:${BRAND.ink};font-weight:600;text-align:right;border-bottom:1px solid ${BRAND.border};">${d.depositDate}</td></tr>
-<tr><td style="padding:8px 0;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">Reference</td><td style="padding:8px 0;color:${BRAND.navy};font-weight:700;text-align:right;font-size:12px;border-bottom:1px solid ${BRAND.border};">${d.depositRef}</td></tr>
+<tr><td style="padding:8px 0;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">Date</td><td style="padding:8px 0;color:${BRAND.ink};font-weight:600;text-align:right;border-bottom:1px solid ${BRAND.border};">${d.depositDate || '—'}</td></tr>
+<tr><td style="padding:8px 0;color:${BRAND.muted};border-bottom:1px solid ${BRAND.border};">Reference</td><td style="padding:8px 0;color:${BRAND.navy};font-weight:700;text-align:right;font-size:12px;border-bottom:1px solid ${BRAND.border};">${d.depositRef || '—'}</td></tr>
 <tr><td style="padding:8px 0;color:${BRAND.muted};">Search window</td><td style="padding:8px 0;color:${BRAND.ink};font-weight:600;text-align:right;">60 days</td></tr>
 <tr><td style="padding:14px 0 0;color:${BRAND.ink};font-weight:700;font-size:15px;border-top:2px solid ${BRAND.border};">Total paid</td><td style="padding:14px 0 0;color:${BRAND.navy};font-weight:700;font-size:16px;text-align:right;border-top:2px solid ${BRAND.border};">$850.00</td></tr>
 </table>

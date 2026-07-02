@@ -12,12 +12,16 @@
 const sms = require('./_sms.js');
 const { verifyToken } = require('./auth.js');
 
-// Legacy type aliases — the dashboard already calls these. Keep them working.
+// Legacy type aliases — kept ONLY for template names that still exist in
+// _sms.js TEMPLATES. new_request / rejected were mapped to staff_new_request
+// and staff_rejected which were removed in the 2026-07-01 SMS overhaul
+// (email-only on sign-up and auto-rejection). If a stale dashboard cache
+// posts those aliases now, sms.send() returns { ok:false, error:'unknown_type' }
+// — which the response will surface — rather than routing to a template
+// that no longer exists.
 const LEGACY_ALIASES = {
-  new_request:      'staff_new_request',
   deposit_received: 'staff_deposit_received',
-  booking_made:     'staff_booking_made',
-  rejected:         'staff_rejected'
+  booking_made:     'staff_booking_made'
 };
 
 module.exports = async function handler(req, res) {

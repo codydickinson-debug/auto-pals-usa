@@ -256,7 +256,7 @@ module.exports = async function handler(req, res) {
   //   1. Staff email notification  (you need to know calls were booked)
   //   2. Google Calendar event     (you need to see the call on your day)
   //   3. Client confirmation email (clients also get this from the form)
-  //   4. Staff SMS                 (currently A2P-blocked; logs only)
+  //   4. Staff SMS                 (Salesmsg — live since 2026-06-30)
   //
   // The handler doesn't error on any one of these failing — we report
   // what worked and what didn't in the response so the client UI can

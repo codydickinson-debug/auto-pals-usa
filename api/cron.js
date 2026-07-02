@@ -265,10 +265,13 @@ module.exports = async function handler(req, res) {
         }
 
         // ── DORMANT RE-ENGAGEMENT ──
-        // Long-term campaign for clients who never deposited. Independent of
-        // the booking/deposit drips above so it picks up after they exhaust.
-        // Stops the moment deposit_paid flips true.
-        if (!r.deposit_paid) {
+        // Long-term campaign for clients who never even booked the intro
+        // call. Copy explicitly pushes "book your call" so we gate on
+        // !call_completed_at as well — otherwise a client who already did
+        // the intro but hasn't deposited would get contradictory "book your
+        // call" nudges. Also skip skip_the_line (their call_completed_at
+        // is auto-set at form submit but they never actually had a call).
+        if (!r.deposit_paid && !r.call_completed_at && !r.skip_the_line) {
           const h = hoursSince(r.submitted);
           if (h !== null) {
             const dormantArr = Array.isArray(r.dormant_reminders_sent) ? r.dormant_reminders_sent : [];

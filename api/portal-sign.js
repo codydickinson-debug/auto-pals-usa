@@ -109,50 +109,20 @@ async function handleDocumentUpload(req, res, body) {
 
   const docLabel = DOC_LABELS[docKey];
   const clientName = `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'A client';
-
-  // Fire the staff email with the file as an attachment. sendTemplate is
-  // synchronous-ish (single attempt + retries inside) and we await it so the
-  // portal sees a real success/failure response.
-  try {
-    const result = await email.sendTemplate('staffClientDocumentUploaded', {
-      clientName,
-      clientEmail: row.email,
-      clientPhone: row.phone,
-      portalCode,
-      docKey,
-      docLabel,
-      filename,
-      fileSizeKb: Math.max(1, Math.round(approxBytes / 1024)),
-      requestId: row.id,
-      attachments: [{
-        content:  fileB64,
-        filename, // SendGrid uses this as the visible attachment name
-        type:     mimeType,
-        disposition: 'attachment'
-      }]
-    });
-    if (!result || !result.ok) {
-      console.error('[portal-upload] email send failed', result);
-      return res.status(502).json({ error: 'email_send_failed' });
-    }
-  } catch (err) {
-    console.error('[portal-upload] email error', err && err.message);
-    return res.status(500).json({ error: 'email_error' });
-  }
-
-  // Persist upload metadata to the request row so the staff dashboard can
-  // show "✓ uploaded on DATE" badges in the client's profile detail view.
-  // Merge with whatever's already in documents_uploaded so a 2nd upload
-  // (e.g. clearer photo of the license) overwrites just its own slot
-  // without clobbering the other doc's record. Best-effort — never fail
-  // the upload response if Supabase hiccups.
   const fileSizeKb = Math.max(1, Math.round(approxBytes / 1024));
 
-  // ── Persist the actual file to Supabase Storage so the dashboard can
-  // render a thumbnail / download link instead of only "✓ uploaded".
-  // Bucket is private (RLS-bypassed via service role); the dashboard pulls
-  // signed URLs through /api/doc-url. Best-effort — failure here still
-  // leaves the metadata + email-attachment path intact.
+  // Ordering rationale (rewritten 2026-07-01 after audit):
+  //   1. Storage put   → CRITICAL. If this fails the client's file is lost.
+  //                      Bail with 502 so the portal shows "retry".
+  //   2. Metadata PATCH → CRITICAL. Without it the staff dashboard doesn't
+  //                       know the upload happened.
+  //   3. Staff email  → best-effort. Kept for the "ping with attachment"
+  //                     flow but a SendGrid 5xx no longer loses the file.
+  //   4. Staff SMS   → best-effort.
+  // Prior version fired email FIRST and 502'd on SendGrid 5xx — the client
+  // saw an error but their file had never been written anywhere.
+
+  // ── 1. Storage put ──────────────────────────────────────────────
   const ext = (filename.match(/\.[a-zA-Z0-9]+$/) || ['.bin'])[0].toLowerCase();
   const storagePath = `${row.id}/${docKey}_${Date.now()}${ext}`;
   let storageOk = false;
@@ -176,7 +146,13 @@ async function handleDocumentUpload(req, res, body) {
   } catch (err) {
     console.error('[portal-upload] storage put error', err && err.message);
   }
+  if (!storageOk) {
+    return res.status(502).json({ error: 'storage_failed' });
+  }
 
+  // ── 2. Persist upload metadata to the request row ──────────────
+  // Merge with whatever's already in documents_uploaded so a 2nd upload of
+  // the same doc (e.g. clearer photo) overwrites only its own slot.
   try {
     const existing = (row && row.documents_uploaded && typeof row.documents_uploaded === 'object')
       ? row.documents_uploaded
@@ -188,7 +164,7 @@ async function handleDocumentUpload(req, res, body) {
         filename,
         size_kb: fileSizeKb,
         mime_type: mimeType,
-        storage_path: storageOk ? storagePath : null
+        storage_path: storagePath
       }
     };
     const patchRes = await sb('PATCH', `requests?id=eq.${row.id}`, { documents_uploaded: merged });
@@ -199,8 +175,33 @@ async function handleDocumentUpload(req, res, body) {
     console.error('[portal-upload] documents_uploaded patch error', err && err.message);
   }
 
-  // Best-effort staff SMS — same pattern as portal messages. Failure here
-  // doesn't block the success response; the email is the always-arrives half.
+  // ── 3. Staff email (best-effort) ────────────────────────────────
+  try {
+    const result = await email.sendTemplate('staffClientDocumentUploaded', {
+      clientName,
+      clientEmail: row.email,
+      clientPhone: row.phone,
+      portalCode,
+      docKey,
+      docLabel,
+      filename,
+      fileSizeKb,
+      requestId: row.id,
+      attachments: [{
+        content:  fileB64,
+        filename, // SendGrid uses this as the visible attachment name
+        type:     mimeType,
+        disposition: 'attachment'
+      }]
+    });
+    if (!result || !result.ok) {
+      console.error('[portal-upload] email send failed (file still safe in Storage)', result);
+    }
+  } catch (err) {
+    console.error('[portal-upload] email error (file still safe in Storage)', err && err.message);
+  }
+
+  // ── 4. Staff SMS (best-effort) ──────────────────────────────────
   try {
     await sms.send('staff_portal_message', { clientName: `${clientName} — uploaded ${docLabel.toLowerCase()}` });
   } catch (e) { /* swallow */ }

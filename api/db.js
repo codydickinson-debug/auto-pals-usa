@@ -130,23 +130,6 @@ async function safeSendEmail(type, data) {
   }
 }
 
-// Fire-and-forget SMS — never block the DB response on the SMS provider.
-function fireSms(type, data) {
-  try {
-    Promise.resolve(sms.send(type, data)).catch(err =>
-      console.error('[DB→SMS]', type, err && err.message)
-    );
-  } catch (err) {
-    console.error('[DB→SMS sync]', type, err && err.message);
-  }
-}
-
-// Fire-and-forget email — never block the DB response on SendGrid.
-function fireEmail(type, data) {
-  // Always resolves (safeSendEmail catches everything).
-  return safeSendEmail(type, data);
-}
-
 // Build the human-readable vehicle/budget/year strings used in notifications.
 function vehicleStr(row) {
   if (!row.make) return 'Open Search';
@@ -976,7 +959,10 @@ module.exports = async function handler(req, res) {
 
     return res.status(400).json({ error: 'Unknown table' });
   } catch (err) {
-    console.error('DB error:', err);
-    return res.status(500).json({ error: err.message });
+    // Log the full error server-side but never surface the raw message to
+    // the client — Supabase errors include RLS policy names, column hints,
+    // and internal table schemas that shouldn't be public.
+    console.error('DB error:', err && err.stack || err);
+    return res.status(500).json({ error: 'internal_error' });
   }
 }
