@@ -744,7 +744,10 @@
                   '12:00 PM','12:30 PM','1:00 PM','1:30 PM','2:00 PM','2:30 PM',
                   '3:00 PM','3:30 PM','4:00 PM','4:30 PM'];
 
-  const MAX_PER_DAY = 5;
+  // Raised 5 → 10 on 2026-07-02 (owner request). Must match
+  // MAX_BOOKINGS_PER_DAY in api/db.js — the server is the enforcer; this
+  // constant only drives the calendar's full-day greying + "slots left" hint.
+  const MAX_PER_DAY = 10;
 
   // Bookings cache: { "YYYY-MM-DD": ["9:00 AM", "10:00 AM", ...] }
   const BOOKED = {};

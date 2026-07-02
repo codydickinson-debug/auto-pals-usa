@@ -892,8 +892,11 @@ module.exports = async function handler(req, res) {
         // (bookings_date_time_unique) so simultaneous POSTs for the same
         // (date, time) can't both succeed. The insert below catches the
         // resulting 23505 and returns 409 slot_taken.
+        // Cap raised 5 → 10 on 2026-07-02 (owner request). Must match
+        // MAX_PER_DAY in public/booking.html.
+        const MAX_BOOKINGS_PER_DAY = 10;
         const existing = await query('bookings', 'GET', null, `?date=eq.${body.date}`);
-        if (existing && existing.length >= 5) {
+        if (existing && existing.length >= MAX_BOOKINGS_PER_DAY) {
           return res.status(409).json({ error: 'day_full', count: existing.length });
         }
         const row = {
