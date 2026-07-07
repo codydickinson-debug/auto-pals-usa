@@ -116,7 +116,7 @@ module.exports = async function handler(req, res) {
   }
 
   const host = req.headers.host || 'auto-pals-usa.vercel.app';
-  const summary = { bookingRemindersSent: 0, depositRemindersSent: 0, smsRemindersSent: 0, dormantRemindersSent: 0, errors: [] };
+  const summary = { bookingRemindersSent: 0, depositRemindersSent: 0, smsRemindersSent: 0, dormantRemindersSent: 0, smsAttempted: 0, smsFailed: 0, errors: [] };
 
   try {
     // Pull all non-final-state requests (active ones where reminders could apply)
@@ -203,10 +203,14 @@ module.exports = async function handler(req, res) {
                   smsConsent: r.sms_consent,
                   bookingUrl: BOOKING_URL
                 });
+                // Consent skips don't count as attempts — only real sends.
+                if (!(result && result.skipped)) summary.smsAttempted++;
                 if (result && result.ok) {
                   smsSent.push(label);
                   await sb('requests', 'PATCH', { client_sms_reminders_sent: smsSent }, `?id=eq.${r.id}`);
                   summary.smsRemindersSent++;
+                } else if (result && !result.skipped) {
+                  summary.smsFailed++;
                 }
                 break; // one pre-call SMS per request per run
               }
@@ -239,10 +243,13 @@ module.exports = async function handler(req, res) {
                   phone:      r.phone,
                   smsConsent: r.sms_consent
                 });
+                if (!(result && result.skipped)) summary.smsAttempted++;
                 if (result && result.ok) {
                   smsSent.push(label);
                   await sb('requests', 'PATCH', { client_sms_reminders_sent: smsSent }, `?id=eq.${r.id}`);
                   summary.smsRemindersSent++;
+                } else if (result && !result.skipped) {
+                  summary.smsFailed++;
                 }
                 break; // one post-call SMS per request per run
               }
@@ -319,6 +326,27 @@ module.exports = async function handler(req, res) {
         }
       } catch (err) {
         summary.errors.push({ id: r.id, msg: err.message });
+      }
+    }
+
+    // ── SMS OUTAGE ALARM ─────────────────────────────────────────
+    // If we attempted sends and MOST failed, the pipeline is down (dead
+    // token, credits, provider outage). Email staff immediately — email
+    // is the independent channel, so this alert can't be silenced by the
+    // same failure it reports. This exists because the July 4-7 token
+    // expiry stalled the drip for 3 days with zero visible errors.
+    if (summary.smsAttempted > 0 && summary.smsFailed >= Math.max(3, summary.smsAttempted * 0.8)) {
+      console.error(`[CRON] SMS OUTAGE: ${summary.smsFailed}/${summary.smsAttempted} sends failed this run`);
+      try {
+        await sendEmail(host, 'systemAlert', {
+          alertTitle: 'SMS pipeline is failing',
+          alertBody: `Today's drip run attempted ${summary.smsAttempted} SMS sends and ${summary.smsFailed} failed. `
+            + `Most likely causes: the Salesmsg API token expired (mint a new one in Salesmsg → Settings → Developer → Personal Access Tokens, then update SALESMSG_API_KEY in Vercel), `
+            + `or the account is out of credits (check app.salesmessage.com → Settings → Plan & Billing). `
+            + `Failed sends are NOT marked as sent — they retry automatically on the next daily run once the pipeline is fixed.`
+        });
+      } catch (e) {
+        console.error('[CRON] outage alert email failed too:', e && e.message);
       }
     }
 

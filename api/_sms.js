@@ -40,29 +40,75 @@ const { DEPOSIT_STR, SEARCH_WINDOW_ADJ } = require('./_constants.js');
 
 const SALESMSG_BASE = 'https://api.salesmessage.com/pub/v2.3';
 
-// Personal Access Tokens expire ONE HOUR after being issued (per the
-// Salesmsg UI warning: "all new Personal Access Tokens created now expire
-// one hour after being received. You can use the new API method to update
-// these tokens."). To keep sends working without babysitting env vars, we:
-//   1. Track the "active" token in module memory (survives warm-Lambda
-//      invocations, which handle the bulk of traffic on Vercel).
-//   2. Before every send, if the active token is close to expiry, call
-//      POST /oauth/personal-token/refresh with the current token as Bearer
-//      to get a fresh 1-hour token.
-//   3. On a 401 from /messages (proves the token just aged out mid-flight
-//      or the refresh clock we track is off), refresh once and retry the
-//      send. Never retry more than once — infinite loops on a stuck seed
-//      would burn the rate limit.
+// ── Token lifecycle (v2, 2026-07-07) ────────────────────────────────
+// HISTORY: the original design kept the refreshed token only in lambda
+// module memory, falling back to the SALESMSG_API_KEY env seed on cold
+// starts. Salesmsg PATs hard-expire ~3 days after issue (the "Auto Pals
+// Backend" token was issued Jul 1 and died Jul 4), so once the seed
+// aged out, every cold-start send silently failed for days — the drip
+// stalled and new-lead welcomes stopped while the error feed stayed
+// clean because failures logged as console.warn.
 //
-// Cold starts: the seed token comes from SALESMSG_API_KEY. As long as the
-// seed isn't older than ~1 hour when the Lambda spins up, the first send
-// refreshes it and everything after uses the module-cached refreshed token.
-// If the site is quiet for > 1 hour and the module cache is gone, we fall
-// back to demo mode on that request (seed dead, no way to recover without
-// a human) — better than crashing user-visible flows. api/cron.js includes
-// a keep-alive refresh that runs daily; a more aggressive schedule can be
-// added if long dormant periods become a problem.
+// v2 design:
+//   1. The freshest token is PERSISTED in Supabase (app_config table,
+//      key 'salesmsg_token', service-role access only). Cold starts
+//      read it from there — the env seed only matters for first boot
+//      or disaster recovery.
+//   2. Every successful refresh writes the new token back to app_config.
+//   3. An hourly keep-alive (Supabase pg_cron → /api/sms-keepalive)
+//      refreshes the chain through quiet periods, since each refresh
+//      only extends the token ~1 hour.
+//   4. Refresh failures are console.ERROR now — they show up in the
+//      Vercel error feed instead of hiding as warnings.
+//   5. On a 401 from /messages, wipe cache, re-resolve, retry once.
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://phbdpvfdnxvzxpybfgbr.supabase.co';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_KEY
+  || process.env.SUPABASE_SERVICE_ROLE_KEY
+  || null; // no anon fallback: anon can't read/write app_config under RLS
+
 let _tokenCache = { value: null, expiresAt: 0 };
+
+async function loadPersistedToken() {
+  if (!SUPABASE_SERVICE_KEY) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/app_config?key=eq.salesmsg_token&select=value`, {
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Accept': 'application/json'
+      }
+    });
+    const rows = await res.json().catch(() => []);
+    return (Array.isArray(rows) && rows[0] && rows[0].value) || null;
+  } catch (e) {
+    console.error('[Salesmsg] persisted-token read failed:', e && e.message);
+    return null;
+  }
+}
+
+async function persistToken(token) {
+  if (!SUPABASE_SERVICE_KEY) {
+    console.error('[Salesmsg] cannot persist token — no service-role key configured');
+    return;
+  }
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/app_config`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify({ key: 'salesmsg_token', value: token, updated_at: new Date().toISOString() })
+    });
+    if (!res.ok) {
+      console.error('[Salesmsg] token persist failed:', res.status, (await res.text().catch(() => '')).slice(0, 150));
+    }
+  } catch (e) {
+    console.error('[Salesmsg] token persist error:', e && e.message);
+  }
+}
 
 async function refreshSalesmsgToken(currentToken) {
   const res = await fetch(`${SALESMSG_BASE}/oauth/personal-token/refresh`, {
@@ -74,29 +120,42 @@ async function refreshSalesmsgToken(currentToken) {
   });
   const j = await res.json().catch(() => ({}));
   if (!res.ok || !j.access_token) {
-    console.warn('[Salesmsg] token refresh failed', res.status, JSON.stringify(j).slice(0, 200));
+    console.error('[Salesmsg] TOKEN REFRESH FAILED', res.status, JSON.stringify(j).slice(0, 200),
+      '— if this repeats, the chain is dead: mint a new PAT in Salesmsg (Settings → Developer) and update SALESMSG_API_KEY in Vercel.');
     return null;
   }
-  // expires_in is seconds. Cap our refresh horizon at 55 min so we always
-  // refresh comfortably before the token actually dies.
+  // expires_in is seconds. Cap our in-memory horizon at 55 min so we
+  // always refresh comfortably before the ~1h extension dies.
   const secs = Number(j.expires_in) || 3600;
   const horizonMs = Math.min(secs, 3600) * 1000 - 5 * 60 * 1000;
   _tokenCache = { value: j.access_token, expiresAt: Date.now() + horizonMs };
-  console.log('[Salesmsg] token refreshed, valid ~', Math.round(horizonMs / 60000), 'min');
+  await persistToken(j.access_token);
+  console.log('[Salesmsg] token refreshed + persisted, valid ~', Math.round(horizonMs / 60000), 'min');
   return j.access_token;
 }
 
 async function activeToken() {
-  const seed = process.env.SALESMSG_API_KEY;
-  if (!seed) return null;
+  // 1. Warm-lambda fast path.
   if (_tokenCache.value && Date.now() < _tokenCache.expiresAt) {
     return _tokenCache.value;
   }
-  // Cache empty or expired — refresh using whatever we last had, falling
-  // back to the seed on cold starts.
-  const base = _tokenCache.value || seed;
-  const refreshed = await refreshSalesmsgToken(base);
-  return refreshed || seed;
+  // 2. Cold start / stale cache: try the persisted token first — it's the
+  //    freshest one ANY lambda instance has seen.
+  const persisted = await loadPersistedToken();
+  if (persisted) {
+    const refreshed = await refreshSalesmsgToken(persisted);
+    if (refreshed) return refreshed;
+    // Persisted token dead too (quiet gap > 1h and keep-alive missed) —
+    // fall through to the env seed as last resort.
+  }
+  // 3. Env seed (fresh deploy or disaster recovery).
+  const seed = process.env.SALESMSG_API_KEY;
+  if (!seed) return null;
+  const refreshed = await refreshSalesmsgToken(seed);
+  if (refreshed) return refreshed;
+  // 4. Nothing refreshes. Return the seed so the send attempt itself
+  //    surfaces the 401 (which logs loudly), rather than silently demoing.
+  return seed;
 }
 
 function staffNumbers() {

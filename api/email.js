@@ -814,6 +814,23 @@ ${footer(d)}`)
 
   // Staff fan-out when a CLIENT replies in their portal. Pairs with the
   // staff_portal_message SMS.
+  // Generic ops alarm — staff-facing, fired by automated health checks
+  // (first user: api/cron.js's SMS-outage alarm). Deliberately plain and
+  // urgent-looking; this is a pager, not marketing.
+  systemAlert: (d) => ({
+    subject: `🚨 Auto Pals system alert: ${d.alertTitle || 'automated check failed'}`,
+    html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:#b91c1c;line-height:1.3;margin-bottom:8px;">🚨 ${d.alertTitle || 'System alert'}</div>
+</td></tr>
+<tr><td style="padding:0 40px 22px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fef2f2;border-left:3px solid #b91c1c;border-radius:0 8px 8px 0;"><tr><td style="padding:16px 20px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.ink};line-height:1.7;white-space:pre-wrap;word-wrap:break-word;">${(d.alertBody || '').slice(0, 3000)}</div>
+</td></tr></table>
+</td></tr>
+${footer(d)}`)
+  }),
+
   staffPortalMessage: (d) => ({
     subject: `💬 New portal message from ${d.clientName || 'a client'}`,
     html: shell(`${header()}
@@ -959,7 +976,8 @@ const STAFF_TEMPLATES = new Set([
   'staffDepositReceived',
   'staffPortalMessage',
   'staffContractSigned',
-  'staffClientDocumentUploaded'
+  'staffClientDocumentUploaded',
+  'systemAlert'
 ]);
 
 // Recipient resolution for staff templates. Anything that lands here is
