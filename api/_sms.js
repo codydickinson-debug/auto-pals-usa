@@ -443,6 +443,13 @@ const TEMPLATES = {
     `Book your free 30-min intro call so we can start sourcing your vehicle: ${d.bookingUrl || BOOKING_URL} ` +
     `Reply STOP to unsubscribe, HELP for help. Msg & data rates may apply.`,
 
+  // ─── CALL REMINDER (~1 hour before the booked slot) ──────────────
+  // Fires from api/call-reminders.js via the 10-minute pg_cron ticker.
+  // One per booking, enforced by bookings.reminder_sms_sent_at.
+  client_call_reminder: (d) =>
+    `Hi ${d.firstName || 'there'} — quick reminder from Alex & Josh at Auto Pals USA: your intro call is at ${d.time} EST today, about an hour from now. We'll call you at this number. Need to reschedule? ${d.bookingUrl || BOOKING_URL} ` +
+    `Reply STOP to opt out.`,
+
   // ─── PRE-CALL 4-DAY FOLLOW-UP DRIP ───────────────────────────────
   // Fires from the daily cron for leads that have submitted the form but
   // haven't booked a call yet. Auto-stops the moment booking_confirmed_at
