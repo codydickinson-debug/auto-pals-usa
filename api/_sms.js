@@ -229,10 +229,58 @@ async function sendOne(to, body) {
       console.warn('[Salesmsg] send failed', r.status, dest, err);
       return { ok: false, error: err, status: r.status };
     }
+    // Success line (with the Salesmsg message id) so delivery forensics
+    // don't depend on failures being the only thing that ever logs.
+    console.log('[Salesmsg] sent', dest, 'id', (r.body && r.body.id) || '?');
     return { ok: true, sid: r.body && r.body.id, status: r.body && r.body.status };
   } catch (e) {
     console.error('[Salesmsg] send exception', dest, e && e.message);
     return { ok: false, error: e && e.message ? e.message : 'unknown_error' };
+  }
+}
+
+// ── Opt-out flip ────────────────────────────────────────────────────
+// Sets sms_consent=false on every requests row whose phone ends with the
+// same 10 digits. Salesmsg enforces STOP on its side the moment a contact
+// replies, but our DB never heard about it — so the cron kept attempting
+// opted-out contacts forever and every attempt landed as a red "Failed"
+// thread in the inbox. Called by api/salesmsg-webhook.js (real-time) and
+// api/sms-consent-sync.js (batch reconcile). send()'s consent gate treats
+// explicit false as a hard block, so one flip silences every drip and
+// instant send for that person.
+async function optOutPhone(phone) {
+  if (!SUPABASE_SERVICE_KEY) {
+    console.error('[SMS optout] no service-role key configured — cannot flip consent');
+    return { ok: false, matched: 0, error: 'no_service_key' };
+  }
+  const digits = String(phone || '').replace(/\D/g, '');
+  const last10 = digits.slice(-10);
+  if (last10.length < 10) return { ok: false, matched: 0, error: 'bad_phone' };
+  try {
+    // Rows store phones loosely (bare 10-digit, +1..., formatted) — match
+    // any value ending in the same 10 digits. like.* also matches the bare
+    // 10-digit value itself.
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/requests?phone=like.*${last10}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({ sms_consent: false })
+    });
+    const rows = await res.json().catch(() => []);
+    const matched = Array.isArray(rows) ? rows.length : 0;
+    if (!res.ok) {
+      console.error('[SMS optout] consent flip failed', res.status, 'for …' + last10.slice(-4));
+      return { ok: false, matched: 0, error: `http_${res.status}` };
+    }
+    console.log('[SMS optout] …' + last10.slice(-4), '→ sms_consent=false on', matched, 'request row(s)');
+    return { ok: true, matched };
+  } catch (e) {
+    console.error('[SMS optout] error:', e && e.message);
+    return { ok: false, matched: 0, error: e && e.message };
   }
 }
 
@@ -434,6 +482,7 @@ module.exports = {
   sendToClient,
   sendOne,
   activeToken,
+  optOutPhone,
   staffNumbers,
   normalize,
   TEMPLATES,

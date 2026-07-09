@@ -95,6 +95,24 @@ function hoursSince(iso) {
   return (Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60);
 }
 
+// Retire numbers Salesmsg can never deliver to. A junk/foreign phone fails
+// with the same 4xx on every run, so without this the drip re-attempts it
+// daily forever and each attempt lands another red "Failed" thread in the
+// inbox. Stamping 'undeliverable' removes the request from BOTH drips
+// (checked at each loop entry). Auth/rate/server errors (401/403/429/5xx)
+// are transient — those still retry on the next run.
+const PERMANENT_SMS_STATUS = new Set([400, 404, 410, 422]);
+async function retireIfUndeliverable(r, result, smsSent) {
+  if (!PERMANENT_SMS_STATUS.has(result && result.status)) return;
+  smsSent.push('undeliverable');
+  try {
+    await sb('requests', 'PATCH', { client_sms_reminders_sent: smsSent }, `?id=eq.${r.id}`);
+    console.warn(`[CRON] ${r.id} (${r.phone}) permanently undeliverable (${result.status} ${result.error || ''}) — retired from SMS drips`);
+  } catch (e) {
+    console.warn(`[CRON] failed to stamp undeliverable for ${r.id}:`, e && e.message);
+  }
+}
+
 module.exports = async function handler(req, res) {
   // Verify this is actually Vercel calling us (not some random visitor).
   // Prior version soft-failed when CRON_SECRET was unset — anyone could
@@ -191,7 +209,7 @@ module.exports = async function handler(req, res) {
           // source the Toyota 4Runner you're after..."
           if (r.phone) {
             const smsSent = Array.isArray(r.client_sms_reminders_sent) ? r.client_sms_reminders_sent : [];
-            for (let i = 0; i < BOOKING_SMS_REMINDER_HOURS.length; i++) {
+            for (let i = 0; i < BOOKING_SMS_REMINDER_HOURS.length && !smsSent.includes('undeliverable'); i++) {
               const threshold = BOOKING_SMS_REMINDER_HOURS[i];
               const label = `pre${i + 1}`;
               if (h >= threshold && !smsSent.includes(label)) {
@@ -211,6 +229,7 @@ module.exports = async function handler(req, res) {
                   summary.smsRemindersSent++;
                 } else if (result && !result.skipped) {
                   summary.smsFailed++;
+                  await retireIfUndeliverable(r, result, smsSent);
                 }
                 break; // one pre-call SMS per request per run
               }
@@ -232,7 +251,7 @@ module.exports = async function handler(req, res) {
           const hCall = hoursSince(r.call_completed_at);
           if (hCall !== null) {
             const smsSent = Array.isArray(r.client_sms_reminders_sent) ? r.client_sms_reminders_sent : [];
-            for (let i = 0; i < POSTCALL_SMS_REMINDER_HOURS.length; i++) {
+            for (let i = 0; i < POSTCALL_SMS_REMINDER_HOURS.length && !smsSent.includes('undeliverable'); i++) {
               const threshold = POSTCALL_SMS_REMINDER_HOURS[i];
               const label = `post${i + 1}`;
               if (hCall >= threshold && !smsSent.includes(label)) {
@@ -250,6 +269,7 @@ module.exports = async function handler(req, res) {
                   summary.smsRemindersSent++;
                 } else if (result && !result.skipped) {
                   summary.smsFailed++;
+                  await retireIfUndeliverable(r, result, smsSent);
                 }
                 break; // one post-call SMS per request per run
               }
