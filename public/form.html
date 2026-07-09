@@ -166,8 +166,36 @@
     padding: 0 24px 80px;
   }
   .form-header { margin-bottom: 32px; }
-  .form-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; color: var(--navy); }
-  .form-header p { color: var(--text-muted); font-size: 15px; line-height: 1.6; font-family: system-ui, sans-serif; }
+  .form-eyebrow {
+    display: inline-block;
+    font-family: system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-bright);
+    background: var(--accent-light);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+  .form-header h1 { font-size: 30px; font-weight: 700; margin-bottom: 10px; color: var(--navy); letter-spacing: -0.01em; line-height: 1.12; }
+  .form-header p { color: var(--text-muted); font-size: 15px; line-height: 1.6; font-family: system-ui, sans-serif; max-width: 560px; }
+  .trust-strip { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+  .trust-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--navy);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 7px 13px;
+    border-radius: 999px;
+  }
+  .trust-item .ti-ico { font-size: 13px; line-height: 1; }
 
   .form-card {
     background: var(--surface);
@@ -281,25 +309,68 @@
     gap: 12px;
   }
 
+  /* Must-Have Features — selectable chips (same visual family as the
+     referral grid). The native <input type=checkbox> stays as the data
+     source (submit reads .checkbox-group input:checked); it's just
+     restyled into a custom tick so the whole label reads as a chip. */
   .checkbox-group {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+    gap: 10px;
   }
   .checkbox-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
     font-family: system-ui, sans-serif;
     font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
     cursor: pointer;
+    transition: border-color 150ms var(--ease-out), background 150ms var(--ease-out),
+                color 150ms var(--ease-out), transform 120ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .checkbox-item:hover { border-color: var(--accent); background: rgba(15,37,87,0.03); }
+  }
+  .checkbox-item:active { transform: scale(0.98); }
+  .checkbox-item:has(input:checked) {
+    border-color: var(--accent);
+    background: rgba(15,37,87,0.05);
+    color: var(--navy);
   }
   .checkbox-item input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    margin: 0;
     flex-shrink: 0;
+    border: 1.5px solid var(--border);
+    border-radius: 5px;
+    background: #fff;
     cursor: pointer;
-    accent-color: var(--accent);
+    position: relative;
+    transition: border-color 150ms var(--ease-out), background 150ms var(--ease-out);
+  }
+  .checkbox-item input[type="checkbox"]:checked {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+  .checkbox-item input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 2px;
+    width: 4px;
+    height: 8px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
   }
 
   /* Payment method radio cards */
@@ -1710,8 +1781,14 @@
 <div id="view-client" class="view active">
   <div class="form-page">
     <div class="form-header">
+      <span class="form-eyebrow">Vehicle Sourcing Request</span>
       <h1>Find Your Vehicle</h1>
       <p>Tell us what you're looking for and we'll source it through dealer-only auctions. A member of our team will follow up within 24 hours.</p>
+      <div class="trust-strip">
+        <span class="trust-item"><span class="ti-ico">🔑</span> Dealer-only auction access</span>
+        <span class="trust-item"><span class="ti-ico">🛡️</span> Licensed Florida dealer</span>
+        <span class="trust-item"><span class="ti-ico">💬</span> Free, no-obligation intro call</span>
+      </div>
     </div>
 
     <div class="form-card">
