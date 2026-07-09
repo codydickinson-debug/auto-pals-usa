@@ -38,6 +38,22 @@ function collectPhones(node, out, depth = 0) {
   }
 }
 
+// Salesmsg CONTACT ids, so the opted-out contact's thread can be closed
+// ("trashed out of the inbox", owner request 2026-07-09). A contact object
+// is recognized as "an object with an integer id that also carries a
+// phone-looking field" — resilient to the exact payload nesting.
+function collectContactIds(node, out, depth = 0) {
+  if (!node || typeof node !== 'object' || depth > 6) return;
+  const keys = Object.keys(node);
+  const hasPhone = keys.some(k => /phone|number/i.test(k) &&
+    (typeof node[k] === 'string' || typeof node[k] === 'number') &&
+    String(node[k]).replace(/\D/g, '').length >= 10);
+  if (hasPhone && Number.isInteger(node.id)) out.add(node.id);
+  for (const v of Object.values(node)) {
+    if (v && typeof v === 'object') collectContactIds(v, out, depth + 1);
+  }
+}
+
 module.exports = async function handler(req, res) {
   const expected = process.env.SALESMSG_WEBHOOK_SECRET;
   if (!expected) {
@@ -59,6 +75,8 @@ module.exports = async function handler(req, res) {
 
   const phones = new Set();
   collectPhones(body, phones);
+  const contactIds = new Set();
+  collectContactIds(body, contactIds);
 
   let matched = 0;
   const tails = [];
@@ -70,11 +88,19 @@ module.exports = async function handler(req, res) {
     matched += out.matched || 0;
   }
 
+  // Sweep the STOP thread out of the Open inbox (close, not delete).
+  let closed = 0;
+  for (const id of contactIds) {
+    const c = await sms.closeContactConversation(id);
+    closed += c.closed || 0;
+  }
+
   if (!phones.size) {
     console.warn('[optout-webhook] no phone field found in payload — top-level keys:',
       Object.keys(body).join(',') || '(empty)');
   } else {
-    console.log('[optout-webhook] opt-out event for', tails.join(' '), '—', matched, 'request row(s) flipped');
+    console.log('[optout-webhook] opt-out event for', tails.join(' '), '—', matched,
+      'request row(s) flipped,', closed, 'conversation(s) closed');
   }
-  return res.status(200).json({ ok: true, matched });
+  return res.status(200).json({ ok: true, matched, closed });
 };

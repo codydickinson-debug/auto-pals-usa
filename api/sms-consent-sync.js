@@ -94,7 +94,7 @@ module.exports = async function handler(req, res) {
         checked++;
         const digits = String(phone).replace(/\D/g, '');
         if (digits.endsWith(OWN_NUMBER_LAST10)) continue;
-        if (isOptedOut(c)) optedOut.push(phone);
+        if (isOptedOut(c)) optedOut.push({ phone, contactId: c.id });
       }
 
       const lastPage = j.meta && (j.meta.last_page || j.meta.total_pages);
@@ -102,20 +102,41 @@ module.exports = async function handler(req, res) {
     }
 
     let flipped = 0;
+    let closed = 0;
     const flips = [];
-    for (const p of optedOut) {
-      const out = await sms.optOutPhone(p);
+    for (const { phone, contactId } of optedOut) {
+      const out = await sms.optOutPhone(phone);
       flipped += out.matched || 0;
-      flips.push({ tail: '…' + String(p).replace(/\D/g, '').slice(-4), rows: out.matched || 0 });
+      // Sweep their thread out of the Open inbox too (close, not delete).
+      const c = await sms.closeContactConversation(contactId);
+      closed += c.closed || 0;
+      flips.push({ tail: '…' + String(phone).replace(/\D/g, '').slice(-4), rows: out.matched || 0, closed: c.closed || 0 });
     }
 
-    console.log(`[consent-sync] ${checked} contacts checked, ${optedOut.length} opted out, ${flipped} request row(s) flipped` +
+    // Optional inbox sweep: &closeFailed=1 closes every red "Failed"
+    // conversation for the team in one Salesmsg call (undeliverable junk
+    // numbers, unsubscribed-contact attempts from before the webhook).
+    let failedClosed = null;
+    if (req.query.closeFailed) {
+      const teamId = process.env.SALESMSG_TEAM_ID;
+      const fRes = await fetch(`${SALESMSG_BASE}/conversations/batch/close?team_id=${teamId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${await sms.activeToken()}`, 'Accept': 'application/json' }
+      });
+      const fBody = await fRes.json().catch(() => null);
+      failedClosed = fRes.ok ? (Array.isArray(fBody) ? fBody.length : true) : `http_${fRes.status}`;
+      console.log('[consent-sync] close-all-failed sweep →', failedClosed);
+    }
+
+    console.log(`[consent-sync] ${checked} contacts checked, ${optedOut.length} opted out, ${flipped} request row(s) flipped, ${closed} conversation(s) closed` +
       (pageError ? ` (WARNING: ${pageError})` : ''));
     return res.status(200).json({
       ok: !pageError,
       checked,
       optedOut: optedOut.length,
       flipped,
+      closed,
+      failedClosed,
       flips,
       warning: pageError || undefined,
       probe: req.query.probe ? probeSample : undefined

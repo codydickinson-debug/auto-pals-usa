@@ -284,6 +284,39 @@ async function optOutPhone(phone) {
   }
 }
 
+// ── Conversation close ──────────────────────────────────────────────
+// "Trash" an opted-out contact's thread out of the Open inbox (owner
+// request 2026-07-09: STOP replies were piling up as open conversations).
+// Salesmsg close ≠ delete: the thread moves to the Closed tab and can be
+// reopened, so nothing is lost. Takes the Salesmsg CONTACT id (from a
+// webhook payload or the contacts API), resolves their conversation, and
+// closes it for the whole team.
+async function closeContactConversation(contactId) {
+  if (!contactId) return { ok: false, error: 'no_contact_id' };
+  try {
+    const token = await activeToken();
+    if (!token) return { ok: false, error: 'no_token' };
+    const headers = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' };
+    const cRes = await fetch(`${SALESMSG_BASE}/contacts/${contactId}/conversations`, { headers });
+    if (cRes.status === 204) return { ok: true, closed: 0, note: 'no_conversation' };
+    const cBody = await cRes.json().catch(() => ({}));
+    if (!cRes.ok) return { ok: false, error: `lookup_http_${cRes.status}` };
+    const conv = cBody && (cBody.data || cBody);
+    const convId = conv && conv.id;
+    if (!convId) return { ok: true, closed: 0, note: 'no_conversation' };
+    const clRes = await fetch(`${SALESMSG_BASE}/conversations/${convId}/close`, { method: 'PUT', headers });
+    if (!clRes.ok) {
+      console.warn('[SMS optout] conversation close failed', clRes.status, 'contact', contactId);
+      return { ok: false, error: `close_http_${clRes.status}` };
+    }
+    console.log('[SMS optout] closed conversation', convId, 'for contact', contactId);
+    return { ok: true, closed: 1 };
+  } catch (e) {
+    console.error('[SMS optout] conversation close error:', e && e.message);
+    return { ok: false, error: e && e.message };
+  }
+}
+
 async function sendToStaff(body) {
   const nums = staffNumbers();
   if (!nums.length) {
@@ -483,6 +516,7 @@ module.exports = {
   sendOne,
   activeToken,
   optOutPhone,
+  closeContactConversation,
   staffNumbers,
   normalize,
   TEMPLATES,
