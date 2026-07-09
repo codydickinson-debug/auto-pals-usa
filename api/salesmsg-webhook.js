@@ -89,9 +89,16 @@ module.exports = async function handler(req, res) {
   }
 
   // Sweep the STOP thread out of the Open inbox (close, not delete).
+  // An opt-out event carries one contact; pair any collected phone with
+  // the id so the number-search fallback can kick in.
   let closed = 0;
+  const firstPhone = [...phones][0] || null;
   for (const id of contactIds) {
-    const c = await sms.closeContactConversation(id);
+    const c = await sms.closeContactConversation(id, firstPhone);
+    closed += c.closed || 0;
+  }
+  if (!contactIds.size && firstPhone) {
+    const c = await sms.closeContactConversation(null, firstPhone);
     closed += c.closed || 0;
   }
 

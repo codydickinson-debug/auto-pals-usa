@@ -108,9 +108,9 @@ module.exports = async function handler(req, res) {
       const out = await sms.optOutPhone(phone);
       flipped += out.matched || 0;
       // Sweep their thread out of the Open inbox too (close, not delete).
-      const c = await sms.closeContactConversation(contactId);
+      const c = await sms.closeContactConversation(contactId, phone);
       closed += c.closed || 0;
-      flips.push({ tail: '…' + String(phone).replace(/\D/g, '').slice(-4), rows: out.matched || 0, closed: c.closed || 0 });
+      flips.push({ tail: '…' + String(phone).replace(/\D/g, '').slice(-4), rows: out.matched || 0, closed: c.closed || 0, note: c.error || c.note });
     }
 
     // Optional inbox sweep: &closeFailed=1 closes every red "Failed"

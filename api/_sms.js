@@ -291,26 +291,53 @@ async function optOutPhone(phone) {
 // reopened, so nothing is lost. Takes the Salesmsg CONTACT id (from a
 // webhook payload or the contacts API), resolves their conversation, and
 // closes it for the whole team.
-async function closeContactConversation(contactId) {
-  if (!contactId) return { ok: false, error: 'no_contact_id' };
+function extractConversations(body) {
+  // API responses vary between a bare conversation object, {data: {...}},
+  // and {data: [...]} — normalize all three to an array of ids.
+  const raw = body && (body.data !== undefined ? body.data : body);
+  const arr = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' ? [raw] : []);
+  return arr.map(c => c && c.id).filter(Boolean);
+}
+
+async function closeContactConversation(contactId, phone) {
+  if (!contactId && !phone) return { ok: false, error: 'no_contact' };
   try {
     const token = await activeToken();
     if (!token) return { ok: false, error: 'no_token' };
     const headers = { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' };
-    const cRes = await fetch(`${SALESMSG_BASE}/contacts/${contactId}/conversations`, { headers });
-    if (cRes.status === 204) return { ok: true, closed: 0, note: 'no_conversation' };
-    const cBody = await cRes.json().catch(() => ({}));
-    if (!cRes.ok) return { ok: false, error: `lookup_http_${cRes.status}` };
-    const conv = cBody && (cBody.data || cBody);
-    const convId = conv && conv.id;
-    if (!convId) return { ok: true, closed: 0, note: 'no_conversation' };
-    const clRes = await fetch(`${SALESMSG_BASE}/conversations/${convId}/close`, { method: 'PUT', headers });
-    if (!clRes.ok) {
-      console.warn('[SMS optout] conversation close failed', clRes.status, 'contact', contactId);
-      return { ok: false, error: `close_http_${clRes.status}` };
+    let convIds = [];
+    let note = '';
+
+    if (contactId) {
+      const cRes = await fetch(`${SALESMSG_BASE}/contacts/${contactId}/conversations`, { headers });
+      note = `byContact_${cRes.status}`;
+      if (cRes.ok && cRes.status !== 204) {
+        convIds = extractConversations(await cRes.json().catch(() => null));
+      }
     }
-    console.log('[SMS optout] closed conversation', convId, 'for contact', contactId);
-    return { ok: true, closed: 1 };
+    // Fallback: search conversations by the last 10 digits of the number
+    // (same search the inbox UI uses). Catches shape/permission surprises
+    // in the by-contact endpoint.
+    if (!convIds.length && phone) {
+      const last10 = String(phone).replace(/\D/g, '').slice(-10);
+      const sRes = await fetch(`${SALESMSG_BASE}/conversations?query=${encodeURIComponent(last10)}&limit=10`, { headers });
+      note += ` search_${sRes.status}`;
+      if (sRes.ok) {
+        convIds = extractConversations(await sRes.json().catch(() => null));
+      }
+    }
+    if (!convIds.length) return { ok: true, closed: 0, note: `no_conversation ${note}`.trim() };
+
+    let closed = 0;
+    const errs = [];
+    for (const id of convIds) {
+      const clRes = await fetch(`${SALESMSG_BASE}/conversations/${id}/close`, { method: 'PUT', headers });
+      if (clRes.ok) closed++;
+      else errs.push(`close_${id}_http_${clRes.status}`);
+    }
+    if (closed) console.log('[SMS optout] closed', closed, 'conversation(s) for contact', contactId || phone);
+    if (errs.length) console.warn('[SMS optout] close errors:', errs.join(','));
+    return { ok: !errs.length, closed, note, error: errs.length ? errs.join(',') : undefined };
   } catch (e) {
     console.error('[SMS optout] conversation close error:', e && e.message);
     return { ok: false, error: e && e.message };
