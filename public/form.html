@@ -550,25 +550,166 @@
   }
   .submit-btn:active { transform: scale(0.98); }
 
-  /* Success state */
+  /* Success / confirmation state */
   .success-msg {
     display: none;
     text-align: center;
-    padding: 48px 32px;
+    padding: 44px 32px 40px;
   }
-  .success-icon {
-    width: 56px;
-    height: 56px;
-    background: var(--green-light);
+  .success-badge {
+    width: 66px;
+    height: 66px;
+    margin: 0 auto 18px;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 16px;
-    font-size: 24px;
+    background: var(--green-light);
+    display: grid;
+    place-items: center;
+    color: var(--green);
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 0 0 6px rgba(26,92,50,0.08);
+    animation: successPop 460ms var(--ease-out) both;
   }
-  .success-msg h2 { font-size: 22px; margin-bottom: 8px; }
-  .success-msg p { color: var(--text-muted); font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.6; }
+  .success-body { animation: successRise 460ms var(--ease-out) 90ms both; }
+  @keyframes successPop { from { transform: scale(0.82); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes successRise { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .success-badge, .success-body { animation: none; }
+  }
+  .success-msg h2 { font-size: 23px; margin-bottom: 8px; color: var(--navy); letter-spacing: -0.01em; }
+  .success-subhead { color: var(--text-muted); font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.6; max-width: 480px; margin: 0 auto 24px; }
+
+  .success-cta {
+    display: inline-block;
+    padding: 15px 30px;
+    background: var(--navy);
+    color: #f5f0e8;
+    border-radius: 12px;
+    text-decoration: none;
+    font-family: system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    box-shadow: 0 4px 14px rgba(15,37,87,0.18);
+    transition: transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out), background 150ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .success-cta:hover { background: var(--navy-mid); box-shadow: 0 6px 20px rgba(15,37,87,0.24); }
+  }
+  .success-cta:active { transform: scale(0.97); }
+
+  .success-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 22px auto 0;
+    max-width: 440px;
+    text-align: left;
+  }
+  .success-panel__eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    text-align: center;
+    font-family: system-ui, sans-serif;
+  }
+  .success-checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+  .success-checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .success-checklist li::before {
+    content: '✓';
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--green-light);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .success-avail {
+    font-family: system-ui, sans-serif;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 18px 0 24px;
+  }
+
+  .portal-ticket {
+    background: var(--navy);
+    border-radius: 14px;
+    padding: 18px 22px;
+    margin: 0 auto;
+    max-width: 340px;
+    text-align: center;
+    box-shadow: 0 6px 20px rgba(15,37,87,0.18);
+  }
+  .portal-ticket__label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(245,240,232,0.55);
+    margin-bottom: 10px;
+    font-family: system-ui, sans-serif;
+  }
+  .portal-ticket__row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .portal-ticket__code {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: #f5f0e8;
+    letter-spacing: 0.08em;
+  }
+  .portal-ticket__copy {
+    border: 1px solid rgba(245,240,232,0.28);
+    background: rgba(245,240,232,0.08);
+    color: #f5f0e8;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: system-ui, sans-serif;
+    transition: background 150ms var(--ease-out), transform 120ms var(--ease-out);
+  }
+  .portal-ticket__copy:hover { background: rgba(245,240,232,0.16); }
+  .portal-ticket__copy:active { transform: scale(0.95); }
+  .portal-ticket__note { font-size: 11px; color: rgba(245,240,232,0.55); line-height: 1.5; margin-top: 10px; }
+
+  .success-skip { font-size: 13px; color: var(--text-muted); margin: 22px 0 0; line-height: 1.6; }
+  .success-skip a { color: var(--navy); font-weight: 600; text-decoration: underline; }
+  .success-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+  .success-actions a, .success-actions button {
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 150ms var(--ease-out), border-color 150ms var(--ease-out),
+                color 150ms var(--ease-out), transform 120ms var(--ease-out);
+  }
+  .success-actions a { background: rgba(15,37,87,0.06); color: var(--navy); border: 1px solid transparent; }
+  .success-actions a:hover { background: rgba(15,37,87,0.10); }
+  .success-actions button { background: none; border: 1px solid var(--border); color: var(--text-muted); }
+  .success-actions button:hover { border-color: var(--accent); color: var(--navy); }
+  .success-actions a:active, .success-actions button:active { transform: scale(0.97); }
 
   /* ============ DASHBOARD VIEW ============ */
   .dash-layout {
@@ -2082,49 +2223,53 @@
            handler in JS rewrites headline/subhead/CTA based on req.skipTheLine
            so skip-the-line clients see a "go pay deposit" path instead. -->
       <div class="success-msg" id="success-msg">
-        <div class="success-icon">✓</div>
-        <h2 id="success-headline" style="margin-bottom:8px;">Got it — now book your call.</h2>
-        <p id="success-subhead" style="max-width:480px;margin:0 auto 24px;color:var(--text-muted);line-height:1.6;">A 30-min discovery call is the fastest way to lock in your search. Pick a time that works below.</p>
+        <div class="success-badge">✓</div>
+        <div class="success-body">
+          <h2 id="success-headline">Got it — now book your call.</h2>
+          <p id="success-subhead" class="success-subhead">A 30-min discovery call is the fastest way to lock in your search. Pick a time that works below.</p>
 
-        <!-- Primary CTA — book the call -->
-        <a id="primary-cta" href="booking.html"
-           onclick="try{track('success_primary_cta_click',{cta:(document.getElementById('primary-cta')||{}).textContent||''});}catch(e){}"
-           style="display:inline-block;padding:16px 32px;background:var(--navy);color:#f5f0e8;border-radius:12px;text-decoration:none;font-family:'DM Sans',system-ui,sans-serif;font-size:16px;font-weight:700;margin-bottom:20px;letter-spacing:0.01em;box-shadow:0 4px 14px rgba(15,37,87,0.18);">
-          📅 Book your 30-min call →
-        </a>
+          <!-- Primary CTA — book the call -->
+          <a id="primary-cta" class="success-cta" href="booking.html"
+             onclick="try{track('success_primary_cta_click',{cta:(document.getElementById('primary-cta')||{}).textContent||''});}catch(e){}">
+            📅 Book your 30-min call →
+          </a>
 
-        <!-- What you'll cover on the call -->
-        <div id="what-youll-learn" style="background:rgba(245,240,232,0.55);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin:0 auto 18px;max-width:460px;text-align:left;">
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;text-align:center;">On the call we'll cover</div>
-          <ul style="margin:0;padding-left:20px;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;color:var(--text);line-height:1.7;">
-            <li>What you can realistically expect to land for your budget</li>
-            <li>How auctions work and where the savings actually come from</li>
-            <li>Timeline — most clients see matches within 2–4 weeks</li>
-          </ul>
-        </div>
+          <!-- What you'll cover on the call -->
+          <div id="what-youll-learn" class="success-panel">
+            <div class="success-panel__eyebrow">On the call we'll cover</div>
+            <ul class="success-checklist">
+              <li>What you can realistically expect to land for your budget</li>
+              <li>How auctions work and where the savings actually come from</li>
+              <li>Timeline — most clients see matches within 2–4 weeks</li>
+            </ul>
+          </div>
 
-        <!-- Availability hint -->
-        <div id="availability-hint" style="font-family:'DM Sans',system-ui,sans-serif;font-size:12px;color:var(--text-muted);margin-bottom:24px;">
-          📅 Mon–Fri 9am–5pm EST &nbsp;•&nbsp; up to 10 call slots a day
-        </div>
+          <!-- Availability hint -->
+          <div id="availability-hint" class="success-avail">
+            📅 Mon–Fri 9am–5pm EST &nbsp;•&nbsp; up to 10 call slots a day
+          </div>
 
-        <!-- Portal code (smaller now, supporting role) -->
-        <div id="portal-code-box" style="background:var(--navy);border-radius:10px;padding:16px 22px;margin:0 auto 18px;max-width:320px;text-align:center;">
-          <div style="font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(245,240,232,0.5);margin-bottom:6px;">Your Portal Access Code</div>
-          <div id="portal-code-display" style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#f5f0e8;letter-spacing:0.12em;margin-bottom:4px;"></div>
-          <div style="font-size:11px;color:rgba(245,240,232,0.5);line-height:1.5;">Save this — needed to track your request</div>
-        </div>
+          <!-- Portal access code — clients must save this to track their request -->
+          <div id="portal-code-box" class="portal-ticket">
+            <div class="portal-ticket__label">Your Portal Access Code</div>
+            <div class="portal-ticket__row">
+              <span id="portal-code-display" class="portal-ticket__code"></span>
+              <button type="button" class="portal-ticket__copy" onclick="copyPortalCode(this)">Copy</button>
+            </div>
+            <div class="portal-ticket__note">Save this — you'll need it to track your request</div>
+          </div>
 
-        <!-- Skip-the-call alternative (hidden for skip-the-line submissions) -->
-        <p id="skip-cta-wrap" style="font-size:13px;color:var(--text-muted);margin:14px 0;line-height:1.6;">
-          Want to skip the call and start sourcing today?
-          <a href="portal.html" onclick="try{track('success_skip_pay_click');}catch(e){}" style="color:var(--navy);font-weight:600;text-decoration:underline;">Pay your $850 deposit →</a>
-        </p>
+          <!-- Skip-the-call alternative (hidden for skip-the-line submissions) -->
+          <p id="skip-cta-wrap" class="success-skip">
+            Want to skip the call and start sourcing today?
+            <a href="portal.html" onclick="try{track('success_skip_pay_click');}catch(e){}">Pay your $850 deposit →</a>
+          </p>
 
-        <!-- Secondary actions -->
-        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px;">
-          <a id="secondary-cta" href="portal.html" onclick="try{track('success_portal_click');}catch(e){}" style="padding:9px 18px;background:rgba(15,37,87,0.06);color:var(--navy);border-radius:8px;text-decoration:none;font-family:system-ui,sans-serif;font-size:13px;font-weight:600;">Go to portal</a>
-          <button class="submit-btn" style="max-width:160px;background:none;border:1px solid var(--border);color:var(--text-muted);padding:9px 18px;font-size:13px;" onclick="resetForm()">Submit Another</button>
+          <!-- Secondary actions -->
+          <div class="success-actions">
+            <a id="secondary-cta" href="portal.html" onclick="try{track('success_portal_click');}catch(e){}">Go to portal</a>
+            <button type="button" onclick="resetForm()">Submit another</button>
+          </div>
         </div>
       </div>
     </div>
@@ -4390,6 +4535,24 @@
     const rand = Array.from(buf, b => alphabet[b % alphabet.length]).join('');
     const suffix = String(id).slice(-3).padStart(3, '0');
     return `${prefix}-${rand}-${suffix}`;
+  }
+
+  // Copy the portal access code to the clipboard from the confirmation screen.
+  // Falls back gracefully (still flashes "Copied!") where the async Clipboard
+  // API is unavailable — the code is also visible on-screen to type manually.
+  function copyPortalCode(btn) {
+    const code = (document.getElementById('portal-code-display') || {}).textContent || '';
+    if (!code) return;
+    const flash = () => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = orig; }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(flash).catch(flash);
+    } else {
+      flash();
+    }
   }
 
   function resetForm() {
