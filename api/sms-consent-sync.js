@@ -62,10 +62,13 @@ module.exports = async function handler(req, res) {
     let probeSample = null;
     let pageError = null;
 
-    // ~420 contacts today; hard cap of 50 pages (5,000 contacts) keeps a
-    // pathological pagination loop inside the lambda time budget.
-    for (let page = 1; page <= 50; page++) {
-      const r = await fetch(`${SALESMSG_BASE}/contacts?page=${page}&per_page=100`, {
+    // ~420 contacts today; hard cap of 60 pages keeps a pathological
+    // pagination loop inside the lambda time budget. The API ignores
+    // per_page and serves 10/page (observed 2026-07-08), so both size
+    // params are sent hopefully and the loop trusts meta/last-page or an
+    // empty page — never a short page — to decide it's done.
+    for (let page = 1; page <= 60; page++) {
+      const r = await fetch(`${SALESMSG_BASE}/contacts?page=${page}&per_page=100&limit=100`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
       });
       const j = await r.json().catch(() => ({}));
@@ -95,7 +98,7 @@ module.exports = async function handler(req, res) {
       }
 
       const lastPage = j.meta && (j.meta.last_page || j.meta.total_pages);
-      if (list.length < 100 || (lastPage && page >= Number(lastPage))) break;
+      if (!list.length || (lastPage && page >= Number(lastPage))) break;
     }
 
     let flipped = 0;
