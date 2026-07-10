@@ -175,6 +175,11 @@ async function bookCall(args) {
   // CRM with what they actually want. Accepts a specific make/model OR an
   // open description ("reliable SUV under 30k", "open to suggestions").
   if (!vehicle) return { success: false, reason: 'missing_vehicle', message: "Before I book this — what vehicle are you looking for? A make and model, or a type and budget if you're still deciding." };
+  // $6,000 vehicle minimum (owner rule 2026-07-10) — anything below is
+  // unworkable. Backstop for the prompt-level qualification: only trips when a
+  // budget was actually captured and is clearly under 6k, so it never blocks a
+  // booking where budget wasn't discussed.
+  if (budgetMax > 0 && budgetMax < 6000) return { success: false, reason: 'below_minimum', message: "Our vehicle minimum is $6,000 — we're not able to source anything below that. If you can go to $6,000 or more I'd be glad to get you booked." };
   if (!SLOTS.includes(time)) return { success: false, reason: 'bad_time', message: "That time isn't one of our slots — our calls run on the half hour, 9 to 4:30 Eastern." };
 
   // Re-validate the date/slot server-side (never trust the model's memory).
