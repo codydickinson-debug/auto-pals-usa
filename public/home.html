@@ -38,7 +38,7 @@
   "alternateName": "Automotivation Enterprises LLC",
   "description": "Personal car sourcing through dealer-only auctions",
   "url": "https://autopalsusa.com",
-  "telephone": "",
+  "telephone": "+1-561-220-9577",
   "address": {
     "@type": "PostalAddress",
     "streetAddress": "450D NE 27th Street",
@@ -350,6 +350,49 @@
     .btn-ghost:hover { border-color: rgba(245,240,232,0.4); color: var(--cream); background: rgba(245,240,232,0.06); }
   }
   .btn-ghost:active { transform: scale(0.97); }
+
+  /* Hero — "call our AI assistant" line */
+  .hero-call {
+    margin-top: 24px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.5s forwards;
+  }
+  .hero-call-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 13px;
+    text-decoration: none;
+    color: var(--cream);
+    transition: transform 160ms var(--ease-out);
+  }
+  .hero-call-icon {
+    width: 42px; height: 42px;
+    flex-shrink: 0;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    background: rgba(125,212,168,0.14);
+    border: 1px solid rgba(125,212,168,0.32);
+    font-size: 18px;
+  }
+  .hero-call-text strong {
+    display: block;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--cream);
+    letter-spacing: 0.01em;
+  }
+  .hero-call-num {
+    display: block;
+    font-size: 13px;
+    color: rgba(245,240,232,0.62);
+    margin-top: 2px;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .hero-call-link:hover { transform: translateX(2px); }
+    .hero-call-link:hover .hero-call-num { color: rgba(245,240,232,0.88); }
+  }
+  .hero-call-link:active { transform: scale(0.98); }
 
   /* Hero card */
   .hero-card {
@@ -866,6 +909,15 @@
       <div class="hero-actions">
         <a href="form.html?form=1" class="btn-primary">Get Started →</a>
         <a href="#how-it-works" class="btn-ghost">See How It Works</a>
+      </div>
+      <div class="hero-call">
+        <a href="tel:+15612209577" class="hero-call-link">
+          <span class="hero-call-icon">📞</span>
+          <span class="hero-call-text">
+            <strong>Questions? Call our AI assistant</strong>
+            <span class="hero-call-num">(561) 220-9577 — answers questions &amp; books your call, 24/7</span>
+          </span>
+        </a>
       </div>
     </div>
 
