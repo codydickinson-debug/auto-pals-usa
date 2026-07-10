@@ -351,48 +351,51 @@
   }
   .btn-ghost:active { transform: scale(0.97); }
 
-  /* Hero — "call our AI assistant" line */
-  .hero-call {
-    margin-top: 24px;
-    opacity: 0;
-    animation: fadeUp 0.6s ease 0.5s forwards;
+  /* Virtual-assistant call-out — centered pill above the hero video */
+  .video-cta {
+    max-width: 1100px;
+    margin: 0 auto 22px;
+    padding: 0 24px;
+    display: flex;
+    justify-content: center;
   }
-  .hero-call-link {
+  .video-cta__link {
     display: inline-flex;
     align-items: center;
     gap: 13px;
     text-decoration: none;
-    color: var(--cream);
-    transition: transform 160ms var(--ease-out);
+    background: #fff;
+    border: 1px solid var(--cream-dark);
+    border-radius: 999px;
+    padding: 11px 24px 11px 14px;
+    box-shadow: 0 4px 18px rgba(15,37,87,0.08);
+    transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
   }
-  .hero-call-icon {
+  @media (hover: hover) and (pointer: fine) {
+    .video-cta__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(15,37,87,0.13); }
+  }
+  .video-cta__link:active { transform: scale(0.98); }
+  .video-cta__icon {
     width: 42px; height: 42px;
     flex-shrink: 0;
     display: grid; place-items: center;
     border-radius: 50%;
-    background: rgba(125,212,168,0.14);
-    border: 1px solid rgba(125,212,168,0.32);
+    background: rgba(125,212,168,0.18);
+    border: 1px solid rgba(125,212,168,0.4);
     font-size: 18px;
   }
-  .hero-call-text strong {
-    display: block;
+  .video-cta__text { display: flex; flex-direction: column; text-align: left; }
+  .video-cta__title {
     font-family: 'DM Sans', sans-serif;
-    font-size: 14.5px;
+    font-size: 15px;
     font-weight: 600;
-    color: var(--cream);
+    color: var(--navy);
     letter-spacing: 0.01em;
   }
-  .hero-call-num {
-    display: block;
-    font-size: 13px;
-    color: rgba(245,240,232,0.62);
-    margin-top: 2px;
+  .video-cta__num { font-size: 13px; color: var(--text-muted); margin-top: 1px; }
+  @media (max-width: 560px) {
+    .video-cta__title { font-size: 14px; }
   }
-  @media (hover: hover) and (pointer: fine) {
-    .hero-call-link:hover { transform: translateX(2px); }
-    .hero-call-link:hover .hero-call-num { color: rgba(245,240,232,0.88); }
-  }
-  .hero-call-link:active { transform: scale(0.98); }
 
   /* Hero card */
   .hero-card {
@@ -910,15 +913,6 @@
         <a href="form.html?form=1" class="btn-primary">Get Started →</a>
         <a href="#how-it-works" class="btn-ghost">See How It Works</a>
       </div>
-      <div class="hero-call">
-        <a href="tel:+15612209577" class="hero-call-link">
-          <span class="hero-call-icon">📞</span>
-          <span class="hero-call-text">
-            <strong>Questions? Call our AI assistant</strong>
-            <span class="hero-call-num">(561) 220-9577 — answers questions &amp; books your call, 24/7</span>
-          </span>
-        </a>
-      </div>
     </div>
 
     <div class="hero-card">
@@ -965,6 +959,17 @@
 </section>
 
 <!-- HOW IT WORKS -->
+<!-- Virtual-assistant call-out, centered above the hero video -->
+<div class="video-cta reveal">
+  <a href="tel:+15612209577" class="video-cta__link">
+    <span class="video-cta__icon">📞</span>
+    <span class="video-cta__text">
+      <span class="video-cta__title">Speak to our virtual assistant about any questions</span>
+      <span class="video-cta__num">(561) 220-9577 — available 24/7</span>
+    </span>
+  </a>
+</div>
+
 <!-- HERO VIDEO — autoplays muted, no loop -->
 <div class="hero-video-wrap reveal">
   <div class="hero-video-frame">
