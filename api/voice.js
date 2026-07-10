@@ -28,7 +28,36 @@
 // function name from body.name / body.action / ?action=, and the arguments
 // from body.args / body.arguments / the body itself.
 
+const crypto = require('crypto');
+
 const BASE = process.env.PUBLIC_BASE_URL || 'https://www.autopalsusa.com';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://phbdpvfdnxvzxpybfgbr.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || null;
+
+// Look up an existing lead by email so a caller who already submitted the
+// website form doesn't get a duplicate request row. Service-role read only.
+async function findRequestByEmail(email) {
+  if (!SUPABASE_KEY || !email) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/requests?email=eq.${encodeURIComponent(email)}&select=id,portal_code&order=submitted.desc&limit=1`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Accept: 'application/json' }
+    });
+    if (!r.ok) return null;
+    const rows = await r.json().catch(() => []);
+    return (Array.isArray(rows) && rows[0]) || null;
+  } catch { return null; }
+}
+
+// Portal access code, matching public/form.html generateAccessCode():
+// 3 letters of the first name + 6 crypto chars + last 3 of the id.
+function genPortalCode(firstName, id) {
+  const cleaned = String(firstName || '').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase();
+  const prefix = cleaned.length ? cleaned.padEnd(3, 'X') : 'APU';
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1
+  const rand = Array.from(crypto.randomBytes(6), b => alphabet[b % alphabet.length]).join('');
+  const suffix = String(id).slice(-3).padStart(3, '0');
+  return `${prefix}-${rand}-${suffix}`;
+}
 
 // Canonical slots — MUST match SLOTS in public/booking.html and the
 // MAX_BOOKINGS_PER_DAY cap in api/db.js. Weekdays only, 9:00 AM–4:30 PM ET.
@@ -136,10 +165,16 @@ async function bookCall(args) {
   const date      = String(args.date || '').trim();
   const time      = String(args.time || '').trim();
   const vehicle   = String(args.vehicle || args.vehicleInterest || '').trim();
+  const budgetMin = Number(String(args.budgetMin ?? args.budget_min ?? '').replace(/[^\d.]/g, '')) || 0;
+  const budgetMax = Number(String(args.budgetMax ?? args.budget_max ?? '').replace(/[^\d.]/g, '')) || 0;
 
   if (!firstName || !lastName) return { success: false, reason: 'missing_name', message: "I just need your first and last name to book this." };
   if (!email)  return { success: false, reason: 'missing_email', message: "What's the best email for your calendar invite and confirmation?" };
   if (phoneD.length < 10) return { success: false, reason: 'missing_phone', message: "What's the best callback number, including area code?" };
+  // Vehicle is required (owner request 2026-07-10) so the lead lands in the
+  // CRM with what they actually want. Accepts a specific make/model OR an
+  // open description ("reliable SUV under 30k", "open to suggestions").
+  if (!vehicle) return { success: false, reason: 'missing_vehicle', message: "Before I book this — what vehicle are you looking for? A make and model, or a type and budget if you're still deciding." };
   if (!SLOTS.includes(time)) return { success: false, reason: 'bad_time', message: "That time isn't one of our slots — our calls run on the half hour, 9 to 4:30 Eastern." };
 
   // Re-validate the date/slot server-side (never trust the model's memory).
@@ -155,13 +190,49 @@ async function bookCall(args) {
       message: `Sorry, ${time} on ${avail.dateLabel} just got taken. Open times are ${avail.open.slice(0, 5).join(', ')}.` };
   }
 
+  const phoneE164 = phoneD.length === 10 ? `+1${phoneD}` : `+${phoneD}`;
   const bookingBody = {
     firstName, lastName, email,
-    phone: phoneD.length === 10 ? `+1${phoneD}` : `+${phoneD}`,
+    phone: phoneE164,
     date, time,
     dateLabel: avail.dateLabel,
-    vehicle: vehicle || 'Phone inquiry'
+    vehicle
   };
+
+  // Step 0 — make sure this caller is a full lead (a "form submission") so they
+  // land in Pipedrive + the client portal + the lead sheet, aligned with a web
+  // signup. Skipped if a request already exists for this email. The "book your
+  // call" welcome SMS is suppressed (they're booking right now); the booking
+  // below cross-links to this request and flips it to "booked" in the CRM.
+  let portalCode = '';
+  try {
+    const existing = await findRequestByEmail(email);
+    if (existing) {
+      portalCode = existing.portal_code || '';
+    } else {
+      const reqId = Date.now();
+      portalCode = genPortalCode(firstName, reqId);
+      const reqRes = await fetch(`${BASE}/api/db?table=requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: reqId,
+          submitted: new Date().toISOString(),
+          firstName, lastName, email, phone: phoneE164,
+          make: vehicle, model: '',
+          budgetMin, budgetMax,
+          searchMode: 'specific',
+          referralSource: 'Phone (AI assistant)',
+          portalCode,
+          notes: 'Lead created by the AI phone assistant during a booked call.',
+          suppressWelcomeSms: true
+        })
+      });
+      if (!reqRes.ok) console.warn('[voice] request create failed', reqRes.status);
+    }
+  } catch (e) {
+    console.error('[voice] lead-create error', e && e.message); // non-fatal — still book
+  }
 
   // Step 1 — insert the booking row (enforces the per-slot unique index and
   // the 10/day cap; also cross-links a matching request + syncs Pipedrive).
@@ -198,12 +269,12 @@ async function bookCall(args) {
     console.error('[voice] booking fan-out error', e && e.message);
   }
 
-  console.log('[voice] booked', bookingBody.date, bookingBody.time, 'for', firstName, '…' + phoneD.slice(-4));
+  console.log('[voice] booked', bookingBody.date, bookingBody.time, 'for', firstName, '…' + phoneD.slice(-4), '| vehicle:', vehicle);
   return {
     success: true,
     date, time, dateLabel: avail.dateLabel,
     calendarOk: !!fanout.calendarOk,
-    message: `You're booked for ${avail.dateLabel} at ${time} Eastern. You'll get a confirmation email and a calendar invite, and we'll text a reminder about an hour before. Anything else?`
+    message: `You're all set for ${avail.dateLabel} at ${time} Eastern, and I've noted you're after ${vehicle}. You'll get a confirmation email with your client-portal access code and a calendar invite, plus a text reminder about an hour before the call. Anything else I can help with?`
   };
 }
 

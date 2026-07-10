@@ -302,7 +302,13 @@ module.exports = async function handler(req, res) {
             paymentStr:  _payStr,
             portalCode:  row.portal_code
           }));
-          if (row.phone) {
+          // suppressWelcomeSms: set by the voice agent (api/voice.js) when the
+          // caller is booking a call on the same phone conversation — the
+          // "book your free intro call" welcome would be redundant/confusing
+          // since they've just booked. Everything else (staff email, client
+          // confirmation email, Pipedrive, sheet) still fires so the phone
+          // lead is fully aligned with a web signup.
+          if (row.phone && !body.suppressWelcomeSms) {
             fires.push(sms.send('client_book_call', {
               firstName: row.first_name, phone: row.phone,
               smsConsent: row.sms_consent
