@@ -351,50 +351,36 @@
   }
   .btn-ghost:active { transform: scale(0.97); }
 
-  /* Virtual-assistant call-out — centered pill above the hero video */
-  .video-cta {
-    max-width: 1100px;
-    margin: 0 auto 22px;
-    padding: 0 24px;
-    display: flex;
-    justify-content: center;
-  }
-  .video-cta__link {
+  /* Clickable phone number under the "Speak to an Expert" button */
+  .hero-phone {
     display: inline-flex;
     align-items: center;
-    gap: 13px;
+    gap: 9px;
+    margin-top: 18px;
     text-decoration: none;
-    background: #fff;
-    border: 1px solid var(--cream-dark);
-    border-radius: 999px;
-    padding: 11px 24px 11px 14px;
-    box-shadow: 0 4px 18px rgba(15,37,87,0.08);
-    transition: transform 160ms var(--ease-out), box-shadow 160ms var(--ease-out);
+    font-family: 'DM Sans', sans-serif;
+    opacity: 0;
+    animation: fadeUp 0.6s ease 0.5s forwards;
+    transition: transform 160ms var(--ease-out);
   }
-  @media (hover: hover) and (pointer: fine) {
-    .video-cta__link:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(15,37,87,0.13); }
-  }
-  .video-cta__link:active { transform: scale(0.98); }
-  .video-cta__icon {
-    width: 42px; height: 42px;
+  .hero-phone__icon {
+    width: 30px; height: 30px;
     flex-shrink: 0;
     display: grid; place-items: center;
     border-radius: 50%;
-    background: rgba(125,212,168,0.18);
-    border: 1px solid rgba(125,212,168,0.4);
-    font-size: 18px;
+    background: rgba(125,212,168,0.16);
+    border: 1px solid rgba(125,212,168,0.35);
+    font-size: 14px;
   }
-  .video-cta__text { display: flex; flex-direction: column; text-align: left; }
-  .video-cta__title {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--navy);
-    letter-spacing: 0.01em;
+  .hero-phone__num { font-size: 17px; font-weight: 600; color: var(--cream); letter-spacing: 0.01em; }
+  .hero-phone__meta { font-size: 13px; color: rgba(245,240,232,0.55); }
+  .hero-phone__meta::before { content: '·'; margin-right: 9px; color: rgba(245,240,232,0.35); }
+  @media (hover: hover) and (pointer: fine) {
+    .hero-phone:hover .hero-phone__num { color: #fff; }
   }
-  .video-cta__num { font-size: 13px; color: var(--text-muted); margin-top: 1px; }
+  .hero-phone:active { transform: scale(0.98); }
   @media (max-width: 560px) {
-    .video-cta__title { font-size: 14px; }
+    .hero-phone__meta { display: none; }
   }
 
   /* Hero card */
@@ -911,8 +897,13 @@
       </p>
       <div class="hero-actions">
         <a href="form.html?form=1" class="btn-primary">Get Started →</a>
-        <a href="#how-it-works" class="btn-ghost">See How It Works</a>
+        <a href="tel:+15612209577" class="btn-ghost">Speak to an Expert</a>
       </div>
+      <a href="tel:+15612209577" class="hero-phone">
+        <span class="hero-phone__icon">📞</span>
+        <span class="hero-phone__num">(561) 220-9577</span>
+        <span class="hero-phone__meta">available 24/7</span>
+      </a>
     </div>
 
     <div class="hero-card">
@@ -959,17 +950,6 @@
 </section>
 
 <!-- HOW IT WORKS -->
-<!-- Virtual-assistant call-out, centered above the hero video -->
-<div class="video-cta reveal">
-  <a href="tel:+15612209577" class="video-cta__link">
-    <span class="video-cta__icon">📞</span>
-    <span class="video-cta__text">
-      <span class="video-cta__title">Speak to our virtual assistant about any questions</span>
-      <span class="video-cta__num">(561) 220-9577 — available 24/7</span>
-    </span>
-  </a>
-</div>
-
 <!-- HERO VIDEO — autoplays muted, no loop -->
 <div class="hero-video-wrap reveal">
   <div class="hero-video-frame">
@@ -1540,7 +1520,7 @@
 </div>
 
 <script>
-  const SYSTEM_PROMPT = `You are the Auto Pals USA virtual assistant — a knowledgeable, warm, and professional guide for potential clients visiting the Auto Pals USA website. Your job is to help people understand how the service works and encourage them to submit a request or schedule a call.
+  const SYSTEM_PROMPT = `You are the Auto Pals USA expert — a knowledgeable, warm, and professional guide for potential clients visiting the Auto Pals USA website. Your job is to help people understand how the service works and encourage them to submit a request or schedule a call.
 
 ABOUT AUTO PALS USA:
 Auto Pals USA is a vehicle sourcing company based in Pompano Beach, Florida, co-founded by Alex and Josh. Alex handles sourcing and operations — he's the one searching the auctions. Josh is client-facing — he's who clients talk to on their sales call. They are a small, hands-on team that genuinely cares about getting each client the right car. They are not a dealership, not a car lot, and have no sales floor. Everything is done personally.
@@ -1618,7 +1598,7 @@ WHAT NOT TO DO:
         showTyping();
         setTimeout(() => {
           removeTyping();
-          addAIMessage('ai', "Hey! I'm the Auto Pals USA assistant. Ask me anything about how our vehicle sourcing service works, what it costs, or how to get started.");
+          addAIMessage('ai', "Hey! I'm the Auto Pals USA expert. Ask me anything about how our vehicle sourcing service works, what it costs, or how to get started.");
         }, 1800);
       }, 400);
     }

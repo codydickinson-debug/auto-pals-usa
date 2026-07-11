@@ -82,8 +82,12 @@ function buildDealPayload(req, personId) {
     .filter(Boolean).join(' ') || 'Open Search';
   const name = [req.first_name, req.last_name].filter(Boolean).join(' ').trim() || 'Lead';
   const stageId = STATUS_TO_STAGE[req.status] || STATUS_TO_STAGE.new;
+  // Tag leads that came in through the AI phone assistant so the team can
+  // tell at a glance (in the deal list / board) that the VA booked it.
+  // referral_source is set to 'Phone (AI assistant)' by api/voice.js.
+  const vaTag = /ai\s*assistant/i.test(req.referral_source || '') ? '🤖 VA · ' : '';
   return {
-    title: `${name} — ${car}`,
+    title: `${vaTag}${name} — ${car}`,
     person_id: personId,
     pipeline_id: PIPEDRIVE_PIPELINE_ID,
     stage_id: stageId,

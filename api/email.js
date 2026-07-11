@@ -936,6 +936,7 @@ ${footer(d)}`)
 <tr><td style="padding:28px 40px 0;">
 <div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:8px;">New client request</div>
 <p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 18px;">Just landed in the dashboard — review and reach out.</p>
+${d.referralSource && /ai\s*assistant/i.test(d.referralSource) ? `<div style="display:inline-block;background:${BRAND.navy};color:#fff;font-family:-apple-system,'Segoe UI',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;padding:6px 13px;border-radius:999px;margin:0 0 18px;">🤖 Booked by AI phone assistant</div>` : ''}
 </td></tr>
 <tr><td style="padding:0 40px 24px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:18px 22px;">
@@ -946,6 +947,7 @@ ${d.clientPhone ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Phone</td
 <tr><td style="padding:6px 0;color:${BRAND.muted};">Vehicle</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.vehicleStr || 'Open Search'}</td></tr>
 ${d.budgetStr ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Budget</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.budgetStr}</td></tr>` : ''}
 ${d.paymentStr ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Payment</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.paymentStr}</td></tr>` : ''}
+${d.referralSource ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Source</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.referralSource}</td></tr>` : ''}
 ${d.portalCode ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Portal code</td><td style="padding:6px 0;color:${BRAND.navy};font-weight:700;text-align:right;font-size:12px;">${d.portalCode}</td></tr>` : ''}
 </table>
 </td></tr></table>

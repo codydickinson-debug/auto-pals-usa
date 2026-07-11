@@ -300,7 +300,8 @@ module.exports = async function handler(req, res) {
             vehicleStr:  _vehStr,
             budgetStr:   _budgStr,
             paymentStr:  _payStr,
-            portalCode:  row.portal_code
+            portalCode:  row.portal_code,
+            referralSource: row.referral_source
           }));
           // suppressWelcomeSms: set by the voice agent (api/voice.js) when the
           // caller is booking a call on the same phone conversation — the
