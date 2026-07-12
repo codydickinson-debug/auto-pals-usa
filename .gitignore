@@ -10,3 +10,10 @@ node_modules
 # Claude Code session metadata — local per-machine state, not for git
 .claude/
 .tmp-*
+
+# Local AI-session scratch docs — not part of the deployed app
+COWORK_SESSION_PRIMER.md
+LAUNCH_NOTES.md
+PROJECT_CONTEXT.md
+SESSION_SUMMARY.md
+TESTER_BRIEF.txt

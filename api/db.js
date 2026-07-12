@@ -200,11 +200,29 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  // Is this caller authenticated staff? Several ops are "public" (no token
+  // required) but must NOT hand the full table to an anonymous caller — e.g.
+  // GET /requests and GET /messages. For those, staff get the full/unfiltered
+  // view for the dashboard, while public callers get a portal-code-scoped view.
+  const _staffToken = req.headers['x-staff-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+  const isStaff = verifyToken(_staffToken);
+
   try {
     // ── REQUESTS ──────────────────────────────────────────────────
     if (table === 'requests') {
       if (req.method === 'GET') {
-        const data = await query('requests', 'GET', null, '?order=submitted.desc');
+        // Staff (valid token) get the full table for the dashboard. Public
+        // callers MUST supply a portal_code and only ever receive the row(s)
+        // matching that exact code — never the whole customer database. This
+        // closes an unauthenticated dump of every client's PII (name, email,
+        // phone, address). The portal login already sends portal_code.
+        if (isStaff) {
+          const data = await query('requests', 'GET', null, '?order=submitted.desc');
+          return res.json(data || []);
+        }
+        const code = String(req.query.portal_code || '').trim();
+        if (!code) return res.json([]);
+        const data = await query('requests', 'GET', null, `?portal_code=eq.${encodeURIComponent(code)}&order=submitted.desc`);
         return res.json(data || []);
       }
       if (req.method === 'POST') {
@@ -769,8 +787,22 @@ module.exports = async function handler(req, res) {
     if (table === 'messages') {
       if (req.method === 'GET') {
         const reqId = req.query.request_id;
-        const params = reqId ? `?request_id=eq.${reqId}&order=ts.asc` : '?order=ts.asc';
-        const data = await query('messages', 'GET', null, params);
+        // Staff (valid token) can read any single thread, or all threads for the
+        // message center.
+        if (isStaff) {
+          const params = reqId ? `?request_id=eq.${reqId}&order=ts.asc` : '?order=ts.asc';
+          const data = await query('messages', 'GET', null, params);
+          return res.json(data || []);
+        }
+        // Public callers must prove ownership: supply BOTH request_id and the
+        // matching portal_code. We verify the code belongs to that request
+        // before returning its messages, so a bare request_id can't read a
+        // stranger's thread. (The portal already sends both.)
+        const code = String(req.query.portal_code || '').trim();
+        if (!reqId || !code) return res.json([]);
+        const owner = await query('requests', 'GET', null, `?id=eq.${encodeURIComponent(reqId)}&portal_code=eq.${encodeURIComponent(code)}&limit=1`);
+        if (!owner || !owner.length) return res.json([]);
+        const data = await query('messages', 'GET', null, `?request_id=eq.${encodeURIComponent(reqId)}&order=ts.asc`);
         return res.json(data || []);
       }
       if (req.method === 'POST') {
