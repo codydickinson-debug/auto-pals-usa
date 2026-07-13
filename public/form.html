@@ -7697,9 +7697,9 @@
     if (activeRequestId) {
       const view = document.getElementById('view-detail');
       if (view && view.classList.contains('active')) {
-        // Scoped to the single open request (server honors &id=) instead of
-        // pulling the whole requests table every tick.
-        const data = await dbGet('requests', `&id=eq.${activeRequestId}`);
+        // Scoped to the single open request (server adds the eq. filter) instead
+        // of pulling the whole requests table every tick.
+        const data = await dbGet('requests', `&id=${activeRequestId}`);
         if (data && Array.isArray(data)) {
           const match = data.find(r => Number(r.id) === Number(activeRequestId));
           if (match) {
