@@ -376,7 +376,7 @@ Recommend 3 vehicles.`;
 // The system prompt forbids adding new info or changing meaning — this is
 // editing-pass behavior, not a rewrite or content-gen tool.
 
-const SB_URL = process.env.SUPABASE_URL || 'https://phbdpvfdnxvzxpybfgbr.supabase.co';
+const { SUPABASE_URL: SB_URL } = require('./_constants.js');
 const SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
             || process.env.SUPABASE_KEY
             || process.env.SUPABASE_ANON_KEY;

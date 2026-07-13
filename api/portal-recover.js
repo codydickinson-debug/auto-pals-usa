@@ -4,7 +4,7 @@
 // (even when nothing matches) so we don't leak which emails are in our
 // system to anyone probing the endpoint.
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://phbdpvfdnxvzxpybfgbr.supabase.co';
+const { SUPABASE_URL } = require('./_constants.js');
 const SUPABASE_KEY = process.env.SUPABASE_KEY
   || process.env.SUPABASE_SERVICE_ROLE_KEY
   || process.env.SUPABASE_ANON_KEY

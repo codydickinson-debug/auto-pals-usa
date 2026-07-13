@@ -25,7 +25,7 @@
 //
 // Protected by CRON_SECRET env var (Vercel auto-sends as Authorization header).
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://phbdpvfdnxvzxpybfgbr.supabase.co';
+const { SUPABASE_URL } = require('./_constants.js');
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
   || process.env.SUPABASE_KEY
   || process.env.SUPABASE_ANON_KEY
@@ -347,6 +347,18 @@ module.exports = async function handler(req, res) {
       } catch (err) {
         summary.errors.push({ id: r.id, msg: err.message });
       }
+    }
+
+    // ── EMAIL_LOG RETENTION ──────────────────────────────────────
+    // Prune email_log rows older than 90 days so the audit table doesn't grow
+    // unbounded. Best-effort — a failure here never fails the run. (The filter
+    // keeps PostgREST from rejecting an unqualified DELETE.)
+    try {
+      const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+      await sb('email_log', 'DELETE', null, `?ts=lt.${encodeURIComponent(cutoff)}`);
+      console.log(`[CRON] pruned email_log rows older than ${cutoff}`);
+    } catch (e) {
+      console.warn('[CRON] email_log prune failed:', e && e.message);
     }
 
     // ── SMS OUTAGE ALARM ─────────────────────────────────────────

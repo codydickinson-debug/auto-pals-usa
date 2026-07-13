@@ -4,7 +4,7 @@
 // Public endpoint by design (testers, who don't have staff tokens, need to use it).
 // Rate-limited shape: 4KB max message size, must be a string, basic spam guard.
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://phbdpvfdnxvzxpybfgbr.supabase.co';
+const { SUPABASE_URL } = require('./_constants.js');
 const SUPABASE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   process.env.SUPABASE_KEY ||

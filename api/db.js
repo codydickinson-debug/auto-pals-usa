@@ -4,7 +4,7 @@
 // The hardcoded fallbacks exist so the app doesn't break if env vars are missing,
 // but in production these MUST be set (and the hardcoded values should be rotated).
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://phbdpvfdnxvzxpybfgbr.supabase.co';
+const { SUPABASE_URL } = require('./_constants.js');
 // v165: prefer the service-role key (same chain api/portal-sign.js uses).
 // All db.js endpoints are server-side and gated either by isPublicOp or
 // the staff token, so RLS isn't the security boundary here — the API auth
@@ -115,9 +115,14 @@ async function safeSendEmail(type, data) {
       console.warn('[DB→EMAIL] inproc sendTemplate missing — using HTTP fallback');
     }
     // HTTP fallback. Signs a staff token the same way api/auth.js does;
-    // STAFF_SECRET stays server-side, never exposed to the client.
+    // STAFF_SECRET stays server-side, never exposed to the client. Fail closed
+    // (no known default) — if it's unset the fallback email just won't send.
     const crypto = require('crypto');
-    const secret = process.env.STAFF_SECRET || 'CHANGE_ME_IN_VERCEL_ENV';
+    const secret = process.env.STAFF_SECRET;
+    if (!secret) {
+      console.error('[DB→EMAIL] STAFF_SECRET unset — cannot sign HTTP fallback token');
+      return { ok: false, error: 'staff_secret_unset' };
+    }
     const todayKey = new Date().toISOString().slice(0, 10);
     const token = crypto.createHmac('sha256', secret).update('staff:' + todayKey).digest('hex');
     const base  = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.autopalsusa.com';
@@ -217,7 +222,13 @@ module.exports = async function handler(req, res) {
         // closes an unauthenticated dump of every client's PII (name, email,
         // phone, address). The portal login already sends portal_code.
         if (isStaff) {
-          const data = await query('requests', 'GET', null, '?order=submitted.desc');
+          // Optional id filter lets the dashboard refresh a single open request
+          // (e.g. the 10s detail-view poll) without pulling the whole table.
+          const id = String(req.query.id || '').trim();
+          const staffParams = id
+            ? `?id=eq.${encodeURIComponent(id)}&limit=1`
+            : '?order=submitted.desc';
+          const data = await query('requests', 'GET', null, staffParams);
           return res.json(data || []);
         }
         const code = String(req.query.portal_code || '').trim();

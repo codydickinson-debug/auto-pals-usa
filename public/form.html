@@ -1881,7 +1881,7 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v168 · 2026-06-20</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v169 · 2026-07-12</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -7697,7 +7697,9 @@
     if (activeRequestId) {
       const view = document.getElementById('view-detail');
       if (view && view.classList.contains('active')) {
-        const data = await dbGet('requests');
+        // Scoped to the single open request (server honors &id=) instead of
+        // pulling the whole requests table every tick.
+        const data = await dbGet('requests', `&id=eq.${activeRequestId}`);
         if (data && Array.isArray(data)) {
           const match = data.find(r => Number(r.id) === Number(activeRequestId));
           if (match) {
@@ -7716,7 +7718,7 @@
 
   function startPolling() {
     if (pollingInterval) return;
-    pollingInterval = setInterval(pollForUpdates, 5000);
+    pollingInterval = setInterval(pollForUpdates, 10000);
   }
 
   function stopPolling() {

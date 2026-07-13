@@ -15,6 +15,10 @@
 const DEPOSIT_AMOUNT_USD = Number(process.env.DEPOSIT_AMOUNT_USD) || 850;
 const SEARCH_WINDOW_DAYS = Number(process.env.SEARCH_WINDOW_DAYS) || 60;
 
+// Supabase project URL — single source of truth so the project host isn't a
+// literal duplicated across ~10 serverless files. Env var still wins in prod.
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://phbdpvfdnxvzxpybfgbr.supabase.co';
+
 // Pre-formatted string variants for direct template interpolation.
 const DEPOSIT_STR              = `$${DEPOSIT_AMOUNT_USD.toLocaleString('en-US')}`;
 const DEPOSIT_STR_WITH_CENTS   = `$${DEPOSIT_AMOUNT_USD.toFixed(2)}`;
@@ -25,6 +29,7 @@ const SEARCH_WINDOW_NOUN       = `${SEARCH_WINDOW_DAYS} days`;  // "you have 60 
 module.exports = {
   DEPOSIT_AMOUNT_USD,
   SEARCH_WINDOW_DAYS,
+  SUPABASE_URL,
   DEPOSIT_STR,
   DEPOSIT_STR_WITH_CENTS,
   DEPOSIT_STR_BARE,

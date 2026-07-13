@@ -64,7 +64,7 @@ const SALESMSG_BASE = 'https://api.salesmessage.com/pub/v2.3';
 //   4. Refresh failures are console.ERROR now — they show up in the
 //      Vercel error feed instead of hiding as warnings.
 //   5. On a 401 from /messages, wipe cache, re-resolve, retry once.
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://phbdpvfdnxvzxpybfgbr.supabase.co';
+const { SUPABASE_URL } = require('./_constants.js');
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_KEY
   || process.env.SUPABASE_SERVICE_ROLE_KEY
   || null; // no anon fallback: anon can't read/write app_config under RLS

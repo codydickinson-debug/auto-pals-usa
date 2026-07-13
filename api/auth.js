@@ -11,13 +11,19 @@ function todayKey() {
 }
 
 function signToken() {
-  const secret = process.env.STAFF_SECRET || 'CHANGE_ME_IN_VERCEL_ENV';
+  // Fail closed: no known default. If STAFF_SECRET is unset, tokens can neither
+  // be minted nor verified (rather than falling back to a public, forgeable
+  // default HMAC key). STAFF_SECRET is set in Vercel prod.
+  const secret = process.env.STAFF_SECRET;
+  if (!secret) throw new Error('STAFF_SECRET not configured');
   return crypto.createHmac('sha256', secret).update('staff:' + todayKey()).digest('hex');
 }
 
 function verifyToken(token) {
   if (!token || typeof token !== 'string') return false;
-  const expected = signToken();
+  let expected;
+  try { expected = signToken(); } catch { return false; } // secret missing → reject
+  if (!expected) return false;
   if (token.length !== expected.length) return false;
   // Constant-time compare
   return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(expected));
@@ -33,6 +39,9 @@ module.exports = async function handler(req, res) {
   const expectedPw = process.env.STAFF_PASSWORD;
   if (!expectedPw) {
     return res.status(500).json({ error: 'Staff password not configured on server' });
+  }
+  if (!process.env.STAFF_SECRET) {
+    return res.status(500).json({ error: 'Staff auth not configured on server' });
   }
 
   const { password } = req.body || {};
