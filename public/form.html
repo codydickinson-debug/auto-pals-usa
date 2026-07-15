@@ -43,6 +43,11 @@
       0 8px 24px rgba(15,37,87,0.05);
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    /* Champagne-gold accent — premium through-line, matches the marketing site. */
+    --gold: #d3ac5f;
+    --gold-light: #f2e0af;
+    --gold-deep: #c39a44;
+    --gold-grad: linear-gradient(135deg, #f2e0af 0%, #d3ac5f 55%, #c39a44 100%);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -139,9 +144,9 @@
     font-weight: 500;
   }
   .nav-tab.active {
-    background: rgba(245,240,232,0.15);
-    color: #f5f0e8;
-    border: 1px solid rgba(245,240,232,0.2);
+    background: rgba(216,180,112,0.18);
+    color: var(--gold-light);
+    border: 1px solid rgba(216,180,112,0.4);
   }
   @media (hover: hover) and (pointer: fine) {
     .nav-tab:hover:not(.active) { background: rgba(255,255,255,0.08); color: #fff; }
@@ -173,8 +178,8 @@
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--accent-bright);
-    background: var(--accent-light);
+    color: var(--gold-deep);
+    background: rgba(211,172,95,0.14);
     padding: 5px 12px;
     border-radius: 999px;
     margin-bottom: 14px;
@@ -200,7 +205,7 @@
   .form-card {
     background: var(--surface);
     border: 1px solid var(--border-subtle);
-    border-top: 3px solid var(--accent-bright);
+    border-top: 3px solid var(--gold);
     border-radius: var(--radius);
     padding: 32px;
     box-shadow: var(--shadow-card);
@@ -533,20 +538,21 @@
   .submit-btn {
     width: 100%;
     padding: 14px;
-    background: var(--accent-bright);
-    color: #fff;
+    background: var(--gold-grad);
+    color: #33260a;
     border: none;
     border-radius: var(--radius);
     font-family: system-ui, sans-serif;
     font-size: 15px;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 150ms var(--ease-out), transform 150ms var(--ease-out);
+    box-shadow: 0 4px 14px rgba(180,140,50,0.28), inset 0 1px 0 rgba(255,255,255,0.4);
+    transition: filter 150ms var(--ease-out), box-shadow 150ms var(--ease-out), transform 150ms var(--ease-out);
     margin-top: 8px;
     letter-spacing: 0.01em;
   }
   @media (hover: hover) and (pointer: fine) {
-    .submit-btn:hover { background: var(--accent-mid); }
+    .submit-btn:hover { filter: brightness(1.04); box-shadow: 0 6px 20px rgba(180,140,50,0.36), inset 0 1px 0 rgba(255,255,255,0.5); }
   }
   .submit-btn:active { transform: scale(0.98); }
 
@@ -651,6 +657,7 @@
 
   .portal-ticket {
     background: var(--navy);
+    border: 1px solid rgba(216,180,112,0.4);
     border-radius: 14px;
     padding: 18px 22px;
     margin: 20px auto 0;
@@ -661,9 +668,9 @@
   .portal-ticket__label {
     font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: rgba(245,240,232,0.55);
+    color: var(--gold-light);
     margin-bottom: 10px;
     font-family: system-ui, sans-serif;
   }
@@ -769,8 +776,8 @@
     font-weight: 500;
   }
   .sidebar-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
-  .sidebar-item.active { background: var(--accent-bright); color: #fff; }
-  .sidebar-item.active .badge { background: rgba(255,255,255,0.2); color: #fff; }
+  .sidebar-item.active { background: var(--gold-grad); color: #33260a; }
+  .sidebar-item.active .badge { background: rgba(51,38,10,0.18); color: #33260a; }
   .badge {
     background: rgba(255,255,255,0.12);
     color: rgba(255,255,255,0.6);
@@ -833,11 +840,20 @@
     color: var(--text-muted);
     transition: background-color 120ms var(--ease-out), border-color 120ms var(--ease-out), color 120ms var(--ease-out), transform 120ms var(--ease-out);
   }
-  .filter-btn.active { background: var(--accent-bright); color: #fff; border-color: var(--accent-bright); }
+  .filter-btn.active { background: var(--gold-grad); color: #33260a; border-color: var(--gold-deep); }
   @media (hover: hover) and (pointer: fine) {
     .filter-btn:hover:not(.active) { background: var(--accent-light); color: var(--text); }
   }
   .filter-btn:active { transform: scale(0.95); }
+  /* Client name in the Sold Cars table — click to reopen the full profile. */
+  .sold-client-link {
+    background: none; border: none; padding: 0; margin: 0;
+    font: inherit; font-weight: 700; color: var(--navy);
+    cursor: pointer; text-align: left;
+    border-bottom: 1px solid transparent;
+    transition: color 150ms var(--ease-out), border-color 150ms var(--ease-out);
+  }
+  .sold-client-link:hover { color: var(--gold-deep); border-bottom-color: var(--gold-deep); }
 
   .requests-table {
     background: var(--surface);
@@ -7581,6 +7597,20 @@
     renderSoldTable();
   }
 
+  // Reopen a sold client's full profile from the Sold Cars table. Sold
+  // requests stay in `requests` (status 'sold') but are hidden from the
+  // request lists, so this is the way back to the profile. Matches on the
+  // stored request id when present, else on the client's name.
+  function openSoldClientProfile(saleId) {
+    const s = sales.find(x => x.id === saleId);
+    if (!s) return;
+    const name = (s.client || '').trim().toLowerCase();
+    let req = (s.reqId != null) ? requests.find(r => r.id === s.reqId) : null;
+    if (!req) req = requests.find(r => `${r.firstName || ''} ${r.lastName || ''}`.trim().toLowerCase() === name);
+    if (!req) { alert('No client profile is linked to this sale — the original request may have been deleted.'); return; }
+    openDetailView(req.id);
+  }
+
   function renderSoldTable() {
     // All-time stats
     document.getElementById('sold-count').textContent = sales.length;
@@ -7639,7 +7669,7 @@
         ? `<span style="color:var(--green);font-weight:600;">${fmtV(Number(s.shippingProfit))}</span>`
         : '<span style="color:var(--text-muted);">—</span>';
       return `<tr>
-        <td><strong>${s.client}</strong></td>
+        <td><button class="sold-client-link" onclick="openSoldClientProfile(${s.id})" title="View this client's full profile">${escapeHtml(s.client)}</button></td>
         <td>${s.vehicle}</td>
         <td style="color:var(--text-muted)">${s.miles ? Number(s.miles).toLocaleString() + ' mi' : '—'}</td>
         <td>${fmtV(s.purchase)}</td>

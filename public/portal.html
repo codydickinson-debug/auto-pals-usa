@@ -45,6 +45,11 @@
       0 14px 32px rgba(15,37,87,0.10);
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    /* Champagne-gold accent — premium through-line, matches the marketing site. */
+    --gold: #d3ac5f;
+    --gold-light: #f2e0af;
+    --gold-deep: #c39a44;
+    --gold-grad: linear-gradient(135deg, #f2e0af 0%, #d3ac5f 55%, #c39a44 100%);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -147,8 +152,8 @@
   }
   .hero-eyebrow {
     display: inline-flex; align-items: center; gap: 8px;
-    font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--navy);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--gold-deep);
     margin-bottom: 12px;
   }
   .hero-eyebrow-dot { width: 6px; height: 6px; background: #16a34a; border-radius: 50%; box-shadow: 0 0 8px rgba(22,163,74,0.4); }
@@ -160,16 +165,16 @@
   .hero-sub { font-size: 14px; color: var(--text-muted); }
   .hero-cta {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 12px 22px; background: var(--navy); color: var(--cream);
+    padding: 12px 22px; background: var(--gold-grad); color: #33260a;
     border-radius: 10px; font-family: 'DM Sans',sans-serif;
     font-size: 13px; font-weight: 700; text-decoration: none;
-    transition: transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+    transition: transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out), filter 150ms var(--ease-out);
     flex-shrink: 0; align-self: center;
     white-space: nowrap;
-    box-shadow: 0 4px 14px rgba(15,37,87,0.18);
+    box-shadow: 0 4px 14px rgba(180,140,50,0.28), inset 0 1px 0 rgba(255,255,255,0.4);
   }
   @media (hover: hover) and (pointer: fine) {
-    .hero-cta:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(15,37,87,0.28); }
+    .hero-cta:hover { transform: translateY(-1px); filter: brightness(1.04); box-shadow: 0 6px 18px rgba(180,140,50,0.36), inset 0 1px 0 rgba(255,255,255,0.5); }
   }
   .hero-cta:active { transform: scale(0.97); }
 
@@ -222,7 +227,7 @@
     position: absolute;
     top: 0; left: 0; bottom: 0;
     width: 0;
-    background: linear-gradient(90deg, var(--navy) 0%, #1a3470 100%);
+    background: linear-gradient(90deg, var(--gold-deep) 0%, var(--gold-light) 100%);
     border-radius: 2px;
     transition: width 450ms var(--ease-out);
   }
@@ -248,24 +253,24 @@
     box-shadow: 0 1px 3px rgba(15,37,87,0.06);
   }
   .hero-step.done .hero-step-circle {
-    background: var(--navy); border-color: var(--navy); color: var(--cream);
-    box-shadow: 0 4px 12px rgba(15,37,87,0.25);
+    background: var(--gold-grad); border-color: var(--gold-deep); color: #33260a;
+    box-shadow: 0 4px 12px rgba(180,140,50,0.3);
   }
   /* Active step matches done — solid navy with cream content. The 5px glow
      ring + scale stays so it's still distinguishable as the current stage.
      A subtle ring pulse runs continuously so the current stage feels "alive"
      and draws the eye on first glance. Pauses for reduced-motion users. */
   .hero-step.active .hero-step-circle {
-    background: var(--navy); border-color: var(--navy); color: var(--cream);
+    background: var(--gold-grad); border-color: var(--gold-deep); color: #33260a;
     transform: scale(1.08);
     animation: portalStepPulse 2.6s var(--ease-in-out) infinite;
   }
   @keyframes portalStepPulse {
     0%, 100% {
-      box-shadow: 0 0 0 5px rgba(15,37,87,0.18), 0 4px 12px rgba(15,37,87,0.25);
+      box-shadow: 0 0 0 5px rgba(211,172,95,0.3), 0 4px 12px rgba(180,140,50,0.28);
     }
     50% {
-      box-shadow: 0 0 0 9px rgba(15,37,87,0.08), 0 4px 16px rgba(15,37,87,0.32);
+      box-shadow: 0 0 0 9px rgba(211,172,95,0.12), 0 4px 16px rgba(180,140,50,0.34);
     }
   }
   .hero-step-label {
@@ -275,7 +280,7 @@
   }
   .hero-step.done .hero-step-label,
   .hero-step.active .hero-step-label {
-    color: var(--navy);
+    color: var(--gold-deep);
     font-weight: 700;
   }
   @media (max-width: 720px) {
@@ -302,7 +307,7 @@
   }
   .portal-top-duo > * { margin-bottom: 0; }
   .portal-top-duo .deposit-receipt {
-    border-top: 3px solid var(--navy);
+    border-top: 3px solid var(--gold);
   }
   .portal-flow > .portal-section { margin-bottom: 0; }
   /* Your Request — headline at top, 2-col grid below for the meta fields */
@@ -370,8 +375,8 @@
   }
   .greeting-tag {
     display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--green); margin-bottom: 10px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--gold-deep); margin-bottom: 10px;
   }
   .greeting-tag-dot { width: 6px; height: 6px; background: #16a34a; border-radius: 50%; }
   .greeting h1 {
@@ -437,7 +442,7 @@
     z-index: 0;
   }
   .progress-step:last-child::before { display: none; }
-  .progress-step.done::before { background: var(--navy); }
+  .progress-step.done::before { background: var(--gold); }
   .step-circle {
     width: 32px; height: 32px;
     border-radius: 50%;
@@ -450,11 +455,11 @@
     margin-bottom: 10px;
     transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out), box-shadow 200ms var(--ease-out), transform 200ms var(--ease-out);
   }
-  .progress-step.done .step-circle   { background: var(--navy); color: var(--cream); }
-  .progress-step.active .step-circle { background: var(--navy); color: var(--cream); box-shadow: 0 0 0 4px rgba(15,37,87,0.15); }
+  .progress-step.done .step-circle   { background: var(--gold-grad); color: #33260a; }
+  .progress-step.active .step-circle { background: var(--gold-grad); color: #33260a; box-shadow: 0 0 0 4px rgba(211,172,95,0.25); }
   .step-label { font-size: 11px; font-weight: 600; color: var(--text-muted); line-height: 1.4; }
-  .progress-step.done .step-label   { color: var(--navy); }
-  .progress-step.active .step-label { color: var(--navy); font-weight: 700; }
+  .progress-step.done .step-label   { color: var(--gold-deep); }
+  .progress-step.active .step-label { color: var(--gold-deep); font-weight: 700; }
 
   /* INFO GRID */
   .info-grid {
@@ -543,7 +548,7 @@
   .deposit-receipt {
     background: var(--white);
     border: 1px solid var(--border-subtle);
-    border-top: 3px solid var(--navy);
+    border-top: 3px solid var(--gold);
     border-radius: var(--radius);
     padding: 28px;
     box-shadow: var(--shadow-card);
