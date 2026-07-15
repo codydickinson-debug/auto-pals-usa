@@ -817,6 +817,12 @@ module.exports = async function handler(req, res) {
         return res.json(data || []);
       }
       if (req.method === 'POST') {
+        // Ignore empty / whitespace-only messages. They create phantom
+        // "unread" rows that inflate the Messages badge and even fire a bogus
+        // staff notification. Nothing to store or notify — bail early.
+        if (!body.text || !String(body.text).trim()) {
+          return res.status(400).json({ error: 'empty_message' });
+        }
         const row = {
           request_id: body.requestId,
           from_role: body.from,

@@ -3542,6 +3542,9 @@
         const reqId = String(m.request_id);
         // Skip messages for deleted (tombstoned) or missing requests
         if (isDeleted(m.request_id) || !validReqIds.has(reqId)) return;
+        // Skip empty / whitespace-only rows so a phantom message can't show as
+        // a blank conversation or inflate the unread badge.
+        if (!(m.text || '').trim()) return;
         if (!byReq[reqId]) byReq[reqId] = [];
         byReq[reqId].push({ from: m.from_role, text: m.text, ts: m.ts, read: m.read });
       });
@@ -3786,8 +3789,18 @@
       return bLast.localeCompare(aLast);
     });
 
-    // Update nav badge (always, even when list is empty)
-    const totalUnread = requests.reduce((a,r) => a + getMessages(r.id).filter(m => m.from==='client'&&!m.read).length, 0);
+    // Update nav badge (always, even when list is empty). Only count unread
+    // client messages that actually surface in the Messages list — i.e. skip
+    // dormant threads that are hidden until a fresh message lands (same rule as
+    // the list above), and ignore empty/phantom rows. Otherwise the badge reads
+    // e.g. "2" while the list shows nothing, which is just confusing.
+    const totalUnread = requests.reduce((a, r) => {
+      const msgs = getMessages(r.id);
+      const hiddenDormant = r.status === 'dormant' && r.dormantAt &&
+        !msgs.some(m => m && m.ts && m.ts > r.dormantAt);
+      if (hiddenDormant) return a;
+      return a + msgs.filter(m => m.from === 'client' && !m.read && (m.text || '').trim()).length;
+    }, 0);
     const badge = document.getElementById('nav-badge-messages');
     if (badge) badge.textContent = totalUnread;
 
