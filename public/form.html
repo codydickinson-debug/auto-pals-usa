@@ -1135,7 +1135,11 @@
     box-shadow: 0 4px 16px rgba(0,0,0,0.12);
     z-index: 500;
     min-width: 160px;
-    overflow: hidden;
+    /* Never taller than the viewport — if the list can't fit, it scrolls so
+       every option stays reachable instead of running off the screen. */
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+    overflow-x: hidden;
     font-family: system-ui, sans-serif;
   }
   .context-menu.open { display: block; }
@@ -5331,8 +5335,18 @@
   function openCtx(e, id) {
     ctxTargetId = id;
     ctxMenu.classList.add('open');
-    const x = Math.min(e.clientX, window.innerWidth - 180);
-    const y = Math.min(e.clientY, window.innerHeight - 220);
+    // Measure the menu's real size (now that it's visible) and flip it up/left
+    // as needed so the whole thing stays on-screen no matter where the kebab
+    // was clicked — otherwise tall menus near the bottom clip their options.
+    const margin = 8;
+    const mw = ctxMenu.offsetWidth;
+    const mh = ctxMenu.offsetHeight;
+    let x = e.clientX;
+    let y = e.clientY;
+    if (x + mw + margin > window.innerWidth)  x = window.innerWidth  - mw - margin;
+    if (y + mh + margin > window.innerHeight) y = window.innerHeight - mh - margin;
+    x = Math.max(margin, x);
+    y = Math.max(margin, y);
     ctxMenu.style.left = x + 'px';
     ctxMenu.style.top = y + 'px';
   }
