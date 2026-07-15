@@ -3559,8 +3559,12 @@
           }
         }
       }
-      Object.entries(byReq).forEach(([reqId, msgs]) => {
-        localStorage.setItem('am_msgs_' + reqId, JSON.stringify(msgs));
+      // Rebuild the cache for EVERY live request from this authoritative DB
+      // fetch — including requests that now have zero messages (e.g. after a
+      // phantom/empty row was pruned). Writing '[]' overwrites a stale local
+      // cache so a deleted message can't keep haunting the list or the badge.
+      validReqIds.forEach(reqId => {
+        localStorage.setItem('am_msgs_' + reqId, JSON.stringify(byReq[reqId] || []));
       });
     }
     renderDashboard();
