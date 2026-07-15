@@ -94,6 +94,10 @@
       0 14px 32px rgba(15,37,87,0.10);
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    /* Champagne-gold accent — the premium through-line for the whole page. */
+    --gold: #d3ac5f;
+    --gold-light: #f2e0af;
+    --gold-deep: #c39a44;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -519,8 +523,8 @@
     margin: 0 auto;
   }
   .section-tag {
-    font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--brg); margin-bottom: 12px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--gold-deep); margin-bottom: 12px;
   }
   .section-title {
     font-family: 'Playfair Display', serif;
@@ -555,7 +559,7 @@
     position: absolute;
     bottom: 0; left: 0; right: 0;
     height: 3px;
-    background: linear-gradient(90deg, var(--navy), var(--navy-mid));
+    background: linear-gradient(90deg, var(--gold-light), var(--gold-deep));
     transform: scaleX(0);
     transform-origin: left;
     transition: transform 300ms var(--ease-out);
@@ -567,7 +571,7 @@
   .step-card-num {
     font-family: 'Playfair Display', serif;
     font-size: 64px; font-weight: 700;
-    color: rgba(15,37,87,0.18);
+    color: rgba(195,154,68,0.28);
     line-height: 1; margin-bottom: 16px;
   }
   .step-card-title { font-size: 17px; font-weight: 600; color: var(--navy); margin-bottom: 10px; }
@@ -575,7 +579,7 @@
   .step-card-accent {
     position: absolute; top: 0; left: 32px;
     width: 40px; height: 3px;
-    background: var(--navy);
+    background: linear-gradient(90deg, var(--gold-light), var(--gold-deep));
     border-radius: 0 0 3px 3px;
   }
 
@@ -614,27 +618,27 @@
     gap: 80px; align-items: center;
     position: relative; z-index: 1;
   }
-  .why-tag { color: #a7c4b0; }
+  .why-tag { color: var(--gold); }
   .why-title { color: var(--cream); }
   .why-sub { color: rgba(245,240,232,0.65); }
   .why-list { display: flex; flex-direction: column; gap: 20px; }
   .why-item { display: flex; gap: 16px; align-items: flex-start; }
   .why-icon {
     width: 44px; height: 44px;
-    background: rgba(245,240,232,0.06);
-    border: 1px solid rgba(245,240,232,0.1);
+    background: rgba(216,180,112,0.08);
+    border: 1px solid rgba(216,180,112,0.2);
     border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    color: #a7c4b0;
+    color: var(--gold);
     flex-shrink: 0;
     transition: background-color 200ms var(--ease-out), color 200ms var(--ease-out), border-color 200ms var(--ease-out);
   }
   .why-icon svg { width: 20px; height: 20px; }
   @media (hover: hover) and (pointer: fine) {
     .why-item:hover .why-icon {
-      background: rgba(245,240,232,0.12);
-      color: #c4dbcb;
-      border-color: rgba(245,240,232,0.18);
+      background: rgba(216,180,112,0.15);
+      color: var(--gold-light);
+      border-color: rgba(216,180,112,0.32);
     }
   }
   .why-item-title { font-size: 15px; font-weight: 600; color: var(--cream); margin-bottom: 4px; }
@@ -649,7 +653,7 @@
   .why-stat::before {
     content: '';
     position: absolute; top: 0; left: 0; right: 0; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(245,240,232,0.15), transparent);
+    background: linear-gradient(90deg, transparent, rgba(216,180,112,0.5), transparent);
   }
   @media (hover: hover) and (pointer: fine) {
     .why-stat:hover { background: rgba(245,240,232,0.08); transform: translateY(-2px); }
@@ -657,7 +661,7 @@
   .why-stat-val {
     font-family: 'Playfair Display', serif;
     font-size: 40px; font-weight: 700;
-    color: var(--cream); display: block; margin-bottom: 6px;
+    color: var(--gold-light); display: block; margin-bottom: 6px;
   }
   .why-stat-label { font-size: 12px; color: rgba(245,240,232,0.5); }
 
@@ -669,7 +673,7 @@
   .cta-card {
     background: var(--white);
     border: 1px solid var(--border-subtle);
-    border-top: 4px solid var(--navy);
+    border-top: 3px solid var(--gold);
     border-radius: 20px; padding: 48px 40px;
     box-shadow: var(--shadow-card);
     position: relative; overflow: hidden;
@@ -703,7 +707,8 @@
     .faq-q:hover { color: var(--navy-mid); }
   }
   .faq-chevron { font-size: 18px; color: var(--text-muted); transition: transform 250ms var(--ease-out); flex-shrink: 0; }
-  .faq-item.open .faq-chevron { transform: rotate(180deg); color: var(--navy); }
+  .faq-item.open .faq-chevron { transform: rotate(180deg); color: var(--gold-deep); }
+  .faq-item.open .faq-q { color: var(--gold-deep); }
   .faq-a {
     max-height: 0; overflow: hidden;
     transition: max-height 250ms var(--ease-in-out), padding 250ms var(--ease-in-out);
@@ -746,7 +751,7 @@
   .footer-copy { font-size: 13px; color: rgba(245,240,232,0.35); }
   .footer-links { display: flex; gap: 24px; }
   .footer-link { font-size: 13px; color: rgba(245,240,232,0.45); text-decoration: none; transition: color 0.15s; }
-  .footer-link:hover { color: var(--cream); }
+  .footer-link:hover { color: var(--gold-light); }
 
   /* ── ANIMATIONS ── */
   @keyframes fadeUp {
