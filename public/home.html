@@ -791,6 +791,11 @@
      observer already staggers each card, giving a cascade down the grid. */
   .team-card.reveal, .review-card.reveal { transform: translateY(34px) scale(0.97); }
   .team-card.reveal.visible, .review-card.reveal.visible { transform: translateY(0) scale(1); }
+  /* Team group photo fades in when it loads, so it doesn't pop against the
+     navy placeholder while the (lazy) image is fetched. */
+  .team-photo { opacity: 0; transition: opacity 700ms var(--ease-out); }
+  .team-photo.is-loaded { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .team-photo { opacity: 1; transition: none; } }
 
   /* Filled-star row used for review ratings. SVGs render sharper than the
      Unicode ★ glyph and let us control kerning. */
@@ -1318,7 +1323,7 @@
     <!-- Featured team photo -->
     <figure class="reveal" style="margin:8px auto 48px;max-width:440px;">
       <div style="border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-lg);background:var(--navy);">
-        <img src="images/team-barrett-jackson.jpeg" alt="The Auto Pals USA team at the Barrett-Jackson opening party" width="1200" height="1600" loading="lazy" decoding="async" style="display:block;width:100%;height:auto;aspect-ratio:1200/1600;">
+        <img src="images/team-barrett-jackson.jpeg" alt="The Auto Pals USA team at the Barrett-Jackson opening party" width="1200" height="1600" loading="lazy" decoding="async" class="team-photo" onload="this.classList.add('is-loaded')" onerror="this.classList.add('is-loaded')" style="display:block;width:100%;height:auto;aspect-ratio:1200/1600;">
       </div>
       <figcaption style="margin-top:16px;text-align:center;">
         <div style="display:inline-block;font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:var(--navy);background:var(--navy-light);padding:5px 12px;border-radius:4px;margin-bottom:10px;">Barrett-Jackson Opening Party</div>
@@ -1457,6 +1462,13 @@
     window.addEventListener('scroll', onNavScroll, { passive: true });
     onNavScroll();
   }
+
+  // Safety net: if the team photo was already cached/complete before its inline
+  // onload could fire, reveal it now so it can never stay stuck under the
+  // navy placeholder.
+  document.querySelectorAll('.team-photo').forEach(img => {
+    if (img.complete && img.naturalWidth) img.classList.add('is-loaded');
+  });
 
 </script>
 

@@ -1929,10 +1929,11 @@
     if (fill) {
       const lastDone = s.activeStep || (s.steps.length ? Math.max.apply(null, s.steps) : 1);
       const pct = Math.max(0, Math.min(100, ((lastDone - 1) / 4) * 100));
-      fill.style.width = pct + '%';
-      // First call sets width without animation; .ready enables transitions
-      // for subsequent stage changes so it doesn't re-animate from 0 on reloads.
-      requestAnimationFrame(() => fill.classList.add('ready'));
+      // Draw the gold trail in from 0 → the client's current stage on load
+      // (a premium reveal of their progress). Transitions stay on afterward so
+      // later stage changes animate too.
+      fill.classList.add('ready');
+      requestAnimationFrame(() => { fill.style.width = pct + '%'; });
     }
 
     // Deposit badge
