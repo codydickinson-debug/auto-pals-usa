@@ -786,6 +786,11 @@
   /* The hero video unveils with a gentle scale as it scrolls into view. */
   .hero-video-wrap.reveal { transform: translateY(28px) scale(0.975); }
   .hero-video-wrap.reveal.visible { transform: translateY(0) scale(1); }
+  /* More pronounced, premium reveal for the team & review cards — they rise a
+     touch further and scale in, so the scroll-reveal clearly reads. The reveal
+     observer already staggers each card, giving a cascade down the grid. */
+  .team-card.reveal, .review-card.reveal { transform: translateY(34px) scale(0.97); }
+  .team-card.reveal.visible, .review-card.reveal.visible { transform: translateY(0) scale(1); }
 
   /* Filled-star row used for review ratings. SVGs render sharper than the
      Unicode ★ glyph and let us control kerning. */
