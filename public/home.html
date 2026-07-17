@@ -160,6 +160,12 @@
     backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(255,255,255,0.06);
     box-shadow: 0 4px 24px rgba(15,37,87,0.3);
+    transition: box-shadow 250ms var(--ease-out), border-color 250ms var(--ease-out);
+  }
+  /* Subtle elevation once the page scrolls — deeper shadow + a gold hairline. */
+  nav.scrolled {
+    border-bottom-color: rgba(216,180,112,0.3);
+    box-shadow: 0 8px 30px rgba(6,15,42,0.42);
   }
   .nav-logo {
     font-family: 'DM Sans', sans-serif;
@@ -321,12 +327,26 @@
   }
   .hero-title em {
     font-style: italic;
-    background: linear-gradient(135deg, #f4e4b8 0%, #dcb975 46%, #c39a44 100%);
+    /* Gold with a bright highlight band baked in; a one-time sweep of the
+       background position runs the highlight across the word like light
+       catching metal, then settles back to the rich gold. */
+    background-image: linear-gradient(100deg,
+      #c39a44 0%, #d9b877 28%, #f4e4b8 44%, #fffdf5 50%, #f4e4b8 56%, #d9b877 72%, #c39a44 100%);
+    background-size: 250% 100%;
+    background-position: 120% 0;
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
     filter: drop-shadow(0 2px 20px rgba(220,185,117,0.32));
+    animation: goldSheen 2.4s var(--ease-out) 0.9s 1 both;
+  }
+  @keyframes goldSheen {
+    0%   { background-position: 120% 0; }
+    100% { background-position: -20% 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-title em { animation: none; background-position: 40% 0; }
   }
   .hero-sub {
     font-size: 17px;
@@ -763,6 +783,9 @@
     transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out);
   }
   .reveal.visible { opacity: 1; transform: translateY(0); }
+  /* The hero video unveils with a gentle scale as it scrolls into view. */
+  .hero-video-wrap.reveal { transform: translateY(28px) scale(0.975); }
+  .hero-video-wrap.reveal.visible { transform: translateY(0) scale(1); }
 
   /* Filled-star row used for review ratings. SVGs render sharper than the
      Unicode ★ glyph and let us control kerning. */
@@ -1398,28 +1421,37 @@
     entries.forEach(entry => {
       if (!entry.isIntersecting) return;
       const el = entry.target;
+      statObserver.unobserve(el);
       const original = el.textContent.trim();
-      const m = original.match(/^(\d+(?:\.\d+)?)(.*)$/);
-      if (!m) { statObserver.unobserve(el); return; }
-      const target = parseFloat(m[1]);
-      const suffix = m[2] || '';
-      const isInt = !m[1].includes('.');
-      if (reduceMotion) { statObserver.unobserve(el); return; }
+      // optional prefix ($) · number (with thousands) · suffix (h / % / pt)
+      const m = original.match(/^(\D*?)(\d[\d,]*(?:\.\d+)?)(.*)$/);
+      if (!m || reduceMotion) return;
+      const prefix = m[1] || '';
+      const suffix = m[3] || '';
+      const target = parseFloat(m[2].replace(/,/g, ''));
+      const decimals = (m[2].split('.')[1] || '').length;
+      const fmt = v => prefix + v.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + suffix;
       const duration = 1200;
-      const start = performance.now();
-      el.textContent = (isInt ? '0' : '0.0') + suffix;
+      const startT = performance.now();
+      el.textContent = fmt(0);
       function tick(now) {
-        const t = Math.min(1, (now - start) / duration);
+        const t = Math.min(1, (now - startT) / duration);
         const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
-        const current = target * eased;
-        el.textContent = (isInt ? Math.round(current) : current.toFixed(1)) + suffix;
+        el.textContent = t < 1 ? fmt(target * eased) : fmt(target);
         if (t < 1) requestAnimationFrame(tick);
       }
       requestAnimationFrame(tick);
-      statObserver.unobserve(el);
     });
   }, { threshold: 0.6 });
-  document.querySelectorAll('.why-stat-val').forEach(el => statObserver.observe(el));
+  document.querySelectorAll('.why-stat-val, .hero-card-stat-val').forEach(el => statObserver.observe(el));
+
+  // Subtle nav elevation once the page scrolls (deeper shadow + gold hairline).
+  const navEl = document.querySelector('nav');
+  if (navEl) {
+    const onNavScroll = () => navEl.classList.toggle('scrolled', window.scrollY > 30);
+    window.addEventListener('scroll', onNavScroll, { passive: true });
+    onNavScroll();
+  }
 
 </script>
 

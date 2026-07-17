@@ -537,6 +537,8 @@
 
   .submit-btn {
     width: 100%;
+    position: relative;
+    overflow: hidden;
     padding: 14px;
     background: var(--gold-grad);
     color: #33260a;
@@ -551,8 +553,18 @@
     margin-top: 8px;
     letter-spacing: 0.01em;
   }
+  /* A soft light streak sweeps across the button on hover — gold catching light. */
+  .submit-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.55) 50%, transparent 65%);
+    transform: translateX(-130%);
+    pointer-events: none;
+  }
   @media (hover: hover) and (pointer: fine) {
     .submit-btn:hover { filter: brightness(1.04); box-shadow: 0 6px 20px rgba(180,140,50,0.36), inset 0 1px 0 rgba(255,255,255,0.5); }
+    .submit-btn:hover::after { transform: translateX(130%); transition: transform 700ms var(--ease-out); }
   }
   .submit-btn:active { transform: scale(0.98); }
 
