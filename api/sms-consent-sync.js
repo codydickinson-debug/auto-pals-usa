@@ -101,16 +101,27 @@ module.exports = async function handler(req, res) {
       if (!list.length || (lastPage && page >= Number(lastPage))) break;
     }
 
+    // Scheduled/backup runs pass ?fast=1: flip consent only. Thread-closing is
+    // slower (a Salesmsg call per contact) and is already handled in real time
+    // by the STOP webhook, so skipping it keeps the scheduled run well inside
+    // the function time budget. Manual runs (no ?fast) still close threads.
+    const fast = !!req.query.fast;
     let flipped = 0;
     let closed = 0;
     const flips = [];
-    for (const { phone, contactId } of optedOut) {
+    // Flip consent FIRST for everyone — quick Supabase writes, and the part
+    // that actually stops follow-ups, so this must always finish.
+    for (const { phone } of optedOut) {
       const out = await sms.optOutPhone(phone);
       flipped += out.matched || 0;
-      // Sweep their thread out of the Open inbox too (close, not delete).
-      const c = await sms.closeContactConversation(contactId, phone);
-      closed += c.closed || 0;
-      flips.push({ tail: '…' + String(phone).replace(/\D/g, '').slice(-4), rows: out.matched || 0, closed: c.closed || 0, note: c.error || c.note });
+      flips.push({ tail: '…' + String(phone).replace(/\D/g, '').slice(-4), rows: out.matched || 0 });
+    }
+    // Then sweep their inbox threads closed — skipped on fast/scheduled runs.
+    if (!fast) {
+      for (const { phone, contactId } of optedOut) {
+        const c = await sms.closeContactConversation(contactId, phone);
+        closed += c.closed || 0;
+      }
     }
 
     // Optional inbox sweep: &closeFailed=1 closes every red "Failed"

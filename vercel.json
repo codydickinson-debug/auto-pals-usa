@@ -20,6 +20,9 @@
     { "source": "/booking",     "destination": "/public/booking.html" },
     { "source": "/(.*)",        "destination": "/public/$1" }
   ],
+  "functions": {
+    "api/sms-consent-sync.js": { "maxDuration": 60 }
+  },
   "crons": [
     {
       "path": "/api/cron",
