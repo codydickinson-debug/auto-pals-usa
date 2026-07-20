@@ -1929,11 +1929,18 @@
     if (fill) {
       const lastDone = s.activeStep || (s.steps.length ? Math.max.apply(null, s.steps) : 1);
       const pct = Math.max(0, Math.min(100, ((lastDone - 1) / 4) * 100));
-      // Draw the gold trail in from 0 → the client's current stage on load
-      // (a premium reveal of their progress). Transitions stay on afterward so
-      // later stage changes animate too.
+      // Draw the gold trail in from 0 → the client's current stage on first
+      // render (a premium reveal of their progress). Done synchronously with a
+      // forced reflow so it never depends on rAF (which pauses in background
+      // tabs) — the final width is always set. Later renders just animate to
+      // the new width.
       fill.classList.add('ready');
-      requestAnimationFrame(() => { fill.style.width = pct + '%'; });
+      if (!fill.dataset.drawn) {
+        fill.dataset.drawn = '1';
+        fill.style.width = '0%';
+        void fill.offsetWidth; // commit the 0 so the transition runs from it
+      }
+      fill.style.width = pct + '%';
     }
 
     // Deposit badge
