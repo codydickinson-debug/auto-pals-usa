@@ -5,7 +5,11 @@
 <meta http-equiv="refresh" content="0; url=/home.html">
 <link rel="canonical" href="https://autopalsusa.com/home.html">
 <title>Auto Pals USA</title>
-<script>window.location.replace('/home.html');</script>
+<!-- Carry the query string across the redirect. Ad platforms append click
+     IDs to the landing URL (Meta's ?fbclid=, Google's ?gclid=) and the pixel
+     on /home.html needs them to attribute the click — a bare replace() to
+     '/home.html' silently drops them and breaks ad attribution. -->
+<script>window.location.replace('/home.html' + window.location.search + window.location.hash);</script>
 </head>
 <body>
 <p>Redirecting to <a href="/home.html">home page</a>...</p>

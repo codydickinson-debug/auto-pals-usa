@@ -3483,6 +3483,18 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     } catch (e) { /* never throw */ }
   }
 
+  // ── META PIXEL CONVERSION EVENTS ─────────────────────────────────
+  // Sibling to track() above, for Meta's ad-optimization side. Same
+  // never-throw contract, and the typeof guard matters: ad blockers stop
+  // fbevents.js from loading, which leaves fbq undefined — an unguarded
+  // call would throw a ReferenceError mid-submit and kill the request
+  // for exactly the privacy-conscious users most likely to block it.
+  function pixel(event, params) {
+    try {
+      if (typeof fbq === 'function') fbq('track', event, params || {});
+    } catch (e) { /* never throw */ }
+  }
+
   function mapRequestFromDB(r) {
     return {
       id: r.id, submitted: r.submitted, status: r.status,
@@ -4515,6 +4527,21 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     requests.unshift(req);
     save();
     dbPost('requests', req); // Push to Supabase with portal code already set
+
+    // Meta conversion event. Deliberately NOT fired for auto-rejected rows
+    // (budget under $4k) — Meta optimizes toward whoever we call a Lead, so
+    // counting people we just turned away would train the ad account to find
+    // more of them. searchMode and the budget ride along as custom params for
+    // audience building; `value` is left off on purpose so a future
+    // value-optimized campaign doesn't read a car's price as our revenue.
+    if (req.status !== 'rejected') {
+      pixel('Lead', {
+        content_name: 'Vehicle Request',
+        content_category: req.searchMode === 'open' ? 'Open Search' : 'Specific Vehicle',
+        budget_max: req.budgetMax,
+        skip_the_line: !!req.skipTheLine
+      });
+    }
 
     // Server-side now fires staffNewRequest + (confirmation|rejected) email
     // and (new_request|rejected) SMS as part of POST /requests in api/db.js.

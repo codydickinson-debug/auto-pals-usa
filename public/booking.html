@@ -732,6 +732,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       }).catch(() => {});
     } catch (e) { /* never throw */ }
   }
+  // ── META PIXEL CONVERSION EVENTS ────────────────────────────────
+  // Sibling to track() above, for Meta's ad-optimization side. Same
+  // never-throw contract, and the typeof guard matters: ad blockers stop
+  // fbevents.js from loading, which leaves fbq undefined — an unguarded
+  // call would throw a ReferenceError and break the booking confirmation
+  // for exactly the privacy-conscious users most likely to block it.
+  function pixel(event, params) {
+    try {
+      if (typeof fbq === 'function') fbq('track', event, params || {});
+    } catch (e) { /* never throw */ }
+  }
   // Page-load event fires once per visit.
   try { track('booking_view'); } catch (e) {}
 
@@ -1012,6 +1023,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         vehicle: (document.getElementById('b-vehicle') || {}).value || ''
       });
     } catch (e) {}
+
+    // Meta conversion event. A booked call is the conversion worth optimizing
+    // toward — it's the last step the client controls and the one that
+    // actually fills the calendar, so it gets Meta's standard Schedule event
+    // rather than a second Lead (which would double-count the same person
+    // who already fired Lead on the request form).
+    pixel('Schedule', {
+      content_name: 'Intro Call',
+      content_category: 'Booked Call',
+      returning_client: !!sessionStorage.getItem('portal_code')
+    });
 
     // If the calendar event failed (or we're in demo mode without Google
     // configured), warn the user instead of silently claiming success.
