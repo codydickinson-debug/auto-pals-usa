@@ -1295,6 +1295,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
   let activeClientData = null;
 
+  // ── META PIXEL CONVERSION EVENTS ────────────────────────────────
+  // Same never-throw contract as the pixel() helpers in form.html and
+  // booking.html. The typeof guard matters: ad blockers stop fbevents.js
+  // from loading, which leaves fbq undefined, and an unguarded call would
+  // throw partway through rendering the portal.
+  function pixel(event, params) {
+    try {
+      if (typeof fbq === 'function') fbq('track', event, params || {});
+    } catch (e) { /* never throw */ }
+  }
+
   // ─── "Forgot your code?" recovery ────────────────────────────────
   function toggleRecoverForm() {
     const f = document.getElementById('recover-form');
@@ -2000,6 +2011,45 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         windowEl.textContent = '60 days';
       }
       if (payWrap) payWrap.style.display = 'none';
+
+      // ── Meta conversion event: the $850 deposit is the actual sale ──
+      // Deposits arrive by Zelle and are confirmed by staff in the
+      // dashboard, so there is no in-browser payment moment to hang this
+      // on — the nearest client-side signal is the portal rendering a
+      // confirmed deposit. Two things that has to survive:
+      //
+      //  1. Dedupe. setStage() re-runs on every render and the client
+      //     reopens this portal for weeks while we source, so an
+      //     unguarded call would report a fresh $850 purchase per page
+      //     view and inflate ROAS beyond recognition. Keyed on the portal
+      //     code, which is unique per request.
+      //  2. Gate on the RECORD, not the `depositPaid` local above — the
+      //     `searching` and `found` stages hardcode depositPaid:true as a
+      //     presentational default, so that variable can be true for a
+      //     client who has not actually paid.
+      //
+      // If localStorage is unavailable (private browsing) we skip the
+      // event entirely rather than fire it undeduped: under-reporting
+      // costs us attribution, over-reporting corrupts the ad account.
+      try {
+        const _paidForReal = !!(activeClientData &&
+          (activeClientData.depositPaid || activeClientData.depositReceived));
+        const _key = activeClientData &&
+          (activeClientData.portalCode || activeClientData.id);
+        if (_paidForReal && _key) {
+          const _seen = 'aup_purchase_' + _key;
+          if (!localStorage.getItem(_seen)) {
+            localStorage.setItem(_seen, '1');
+            pixel('Purchase', {
+              value: 850,
+              currency: 'USD',
+              content_name: 'Sourcing Deposit',
+              content_type: 'product',
+              content_ids: ['deposit-850']
+            });
+          }
+        }
+      } catch (e) { /* never throw */ }
     } else {
       badge.textContent = '⚠ Deposit Not Yet Received';
       badge.style.background = 'var(--red-light)';
