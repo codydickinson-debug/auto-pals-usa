@@ -82,6 +82,7 @@ const sms = require('./_sms.js');
 const emailModule = require('./email.js');
 const sheets = require('./sheets.js');
 const pipedrive = require('./_pipedrive.js');
+const meta = require('./_meta.js');
 const { DEPOSIT_STR_BARE } = require('./_constants.js');
 
 const PORTAL_URL  = process.env.PORTAL_URL  || 'https://autopalsusa.com/portal.html';
@@ -395,6 +396,39 @@ module.exports = async function handler(req, res) {
         // swallows its own errors and demo-modes when creds aren't set.
         fires.push(pipedrive.syncNewRequest(row));
 
+        // Meta Conversions API — server-side twin of the browser Lead
+        // pixel in form.html. Sent for the same reason we skip Lead in
+        // the browser for rejects: Meta optimizes toward whatever we
+        // call a conversion, and a sub-$4k budget is not one.
+        //
+        // This request came from the CLIENT'S browser, so their _fbp /
+        // _fbc cookies, IP, and user agent are all legitimately ours to
+        // forward — _fbc in particular carries the ad click that
+        // produced this lead, which is the strongest match signal Meta
+        // takes. `leadEventId` is minted by form.html and passed through
+        // so Meta collapses the browser and server copies into one.
+        if (row.status !== 'rejected') {
+          const _sig = meta.browserSignals(req);
+          fires.push(meta.send({
+            eventName: 'Lead',
+            eventId: body.leadEventId || undefined,
+            actionSource: 'website',
+            eventSourceUrl: _sig.sourceUrl,
+            userData: {
+              email: row.email, phone: row.phone,
+              firstName: row.first_name, lastName: row.last_name,
+              zip: row.zip, city: row.city, state: row.state,
+              fbp: _sig.fbp, fbc: _sig.fbc, ip: _sig.ip, userAgent: _sig.userAgent
+            },
+            customData: {
+              content_name: 'Vehicle Request',
+              content_category: row.search_mode === 'open' ? 'Open Search' : 'Specific Vehicle',
+              budget_max: row.budget_max,
+              skip_the_line: !!row.skip_the_line
+            }
+          }));
+        }
+
         const results = await Promise.allSettled(fires);
         results.forEach((r, i) => {
           if (r.status === 'rejected') console.error('[DB→notify]', i, r.reason && r.reason.message);
@@ -617,6 +651,49 @@ module.exports = async function handler(req, res) {
               portalUrl:   PORTAL_URL
             }));
           }
+
+          // Meta Conversions API — the $850 is the actual sale, and this
+          // is the only place it can be reported honestly. The deposit
+          // arrives by Zelle and a staff member flips it here, so the
+          // client's browser is not involved and the portal-side pixel
+          // only fires whenever they next happen to open the portal —
+          // possibly on a different device than the one that clicked the
+          // ad, possibly never.
+          //
+          // Deliberately NO browserSignals(req): this PATCH came from
+          // the STAFF dashboard, so the IP, user agent, and _fbp cookie
+          // all belong to whoever clicked "mark deposit paid". Sending
+          // those would attribute every sale to a staff member. Matching
+          // rides on the client's hashed email/phone/name instead.
+          //
+          // action_source 'system_generated' is Meta's value for a
+          // conversion recorded by a back-office system rather than
+          // observed in a browser.
+          //
+          // event_id must equal the portal pixel's — both use
+          // `deposit-<requestId>`. Meta's dedup window is ~48h, so a
+          // client who first opens their portal weeks after we mark the
+          // deposit paid could double-count. Once Events Manager shows
+          // Purchase arriving reliably from this server, delete the
+          // browser Purchase in portal.html and the risk goes with it.
+          depositFires.push(meta.send({
+            eventName: 'Purchase',
+            eventId: `deposit-${b.id}`,
+            actionSource: 'system_generated',
+            userData: {
+              email: priorRow.email, phone: priorRow.phone,
+              firstName: priorRow.first_name, lastName: priorRow.last_name,
+              zip: priorRow.zip, city: priorRow.city, state: priorRow.state
+            },
+            customData: {
+              value: 850,
+              currency: 'USD',
+              content_name: 'Sourcing Deposit',
+              content_type: 'product',
+              content_ids: ['deposit-850']
+            }
+          }));
+
           await Promise.allSettled(depositFires);
         }
 

@@ -738,11 +738,34 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // fbevents.js from loading, which leaves fbq undefined — an unguarded
   // call would throw a ReferenceError and break the booking confirmation
   // for exactly the privacy-conscious users most likely to block it.
-  function pixel(event, params) {
+  function pixel(event, params, eventId) {
     try {
-      if (typeof fbq === 'function') fbq('track', event, params || {});
+      if (typeof fbq === 'function') {
+        // The 4th arg is Meta's dedup handle: when the same event_name +
+        // eventID also arrives from our server via the Conversions API,
+        // Meta collapses the pair into one conversion instead of
+        // counting the booking twice.
+        if (eventId) fbq('track', event, params || {}, { eventID: eventId });
+        else fbq('track', event, params || {});
+      }
     } catch (e) { /* never throw */ }
   }
+  // Random, non-identifying dedup handle shared with the server copy of
+  // an event. Deliberately not derived from the client's email or name —
+  // event IDs reach Meta unhashed.
+  function newEventId(prefix) {
+    try {
+      const rand = (window.crypto && window.crypto.randomUUID)
+        ? window.crypto.randomUUID()
+        : Math.random().toString(36).slice(2) + Date.now().toString(36);
+      return prefix + '-' + rand;
+    } catch (e) {
+      return prefix + '-' + Date.now();
+    }
+  }
+  // One id per confirmed booking, minted before /api/booking is called so
+  // the server can reuse it for the Conversions API copy.
+  let _scheduleEventId = null;
   // Page-load event fires once per visit.
   try { track('booking_view'); } catch (e) {}
 
@@ -982,6 +1005,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       // include it. Without it the booking still works fully — just no portal
       // code line in the calendar description.
       const _pc = sessionStorage.getItem('portal_code') || '';
+      _scheduleEventId = newEventId('schedule');
       const bRes = await fetch('/api/booking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -990,7 +1014,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           phone: document.getElementById('b-phone').value.trim(),
           vehicle: document.getElementById('b-vehicle').value.trim(),
           date: selectedDate, time: selectedTime, dateLabel,
-          portalCode: _pc
+          portalCode: _pc,
+          scheduleEventId: _scheduleEventId
         })
       });
       if (!bRes.ok) {
@@ -1033,7 +1058,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       content_name: 'Intro Call',
       content_category: 'Booked Call',
       returning_client: !!sessionStorage.getItem('portal_code')
-    });
+    }, _scheduleEventId);
 
     // If the calendar event failed (or we're in demo mode without Google
     // configured), warn the user instead of silently claiming success.

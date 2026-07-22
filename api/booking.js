@@ -9,6 +9,7 @@
 
 const sms   = require('./_sms.js');
 const email = require('./email.js');
+const meta  = require('./_meta.js');
 const { verifyToken } = require('./auth.js');
 
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
@@ -243,12 +244,38 @@ module.exports = async function handler(req, res) {
 
   const demoMode = !process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_REFRESH_TOKEN;
 
+  // Meta Conversions API — server-side twin of booking.html's Schedule
+  // pixel. Started before the demo-mode branch because a booked call is
+  // a booked call whether or not Google Calendar happens to be wired up.
+  // This POST came from the client's own browser, so their _fbp / _fbc
+  // cookies and IP are legitimately ours to forward; scheduleEventId is
+  // minted in booking.html so Meta collapses the two copies into one.
+  const _sig = meta.browserSignals(req);
+  const metaSchedulePromise = meta.send({
+    eventName: 'Schedule',
+    eventId: booking.scheduleEventId || undefined,
+    actionSource: 'website',
+    eventSourceUrl: _sig.sourceUrl,
+    userData: {
+      email, phone: booking.phone,
+      firstName, lastName,
+      fbp: _sig.fbp, fbc: _sig.fbc, ip: _sig.ip, userAgent: _sig.userAgent
+    },
+    customData: {
+      content_name: 'Intro Call',
+      content_category: 'Booked Call',
+      call_date: date,
+      call_time: time
+    }
+  });
+
   if (demoMode) {
     console.log('[BOOKING DEMO]', `${firstName} ${lastName}`, date, time);
     try { await sendConfirmationEmail(booking); } catch(e) { console.log('[Email demo]', e.message); }
     await Promise.allSettled([
       staffBookingSmsPromise(booking),
-      staffBookingEmailPromise(booking)
+      staffBookingEmailPromise(booking),
+      metaSchedulePromise
     ]);
     return res.status(200).json({ ok: true, demo: true });
   }
@@ -280,7 +307,10 @@ module.exports = async function handler(req, res) {
     staffBookingEmailPromise(booking),
     sendConfirmationEmail(booking),
     calendarPromise,
-    staffBookingSmsPromise(booking)
+    staffBookingSmsPromise(booking),
+    // Awaited with the rest — Vercel kills in-flight fetches the moment
+    // res.json() returns, and _meta.send() never rejects.
+    metaSchedulePromise
   ]);
 
   const eventId =

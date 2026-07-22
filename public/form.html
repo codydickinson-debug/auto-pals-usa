@@ -3489,10 +3489,31 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // fbevents.js from loading, which leaves fbq undefined — an unguarded
   // call would throw a ReferenceError mid-submit and kill the request
   // for exactly the privacy-conscious users most likely to block it.
-  function pixel(event, params) {
+  function pixel(event, params, eventId) {
     try {
-      if (typeof fbq === 'function') fbq('track', event, params || {});
+      if (typeof fbq === 'function') {
+        // The 4th arg is Meta's dedup handle: when the same event_name +
+        // eventID also arrives from our server via the Conversions API,
+        // Meta collapses the pair into one conversion instead of
+        // counting the lead twice.
+        if (eventId) fbq('track', event, params || {}, { eventID: eventId });
+        else fbq('track', event, params || {});
+      }
     } catch (e) { /* never throw */ }
+  }
+
+  // Random, non-identifying dedup handle shared with the server copy of
+  // an event. Deliberately not derived from the client's email or name —
+  // event IDs reach Meta unhashed.
+  function newEventId(prefix) {
+    try {
+      const rand = (window.crypto && window.crypto.randomUUID)
+        ? window.crypto.randomUUID()
+        : Math.random().toString(36).slice(2) + Date.now().toString(36);
+      return prefix + '-' + rand;
+    } catch (e) {
+      return prefix + '-' + Date.now();
+    }
   }
 
   function mapRequestFromDB(r) {
@@ -4524,6 +4545,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     req.portalCode = accessCode;
     req.accessCode = accessCode;
 
+    // Minted before the POST so the same id rides along to the server,
+    // which sends its own Lead via the Conversions API. Matching ids let
+    // Meta collapse the two into one conversion.
+    req.leadEventId = newEventId('lead');
+
     requests.unshift(req);
     save();
     dbPost('requests', req); // Push to Supabase with portal code already set
@@ -4540,7 +4566,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         content_category: req.searchMode === 'open' ? 'Open Search' : 'Specific Vehicle',
         budget_max: req.budgetMax,
         skip_the_line: !!req.skipTheLine
-      });
+      }, req.leadEventId);
     }
 
     // Server-side now fires staffNewRequest + (confirmation|rejected) email

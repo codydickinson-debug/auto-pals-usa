@@ -137,7 +137,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   </ul>
   <p>We also automatically receive limited technical data when you visit the site (browser type, IP address, page views) through our hosting provider's server logs.</p>
   <p>We use the Meta Pixel, an advertising tool provided by Meta Platforms, Inc. (Facebook and Instagram), on our website. It places a cookie in your browser and reports which of our pages you visited, so we can measure how well our ads perform and show our ads to people who have visited our site.</p>
-  <p>The pixel also reports three milestones when you reach them: submitting a vehicle request, booking a call, and having a deposit confirmed. Alongside those we send Meta a small amount of context — whether your search is for a specific vehicle or open-ended, your stated budget range, and the $850 deposit amount. We never send Meta your name, email address, phone number, or the notes you write us. You can limit ad tracking in your Meta ad settings at <a href="https://www.facebook.com/adpreferences" target="_blank" rel="noopener">facebook.com/adpreferences</a>, or by blocking cookies in your browser — the site works normally either way.</p>
+  <p>The pixel also reports three milestones when you reach them: submitting a vehicle request, booking a call, and having a deposit confirmed. Alongside those we send Meta a small amount of context — whether your search is for a specific vehicle or open-ended, your stated budget range, and the $850 deposit amount.</p>
+  <p>We also send these same three milestones to Meta directly from our servers, using a Meta feature called the Conversions API. This is how we record a confirmed deposit, since deposits are paid by bank transfer and confirmed by our staff rather than through the website. When we do this we include a scrambled (one-way hashed) form of your email address, phone number, name, and city, state, and ZIP, which Meta uses to match the event to an account. We do not send the readable values, and Meta cannot recover them from the scrambled form — but you should understand that this is how the match is made. We never send Meta the notes you write us, your address, or any document you upload.</p>
+  <p>You can limit ad tracking in your Meta ad settings at <a href="https://www.facebook.com/adpreferences" target="_blank" rel="noopener">facebook.com/adpreferences</a>, or by blocking cookies in your browser — the site works normally either way. If you would rather we not send your milestones to Meta at all, email us at <a href="mailto:codydickinson@autopalsusa.com">codydickinson@autopalsusa.com</a> and we will exclude you.</p>
 
   <h2>2. How We Use Your Information</h2>
   <p>We use the information you provide to:</p>
@@ -173,7 +175,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <li><strong>Supabase</strong> — for storing your request, messages, and account data</li>
     <li><strong>Google Calendar / Google Workspace</strong> — for scheduling intro calls</li>
     <li><strong>Vercel</strong> — for hosting the website</li>
-    <li><strong>Meta Platforms (Facebook / Instagram)</strong> — website visit data only, through the Meta Pixel described in Section 1, for advertising measurement and retargeting</li>
+    <li><strong>Meta Platforms (Facebook / Instagram)</strong> — website visit data through the Meta Pixel, plus hashed contact details sent through the Conversions API, both as described in Section 1, for advertising measurement and retargeting</li>
   </ul>
   <p>We do not sell, rent, or trade your information. Apart from the website visit data collected by the Meta Pixel, we do not share your information with advertisers or marketing networks — the name, email, phone number, and vehicle details you submit to us are never shared for advertising purposes.</p>
 
@@ -211,6 +213,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   </footer>
 </main>
 
-<div id="privacy-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v110 · 2026-07-22</div>
+<div id="privacy-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v111 · 2026-07-22</div>
 </body>
 </html>

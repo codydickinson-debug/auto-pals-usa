@@ -1300,9 +1300,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // booking.html. The typeof guard matters: ad blockers stop fbevents.js
   // from loading, which leaves fbq undefined, and an unguarded call would
   // throw partway through rendering the portal.
-  function pixel(event, params) {
+  function pixel(event, params, eventId) {
     try {
-      if (typeof fbq === 'function') fbq('track', event, params || {});
+      if (typeof fbq === 'function') {
+        // The 4th arg is Meta's dedup handle: db.js sends the same
+        // Purchase from the server when staff mark the deposit paid, and
+        // matching event ids collapse the pair into one $850 sale.
+        if (eventId) fbq('track', event, params || {}, { eventID: eventId });
+        else fbq('track', event, params || {});
+      }
     } catch (e) { /* never throw */ }
   }
 
@@ -2040,13 +2046,16 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           const _seen = 'aup_purchase_' + _key;
           if (!localStorage.getItem(_seen)) {
             localStorage.setItem(_seen, '1');
+            // Event id must match db.js's `deposit-<requestId>` exactly —
+            // that's what lets Meta collapse this with the server-side
+            // Purchase instead of counting the sale twice.
             pixel('Purchase', {
               value: 850,
               currency: 'USD',
               content_name: 'Sourcing Deposit',
               content_type: 'product',
               content_ids: ['deposit-850']
-            });
+            }, activeClientData.id ? 'deposit-' + activeClientData.id : undefined);
           }
         }
       } catch (e) { /* never throw */ }
