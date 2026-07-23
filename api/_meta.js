@@ -38,6 +38,12 @@ const crypto = require('crypto');
 const META_PIXEL_ID = process.env.META_PIXEL_ID || '979507655137437';
 const GRAPH_VERSION = 'v21.0';
 
+// Ceiling on how long we'll wait for Meta. Sends ride inside the same
+// Promise.allSettled as confirmation emails, the calendar event, and
+// staff SMS, under Vercel's function cap — analytics gets a slice, not
+// the whole budget.
+const SEND_TIMEOUT_MS = Number(process.env.META_CAPI_TIMEOUT_MS) || 3500;
+
 // ── Normalization ──────────────────────────────────────────────────
 // Meta requires PII be SHA-256 hashed, and hashes only match if both
 // sides normalized identically first. Their rules: lowercase, trim,
@@ -191,14 +197,28 @@ async function send({
       payload.test_event_code = process.env.META_TEST_EVENT_CODE;
     }
 
-    const res = await fetch(
-      `https://graph.facebook.com/${GRAPH_VERSION}/${META_PIXEL_ID}/events?access_token=${encodeURIComponent(token)}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      }
-    );
+    // Hard timeout. This call runs inside the same Promise.allSettled as
+    // the booking confirmation email, the calendar event, and the staff
+    // SMS — and Vercel's function cap has already killed that fan-out
+    // once when one leg ran long (see the note in booking.js). Analytics
+    // must never be the reason a client's booking confirmation doesn't
+    // send, so we give Meta a few seconds and walk away.
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), SEND_TIMEOUT_MS);
+    let res;
+    try {
+      res = await fetch(
+        `https://graph.facebook.com/${GRAPH_VERSION}/${META_PIXEL_ID}/events?access_token=${encodeURIComponent(token)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: ctl.signal
+        }
+      );
+    } finally {
+      clearTimeout(timer);
+    }
     const body = await res.json().catch(() => ({}));
 
     if (!res.ok) {
@@ -214,6 +234,14 @@ async function send({
       (body.messages && body.messages.length ? ` warnings=${JSON.stringify(body.messages).slice(0, 200)}` : ''));
     return { ok: true, received: body.events_received, fbTraceId: body.fbtrace_id };
   } catch (e) {
+    // An abort here is us hanging up on Meta, not a bug — name it so the
+    // logs don't read like a crash. The event is simply lost; Meta has no
+    // retry queue on our side by design (a queue would need durable
+    // storage and could double-send).
+    if (e && (e.name === 'AbortError' || e.name === 'TimeoutError')) {
+      console.warn(`[meta-capi] ${eventName} timed out after ${SEND_TIMEOUT_MS}ms — event dropped`);
+      return { ok: false, error: 'timeout' };
+    }
     console.error(`[meta-capi] ${eventName} threw:`, e && e.message);
     return { ok: false, error: e && e.message };
   }
