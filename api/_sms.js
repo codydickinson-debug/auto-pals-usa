@@ -137,13 +137,44 @@ async function refreshSalesmsgToken(currentToken) {
   return j.access_token;
 }
 
+// Single-flight guard. Salesmsg's refresh endpoint ROTATES the token: the
+// call that succeeds invalidates the token it was given. sendToStaff()
+// fans out to every staff number through Promise.all, so on a cold lambda
+// all of them missed the empty cache, loaded the same persisted token, and
+// refreshed it concurrently — one won, the rest were left holding a token
+// that had just been invalidated. They then fell through to the env seed
+// (dead since the first-ever refresh rotated it) and their sends came back
+// 403, which is why a booking would text one staff member and silently
+// skip the others. Observed live 2026-07-23 15:17.
+//
+// Holding the in-flight promise collapses N concurrent resolutions into
+// one: the first caller does the refresh, everyone else awaits the same
+// result and they all send with the same valid token.
+let _refreshInFlight = null;
+
 async function activeToken() {
   // 1. Warm-lambda fast path.
   if (_tokenCache.value && Date.now() < _tokenCache.expiresAt) {
     return _tokenCache.value;
   }
-  // 2. Cold start / stale cache: try the persisted token first — it's the
-  //    freshest one ANY lambda instance has seen.
+  // 2. A resolution is already running — join it instead of starting a
+  //    second one that would rotate the token out from under the first.
+  if (_refreshInFlight) return _refreshInFlight;
+
+  _refreshInFlight = _resolveToken();
+  try {
+    return await _refreshInFlight;
+  } finally {
+    // Cleared after the await so late arrivals join this flight rather
+    // than racing a fresh one. Anyone arriving after this point hits the
+    // warm cache _resolveToken() just populated.
+    _refreshInFlight = null;
+  }
+}
+
+async function _resolveToken() {
+  // Cold start / stale cache: try the persisted token first — it's the
+  // freshest one ANY lambda instance has seen.
   const persisted = await loadPersistedToken();
   if (persisted) {
     const refreshed = await refreshSalesmsgToken(persisted);
@@ -151,13 +182,16 @@ async function activeToken() {
     // Persisted token dead too (quiet gap > 1h and keep-alive missed) —
     // fall through to the env seed as last resort.
   }
-  // 3. Env seed (fresh deploy or disaster recovery).
+  // Env seed (fresh deploy or disaster recovery). Note this is expected to
+  // fail on any project that has refreshed even once, since that first
+  // refresh rotated the seed away — it's a cold-start bootstrap, not a
+  // standing fallback.
   const seed = process.env.SALESMSG_API_KEY;
   if (!seed) return null;
   const refreshed = await refreshSalesmsgToken(seed);
   if (refreshed) return refreshed;
-  // 4. Nothing refreshes. Return the seed so the send attempt itself
-  //    surfaces the 401 (which logs loudly), rather than silently demoing.
+  // Nothing refreshes. Return the seed so the send attempt itself
+  // surfaces the failure (which logs loudly), rather than silently demoing.
   return seed;
 }
 
@@ -219,9 +253,14 @@ async function sendOne(to, body) {
     let r = await postSalesmsgMessage(token, dest, teamId, body);
 
     // 401 → the token aged out (or we got unlucky with cache timing).
-    // Force a refresh and retry once.
-    if (r.status === 401) {
-      console.log('[Salesmsg] 401 on send — refreshing token + retrying');
+    // 403 → Salesmsg's gateway returns "explicit deny in an identity-based
+    // policy" for a token that was ROTATED AWAY rather than merely expired,
+    // which is what a caller ends up holding after losing a concurrent
+    // refresh race. Same remedy as a 401: drop the dead token, re-resolve,
+    // retry once. Before the single-flight guard in activeToken() this was
+    // silently eating staff notifications on every booking.
+    if (r.status === 401 || r.status === 403) {
+      console.log(`[Salesmsg] ${r.status} on send — refreshing token + retrying`);
       _tokenCache = { value: null, expiresAt: 0 };
       token = await activeToken();
       if (token) r = await postSalesmsgMessage(token, dest, teamId, body);
