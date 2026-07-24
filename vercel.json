@@ -9,18 +9,13 @@
     { "source": "/api/cron",    "destination": "/api/cron.js" },
     { "source": "/api/portal-recover", "destination": "/api/portal-recover.js" },
     { "source": "/api/portal-sign",    "destination": "/api/portal-sign.js" },
-    { "source": "/",            "destination": "/public/home.html" },
-    { "source": "/home",        "destination": "/public/home.html" },
-    { "source": "/home.html",   "destination": "/public/home.html" },
-    { "source": "/form",        "destination": "/public/form.html" },
-    { "source": "/form.html",   "destination": "/public/form.html" },
-    { "source": "/request",     "destination": "/public/request.html" },
-    { "source": "/request.html","destination": "/public/request.html" },
-    { "source": "/portal.html", "destination": "/public/portal.html" },
-    { "source": "/portal",      "destination": "/public/portal.html" },
-    { "source": "/booking.html","destination": "/public/booking.html" },
-    { "source": "/booking",     "destination": "/public/booking.html" },
-    { "source": "/(.*)",        "destination": "/public/$1" }
+    { "source": "/home",     "destination": "/home.html" },
+    { "source": "/form",     "destination": "/form.html" },
+    { "source": "/request",  "destination": "/request.html" },
+    { "source": "/portal",   "destination": "/portal.html" },
+    { "source": "/booking",  "destination": "/booking.html" },
+    { "source": "/privacy",  "destination": "/privacy.html" },
+    { "source": "/terms",    "destination": "/terms.html" }
   ],
   "functions": {
     "api/sms-consent-sync.js": { "maxDuration": 60 }
