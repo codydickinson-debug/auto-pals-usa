@@ -96,7 +96,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
   .nav-logo { display:flex; align-items:center; gap:10px; text-decoration:none; }
   .nav-logo-text { color:var(--cream); font-size:18px; font-weight:700; }
-  .nav-logo-sub { font-size:10px; font-weight:500; letter-spacing:0.18em; text-transform:uppercase; color:rgba(245,240,232,0.45); margin-top:1px; }
+  /* a11y: 0.45 alpha on the navy nav was under the 4.5:1 AA minimum for
+     10px text; 0.72 clears it while staying a subdued sub-label. */
+  .nav-logo-sub { font-size:10px; font-weight:500; letter-spacing:0.18em; text-transform:uppercase; color:rgba(245,240,232,0.72); margin-top:1px; }
 
   .booking-wrap {
     max-width: 960px;
@@ -487,6 +489,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   </div>
 </nav>
 
+<!-- a11y: single main landmark so screen-reader users can skip the nav. -->
+<main id="main">
+
 <!-- ── PORTAL-CODE GATE ─────────────────────────────────────────────
      Hides the booking calendar unless the visitor came through the
      portal flow (which sets sessionStorage.portal_code). Reason: we
@@ -693,6 +698,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
   </div>
 </div>
+
+</main>
 
 <script>
   // ── ANONYMOUS FUNNEL TRACKING ──────────────────────────────────

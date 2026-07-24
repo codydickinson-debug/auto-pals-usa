@@ -195,7 +195,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--gold-deep);
+    /* a11y: --gold-deep (#c39a44) on the tinted badge computed to ~2.4:1,
+       well under the 4.5:1 AA minimum for 11px text. This deeper bronze
+       lands ~5.4:1. Scoped here so the brand gold is unchanged elsewhere. */
+    color: #7d5f1b;
     background: rgba(211,172,95,0.14);
     padding: 5px 12px;
     border-radius: 999px;
@@ -1967,6 +1970,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   </div>
 </nav>
 
+<!-- a11y: one main landmark wrapping the view stack. Only one .view is
+     active at a time, so this stays a single main regardless of which
+     view (client form / dashboard / detail) is showing. Modal overlays
+     live outside it, which is where dialogs belong. -->
+<main id="main">
+
 <!-- ============ CLIENT FORM VIEW ============ -->
 <div id="view-client" class="view active">
   <div class="form-page">
@@ -2015,7 +2024,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         </div>
         <div class="form-row">
           <div>
-            <label>Date of Request <span class="req">*</span></label>
+            <label for="f-date">Date of Request <span class="req">*</span></label>
             <input type="date" id="f-date" style="color:var(--text);">
           </div>
           <div>
@@ -2034,7 +2043,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <div id="specific-fields">
         <div class="form-row">
           <div>
-            <label>Make <span class="req">*</span></label>
+            <label for="f-make">Make <span class="req">*</span></label>
             <div class="select-wrap">
             <select id="f-make">
               <option value="">Select make...</option>
@@ -2069,7 +2078,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         </div>
         <div class="form-row">
           <div>
-            <label>Body Style</label>
+            <label for="f-body">Body Style</label>
             <div class="select-wrap">
             <select id="f-body">
               <option value="">No preference</option>
@@ -2087,7 +2096,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         </div>
         <div class="form-row">
           <div>
-            <label>Fuel Type</label>
+            <label for="f-fuel">Fuel Type</label>
             <div class="select-wrap">
             <select id="f-fuel">
               <option value="">No preference</option>
@@ -2829,6 +2838,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
   </div>
 </div>
+
+</main>
 
 <div class="detail-overlay" id="add-search-modal" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="detail-panel">
