@@ -1933,7 +1933,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v169 · 2026-07-12</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v170 · 2026-07-24</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -1999,7 +1999,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
              autocomplete="off" + tabindex="-1" + offscreen positioning keeps it
              out of the way of users. Server-side check in api/db.js rejects too. -->
         <div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;height:0;overflow:hidden;width:1px;">
-          <label>Website (do not fill)</label>
+          <label for="f-website">Website (do not fill)</label>
           <input type="text" id="f-website" name="website" autocomplete="off" tabindex="-1" value="">
         </div>
         <div class="form-row">
@@ -2403,7 +2403,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       <div class="dash-search-row">
         <div class="dash-search-wrap">
           <svg class="dash-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="dash-search-input" placeholder="Search by name, vehicle, phone, email, or portal code..." oninput="renderTable()" autocomplete="off">
+          <input type="text" id="dash-search-input" placeholder="Search by name, vehicle, phone, email, or portal code..." oninput="renderTable()" autocomplete="off" aria-label="Search requests">
           <button id="dash-search-clear" onclick="clearDashSearch()" title="Clear" style="display:none;">×</button>
         </div>
       </div>
@@ -2522,7 +2522,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button class="filter-btn"        id="period-all"     onclick="setPeriod('all',this)">All Time</button>
           <div style="display:flex;align-items:center;gap:8px;margin-left:8px;" id="period-date-wrap">
             <input type="date" id="period-date-picker" onchange="pickPeriodDate(this.value)"
-              style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-family:system-ui,sans-serif;font-size:13px;font-weight:600;color:var(--text);background:var(--surface);outline:none;cursor:pointer;">
+              style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);font-family:system-ui,sans-serif;font-size:13px;font-weight:600;color:var(--text);background:var(--surface);outline:none;cursor:pointer;" aria-label="Pick a date">
             <button onclick="jumpToCurrentPeriod()" style="padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:none;font-family:system-ui,sans-serif;font-size:12px;font-weight:600;color:var(--text-muted);cursor:pointer;white-space:nowrap;transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-bright)';this.style.color='var(--accent-bright)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">Current</button>
           </div>
           <div id="period-label" style="font-family:system-ui,sans-serif;font-size:13px;color:var(--text-muted);margin-left:4px;"></div>
@@ -2622,7 +2622,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <!-- LEFT: conversation list -->
     <div class="convo-list-panel" style="display:flex;flex-direction:column;">
       <div class="convo-list-header">
-        <input id="msg-search" class="msg-search-input" type="text" placeholder="Search clients..." oninput="renderConvoList()">
+        <input id="msg-search" class="msg-search-input" type="text" placeholder="Search clients..." oninput="renderConvoList()" aria-label="Search clients">
         <div class="msg-filter-row">
           <button class="msg-filter-btn active" id="mf-all"      onclick="setMsgFilter('all',this)">All</button>
           <button class="msg-filter-btn"        id="mf-unread"   onclick="setMsgFilter('unread',this)">Unread</button>
@@ -2665,7 +2665,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <div class="msg-composer" style="position:relative;">
           <label title="Attach image" class="msg-attach-btn">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            <input type="file" accept="image/*" style="display:none;" onchange="handleMsgImage(this)" id="msg-image-input">
+            <input type="file" accept="image/*" style="display:none;" onchange="handleMsgImage(this)" id="msg-image-input" aria-label="Attach an image">
           </label>
           <button id="msg-polish-btn" class="msg-polish-btn" type="button"
                   title="Polish — fix spelling, grammar, and finish incomplete sentences using the team's voice"
@@ -2674,7 +2674,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
             spellcheck="true" autocorrect="on" autocapitalize="sentences" autocomplete="off" lang="en"
             oninput="autoGrowReply(this); scheduleSuggestion(this)"
             onkeydown="if(handleSuggestionKey(event)) return;
-                       if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendTeamReply();}"></textarea>
+                       if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendTeamReply();}" aria-label="Reply to client"></textarea>
           <button class="msg-send-btn" onclick="sendTeamReply()">Send</button>
           <div id="msg-polished-flash" class="msg-polished-flash" style="bottom:56px;right:84px;">✓ Polished</div>
         </div>
@@ -2831,7 +2831,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       </div>
 
       <div><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Internal Notes</div>
-        <textarea class="notes-area" id="dv-internal-notes" placeholder="Notes only your team sees..." style="min-height:80px;"></textarea>
+        <textarea class="notes-area" id="dv-internal-notes" placeholder="Notes only your team sees..." style="min-height:80px;" aria-label="Internal notes"></textarea>
         <button class="save-notes-btn" onclick="saveDetailNotes()" style="margin-top:6px;">Save Notes</button>
       </div>
     </div>
@@ -2865,7 +2865,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <div><label style="font-size:12px;">Year To</label><input type="number" id="as-yt" placeholder="2024"></div>
       </div>
       <div class="form-group" style="margin-bottom:14px;"><label style="font-size:12px;">Body Style</label><div class="select-wrap"><select id="as-body"><option value="">No preference</option><option>Sedan</option><option>SUV / Crossover</option><option>Truck</option><option>Coupe</option><option>Van / Minivan</option></select></div></div>
-      <div class="form-group" style="margin-bottom:0;"><label style="font-size:12px;">Notes / Preferences</label><textarea class="notes-area" id="as-notes" placeholder="e.g. buying for teenager, needs towing, strict budget..."></textarea></div>
+      <div class="form-group" style="margin-bottom:0;"><label style="font-size:12px;">Notes / Preferences</label><textarea class="notes-area" id="as-notes" placeholder="e.g. buying for teenager, needs towing, strict budget..." aria-label="Open search notes"></textarea></div>
     </div>
     <button class="submit-btn" onclick="saveOpenSearch()" style="margin-top:8px;">Save</button>
   </div>
@@ -2884,15 +2884,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <div class="detail-section">
       <div class="detail-section-title">Vehicle Info</div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Client Name</label>
+        <label for="rm-client" style="font-size:12px;">Client Name</label>
         <input type="text" id="rm-client" placeholder="e.g. John Smith">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Vehicle</label>
+        <label for="rm-vehicle" style="font-size:12px;">Vehicle</label>
         <input type="text" id="rm-vehicle" placeholder="e.g. 2021 Toyota Tacoma TRD">
       </div>
       <div class="form-group" style="margin-bottom:0;">
-        <label style="font-size:12px;">VIN <span class="req">*</span></label>
+        <label for="rm-vin" style="font-size:12px;">VIN <span class="req">*</span></label>
         <input type="text" id="rm-vin" placeholder="e.g. 1HGBH41JXMN109186" maxlength="17"
           style="text-transform:uppercase;letter-spacing:0.06em;font-family:system-ui,monospace;"
           oninput="this.value=this.value.toUpperCase()">
@@ -2908,7 +2908,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
     <div class="detail-section">
       <div class="detail-section-title">Notes</div>
-      <textarea class="notes-area" id="rm-notes" placeholder="General notes about this car's condition..."></textarea>
+      <textarea class="notes-area" id="rm-notes" placeholder="General notes about this car's condition..." aria-label="Repair notes"></textarea>
     </div>
 
     <button class="submit-btn" onclick="saveRepairCar()" style="margin-top:8px;">Save</button>
@@ -2929,24 +2929,24 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <div class="detail-section">
       <div class="detail-section-title">Client &amp; Vehicle</div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Client Name</label>
+        <label for="sm-client" style="font-size:12px;">Client Name</label>
         <input type="text" id="sm-client" placeholder="e.g. John Smith">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Vehicle</label>
+        <label for="sm-vehicle" style="font-size:12px;">Vehicle</label>
         <input type="text" id="sm-vehicle" placeholder="e.g. 2021 Toyota Tacoma TRD">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">VIN <span class="req">*</span></label>
+        <label for="sm-vin" style="font-size:12px;">VIN <span class="req">*</span></label>
         <input type="text" id="sm-vin" placeholder="e.g. 1FTFW1ET5DFA12345" maxlength="17" style="text-transform:uppercase;font-family:monospace;">
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">17-character Vehicle Identification Number</div>
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Mileage at Sale <span class="req">*</span></label>
+        <label for="sm-miles" style="font-size:12px;">Mileage at Sale <span class="req">*</span></label>
         <input type="number" id="sm-miles" placeholder="e.g. 34000">
       </div>
       <div class="form-group" style="margin-bottom:0;">
-        <label style="font-size:12px;">Date Sold</label>
+        <label for="sm-date" style="font-size:12px;">Date Sold</label>
         <input type="date" id="sm-date">
       </div>
     </div>
@@ -2956,29 +2956,29 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       <!-- Restored in v163 — user wants both auction-side and client-side
            prices captured so the profit stat stays honest. -->
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Purchase Price &mdash; what you paid at auction ($)</label>
+        <label for="sm-purchase" style="font-size:12px;">Purchase Price &mdash; what you paid at auction ($)</label>
         <input type="number" id="sm-purchase" placeholder="e.g. 22000" oninput="calcSaleProfit()">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Sale Price &mdash; what the client paid ($) <span style="color:var(--text-muted);font-weight:400;">— auto-filled from PSI</span></label>
+        <label for="sm-sale" style="font-size:12px;">Sale Price &mdash; what the client paid ($) <span style="color:var(--text-muted);font-weight:400;">— auto-filled from PSI</span></label>
         <input type="number" id="sm-sale" placeholder="e.g. 27500" oninput="calcSaleProfit()">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Repair Cost — your wholesale ($) <span style="color:var(--text-muted);font-weight:400;">— internal only, auto-filled from Repairs</span></label>
+        <label for="sm-repair" style="font-size:12px;">Repair Cost — your wholesale ($) <span style="color:var(--text-muted);font-weight:400;">— internal only, auto-filled from Repairs</span></label>
         <input type="number" id="sm-repair" placeholder="e.g. 1200" oninput="calcSaleProfit()">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Repair Markup — charged to client on top ($)</label>
+        <label for="sm-repair-profit" style="font-size:12px;">Repair Markup — charged to client on top ($)</label>
         <input type="number" id="sm-repair-profit" placeholder="e.g. 700" oninput="calcSaleProfit()">
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Profit margin on repairs (client pays this on top of your wholesale cost). Auto-filled from Repairs when the car was tracked there.</div>
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Shipping Profit — if any ($) <span style="color:var(--text-muted);font-weight:400;">— optional, leave blank if no shipping</span></label>
+        <label for="sm-shipping-profit" style="font-size:12px;">Shipping Profit — if any ($) <span style="color:var(--text-muted);font-weight:400;">— optional, leave blank if no shipping</span></label>
         <input type="number" id="sm-shipping-profit" placeholder="e.g. 200" oninput="calcSaleProfit()">
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Net margin on shipping (what the client paid for shipping minus what we paid). Skip now and come back later via Edit — folds into Net Profit and all the averages the moment it's saved.</div>
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Finder Fee (charged to client) ($) <span style="color:var(--text-muted);font-weight:400;">— defaults to $850</span></label>
+        <label for="sm-finder" style="font-size:12px;">Finder Fee (charged to client) ($) <span style="color:var(--text-muted);font-weight:400;">— defaults to $850</span></label>
         <input type="number" id="sm-finder" placeholder="850" oninput="calcSaleProfit()">
       </div>
       <div id="sm-profit-preview" style="display:none;padding:12px;border-radius:8px;background:var(--green-light);border:1px solid #a7f3d0;font-family:system-ui,sans-serif;font-size:13px;">
@@ -2990,7 +2990,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
     <div class="detail-section">
       <div class="detail-section-title">Notes</div>
-      <textarea class="notes-area" id="sm-notes" placeholder="Any notes about this deal..."></textarea>
+      <textarea class="notes-area" id="sm-notes" placeholder="Any notes about this deal..." aria-label="Sale notes"></textarea>
     </div>
 
     <button class="submit-btn" id="sm-save-btn" onclick="saveSale()" style="margin-top:8px;">Save → Awaiting Paperwork</button>
@@ -3008,19 +3008,19 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <div class="detail-section">
       <div class="detail-section-title">Car &amp; Deal</div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Car we bought <span class="req">*</span></label>
+        <label for="pm-car" style="font-size:12px;">Car we bought <span class="req">*</span></label>
         <input type="text" id="pm-car" placeholder="e.g. 2021 Toyota Tacoma TRD">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Current mileage <span class="req">*</span></label>
+        <label for="pm-miles" style="font-size:12px;">Current mileage <span class="req">*</span></label>
         <input type="number" id="pm-miles" placeholder="e.g. 34000">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label style="font-size:12px;">Purchase price — what we paid at auction ($) <span class="req">*</span></label>
+        <label for="pm-purchase" style="font-size:12px;">Purchase price — what we paid at auction ($) <span class="req">*</span></label>
         <input type="number" id="pm-purchase" placeholder="e.g. 22000">
       </div>
       <div class="form-group" style="margin-bottom:0;">
-        <label style="font-size:12px;">Sale price — what the client pays ($) <span class="req">*</span></label>
+        <label for="pm-sale" style="font-size:12px;">Sale price — what the client pays ($) <span class="req">*</span></label>
         <input type="number" id="pm-sale" placeholder="e.g. 27500">
       </div>
     </div>
@@ -3148,7 +3148,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
     <div class="detail-section">
       <div class="detail-section-title">Internal Notes</div>
-      <textarea class="notes-area" id="dp-internal-notes" placeholder="Add notes visible only to your team..."></textarea>
+      <textarea class="notes-area" id="dp-internal-notes" placeholder="Add notes visible only to your team..." aria-label="Internal notes"></textarea>
       <button class="save-notes-btn" onclick="saveNotes()">Save Notes</button>
     </div>
   </div>
@@ -3162,7 +3162,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <div style="font-size:13px;color:#5a6480;margin-bottom:24px;">Enter your password to access the dashboard.</div>
     <input type="password" id="staff-pw-input" placeholder="Password"
       style="width:100%;padding:12px 16px;border:1.5px solid #ddd5c0;border-radius:10px;font-family:system-ui,sans-serif;font-size:15px;margin-bottom:12px;outline:none;text-align:center;box-sizing:border-box;"
-      onkeydown="if(event.key==='Enter')checkStaffPassword()">
+      onkeydown="if(event.key==='Enter')checkStaffPassword()" aria-label="Staff password">
     <div id="staff-pw-error" style="display:none;font-size:12px;color:#b91c1c;margin-bottom:10px;">Incorrect password. Please try again.</div>
     <button onclick="checkStaffPassword()" style="width:100%;padding:12px;background:var(--navy);color:var(--cream,#f5f0e8);border:none;border-radius:10px;font-family:system-ui,sans-serif;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Enter</button>
     <button onclick="document.getElementById('staff-modal').style.display='none'" style="width:100%;padding:10px;background:none;border:1px solid #ddd5c0;border-radius:10px;font-family:system-ui,sans-serif;font-size:13px;color:#5a6480;cursor:pointer;">Cancel</button>
@@ -5558,8 +5558,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     row.id = 'rec-row-' + i;
     row.innerHTML = `
       <button class="rec-remove-row" onclick="document.getElementById('rec-row-${i}').remove()">✕</button>
-      <input type="text" id="rec-title-${i}" placeholder="Year Make Model Trim" value="${data ? data.title : ''}">
-      <textarea id="rec-why-${i}" rows="2" placeholder="Why this fits the client...">${data ? data.why : ''}</textarea>
+      <input type="text" id="rec-title-${i}" placeholder="Year Make Model Trim" value="${data ? data.title : ''}" aria-label="Recommendation title">
+      <textarea id="rec-why-${i}" rows="2" placeholder="Why this fits the client..." aria-label="Why this vehicle fits">${data ? data.why : ''}</textarea>
     `;
     list.appendChild(row);
   }
@@ -5977,7 +5977,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         // line item is finished. NEVER shown to the client; the receipt /
         // portal quote skip this field entirely.
         const doneCell = `<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-family:system-ui,sans-serif;font-size:12px;color:${r.done ? 'var(--green)' : 'var(--text-muted)'};font-weight:600;">`
-          + `<input type="checkbox" ${r.done ? 'checked' : ''} onchange="toggleRepairItemDone(${car.id}, ${idx}, this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--green);">`
+          + `<input type="checkbox" ${r.done ? 'checked' : ''} onchange="toggleRepairItemDone(${car.id}, ${idx}, this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--green);" aria-label="Mark repair item complete">`
           + (r.done ? '<span>Done</span>' : '<span>Pending</span>')
           + `</label>`;
         const rowStyle = r.done ? 'opacity:0.55;' : '';
@@ -5994,7 +5994,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <td>${p.cost ? '$' + Number(p.cost).toFixed(2) : '—'}</td>
           <td><span class="repair-tag" style="${p.status === 'Received' ? 'background:var(--green-light);color:var(--green);' : p.status === 'Ordered' ? 'background:#fffbeb;color:#92400e;' : ''}">${p.status || 'Needed'}</span></td>
           <td>
-            <select onchange="updatePartStatus(${car.id}, ${i}, this.value)" style="border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-family:system-ui,sans-serif;font-size:11px;background:var(--surface);color:var(--text);cursor:pointer;">
+            <select onchange="updatePartStatus(${car.id}, ${i}, this.value)" style="border:1px solid var(--border);border-radius:4px;padding:2px 4px;font-family:system-ui,sans-serif;font-size:11px;background:var(--surface);color:var(--text);cursor:pointer;" aria-label="Part status">
               <option ${!p.status || p.status==='Needed' ? 'selected' : ''}>Needed</option>
               <option ${p.status==='Ordered' ? 'selected' : ''}>Ordered</option>
               <option ${p.status==='Received' ? 'selected' : ''}>Received</option>
@@ -6153,14 +6153,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const clientPrice = data && data.price != null ? data.price : (data && data.cost != null ? data.cost : '');
     row.innerHTML = `
       <div class="rm-row-top">
-        <input type="text" id="rmp-name-${i}" placeholder="Part name (e.g. brake pads)" value="${data ? data.name : ''}">
-        <input type="text" id="rmp-num-${i}" placeholder="Part # (opt)" value="${data ? data.partNum||'' : ''}">
+        <input type="text" id="rmp-name-${i}" placeholder="Part name (e.g. brake pads)" value="${data ? data.name : ''}" aria-label="Part name">
+        <input type="text" id="rmp-num-${i}" placeholder="Part # (opt)" value="${data ? data.partNum||'' : ''}" aria-label="Part number">
         <button class="rm-remove-btn" onclick="document.getElementById('rm-part-${i}').remove()" title="Remove this part">✕</button>
       </div>
       <div class="rm-row-bot">
         <div class="rm-field">
           <span class="rm-field-label rm-cost-lbl" title="Wholesale — internal only">Your Cost ($)</span>
-          <input type="number" id="rmp-cost-${i}" placeholder="40" value="${wholesale}" min="0" step="0.01" oninput="updatePartChargePreview(${i})">
+          <input type="number" id="rmp-cost-${i}" placeholder="40" value="${wholesale}" min="0" step="0.01" oninput="updatePartChargePreview(${i})" aria-label="Part cost">
         </div>
         <div class="rm-field">
           <span class="rm-field-label rm-charge-lbl" title="Auto: cost × tier markup">Client Charge</span>
@@ -6295,17 +6295,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const clientPrice = data && data.price != null ? data.price : (data && data.cost != null ? data.cost : '');
     row.innerHTML = `
       <div class="rm-row-top">
-        <input type="text" placeholder="Repair description (e.g. Brake job, oil change)" id="rm-desc-${idx}" value="${data ? data.desc : ""}">
+        <input type="text" placeholder="Repair description (e.g. Brake job, oil change)" id="rm-desc-${idx}" value="${data ? data.desc : ""}" aria-label="Repair description">
         <button class="rm-remove-btn" onclick="document.getElementById('rm-row-${idx}').remove()" title="Remove this item">✕</button>
       </div>
       <div class="rm-row-bot">
         <div class="rm-field">
           <span class="rm-field-label rm-cost-lbl" title="Wholesale — internal only">Your Cost ($)</span>
-          <input type="number" placeholder="200" id="rm-cost-${idx}" value="${wholesale}" min="0" step="0.01" oninput="updateRepairChargePreview(${idx})">
+          <input type="number" placeholder="200" id="rm-cost-${idx}" value="${wholesale}" min="0" step="0.01" oninput="updateRepairChargePreview(${idx})" aria-label="Repair cost">
         </div>
         <div class="rm-field">
           <span class="rm-field-label">Hours</span>
-          <input type="number" placeholder="2" id="rm-hrs-${idx}" value="${data ? (data.hours || "") : ""}" min="0" step="0.25" oninput="updateRepairChargePreview(${idx})">
+          <input type="number" placeholder="2" id="rm-hrs-${idx}" value="${data ? (data.hours || "") : ""}" min="0" step="0.25" oninput="updateRepairChargePreview(${idx})" aria-label="Repair hours">
         </div>
         <div class="rm-field">
           <span class="rm-field-label rm-charge-lbl" title="Auto: (cost × tier markup) + (hours × $20)">Client Charge</span>
