@@ -785,7 +785,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     background: linear-gradient(90deg, transparent, rgba(245,240,232,0.12), transparent);
   }
   .footer-logo { font-family: 'DM Sans', sans-serif; font-size: 18px; font-weight: 700; color: var(--cream); }
-  .footer-copy { font-size: 13px; color: rgba(245,240,232,0.35); }
+  /* a11y: 0.35 alpha over --navy computed to 2.89:1 — below the 4.5:1 WCAG AA
+     minimum for body text. 0.62 lands at ~5.9:1 and still reads as muted. */
+  .footer-copy { font-size: 13px; color: rgba(245,240,232,0.62); }
   .footer-links { display: flex; gap: 24px; }
   .footer-link { font-size: 13px; color: rgba(245,240,232,0.45); text-decoration: none; transition: color 0.15s; }
   .footer-link:hover { color: var(--gold-light); }
@@ -987,6 +989,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   </div>
 </nav>
 
+<!-- a11y: single main landmark so screen-reader users can skip the nav
+     straight to primary content. Layout-neutral (no body> or sibling
+     selectors depend on section position). -->
+<main>
 <!-- HERO -->
 <section class="hero">
   <div class="hero-inner">
@@ -1189,7 +1195,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
       <!-- Review 1 -->
       <div class="step-card review-card reveal" style="border-top:3px solid var(--navy);padding:32px 28px;display:flex;flex-direction:column;gap:16px;">
-        <div class="review-stars" aria-label="5 out of 5 stars">
+        <div class="review-stars" role="img" aria-label="5 out of 5 stars">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
@@ -1209,7 +1215,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
       <!-- Review 2 -->
       <div class="step-card review-card reveal" style="border-top:3px solid var(--navy);padding:32px 28px;display:flex;flex-direction:column;gap:16px;">
-        <div class="review-stars" aria-label="5 out of 5 stars">
+        <div class="review-stars" role="img" aria-label="5 out of 5 stars">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
@@ -1229,7 +1235,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
       <!-- Review 3 -->
       <div class="step-card review-card reveal" style="border-top:3px solid var(--navy);padding:32px 28px;display:flex;flex-direction:column;gap:16px;">
-        <div class="review-stars" aria-label="5 out of 5 stars">
+        <div class="review-stars" role="img" aria-label="5 out of 5 stars">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11.05 3.5a1 1 0 0 1 1.9 0l2.1 5.45 5.83.42a1 1 0 0 1 .58 1.77l-4.48 3.78 1.43 5.67a1 1 0 0 1-1.5 1.09L12 18.6l-4.91 3.08a1 1 0 0 1-1.5-1.1l1.43-5.66-4.48-3.78a1 1 0 0 1 .58-1.77l5.82-.42z"/></svg>
@@ -1393,6 +1399,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     </div>
   </div>
 </section>
+
+</main>
 
 <!-- FOOTER -->
 <footer>
@@ -1634,8 +1642,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   <div class="ai-messages" id="ai-messages"></div>
   <div class="ai-input-row">
     <input class="ai-input" id="ai-input" type="text" placeholder="Ask a question..." onkeydown="if(event.key==='Enter')sendAIMessage()">
-    <button class="ai-send-btn" onclick="sendAIMessage()">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <button class="ai-send-btn" onclick="sendAIMessage()" aria-label="Send message">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <path d="M14 8L2 2l2.5 6L2 14l12-6z" fill="rgba(245,240,232,0.9)"/>
       </svg>
     </button>
@@ -1873,7 +1881,7 @@ WHAT NOT TO DO:
   @media (max-width: 480px) { .beta-fb-btn { bottom: 16px; right: 16px; padding: 8px 14px; font-size: 12px; } }
 </style>
 
-<button class="beta-fb-btn" onclick="document.getElementById('beta-fb-overlay').classList.add('open')" aria-label="Report a bug">Report bug</button>
+<button class="beta-fb-btn" onclick="document.getElementById('beta-fb-overlay').classList.add('open')" aria-label="Report bug">Report bug</button>
 
 <div class="beta-fb-overlay" id="beta-fb-overlay" onclick="if(event.target===this)this.classList.remove('open')">
   <div class="beta-fb-modal" role="dialog" aria-labelledby="beta-fb-title">
