@@ -14,6 +14,8 @@
     { "source": "/home.html",   "destination": "/public/home.html" },
     { "source": "/form",        "destination": "/public/form.html" },
     { "source": "/form.html",   "destination": "/public/form.html" },
+    { "source": "/request",     "destination": "/public/request.html" },
+    { "source": "/request.html","destination": "/public/request.html" },
     { "source": "/portal.html", "destination": "/public/portal.html" },
     { "source": "/portal",      "destination": "/public/portal.html" },
     { "source": "/booking.html","destination": "/public/booking.html" },

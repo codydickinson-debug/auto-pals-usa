@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '979507655137437');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+<title>Submit a Vehicle Request — Auto Pals USA</title>
+<meta name="description" content="Tell us what you're looking for and we'll source it from dealer-only auctions in South Florida. Free to start, no commitment.">
+<!-- Indexable: this page is the public client form ONLY. The staff dashboard
+     lives in form.html, which stays noindex. -->
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://autopalsusa.com/request.html">
+<meta property="og:title" content="Submit a Vehicle Request — Auto Pals USA">
+<meta property="og:description" content="Tell us what you're looking for and we'll source it from dealer-only auctions.">
+<meta property="og:url" content="https://autopalsusa.com/request.html">
+<meta name="theme-color" content="#0f2557">
+<link rel="stylesheet" href="/css/tokens.css">
+<style>
+  /* ── tokens, reset, base, nav, .view ─────────────────────────── */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f5f0e8;
+    --surface: #fffdf7;
+    --border: #ddd5c0;
+    --text: #1a1a2e;
+    --text-muted: #5a6480;
+    --accent: #0f2557;
+    --accent-mid: #1a3470;
+    --accent-light: #e8edf8;
+    --accent-bright: #1e3a8a;
+    --navy: #0f2557;
+    --navy-mid: #1a3470;
+    --navy-light: #e8edf8;
+    --green: #1a5c32;
+    --green-light: #e8f0e8;
+    --red: #b91c1c;
+    --red-light: #fef2f2;
+    --amber: #92400e;
+    --amber-light: #fffbeb;
+    --radius: 8px;
+    --shadow: 0 1px 4px rgba(15,37,87,0.10);
+    --shadow-md: 0 4px 16px rgba(15,37,87,0.12);
+    --border-subtle: rgba(15,37,87,0.08);
+    --shadow-card:
+      0 1px 1px rgba(15,37,87,0.04),
+      0 2px 4px rgba(15,37,87,0.04),
+      0 8px 24px rgba(15,37,87,0.05);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    /* Champagne-gold accent — premium through-line, matches the marketing site. */
+    --gold: #d3ac5f;
+    --gold-light: #f2e0af;
+    --gold-deep: #c39a44;
+    --gold-grad: linear-gradient(135deg, #f2e0af 0%, #d3ac5f 55%, #c39a44 100%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  html { scroll-padding-top: 80px; }
+  ::selection { background: var(--navy); color: #f5f0e8; }
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid var(--accent-bright);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'kern', 'liga', 'calt';
+  }
+  table, td, th,
+  input[type="number"], input[type="tel"] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* NAV */
+  nav {
+    background: var(--navy);
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent,
+      transparent 20px,
+      rgba(255,255,255,0.015) 20px,
+      rgba(255,255,255,0.015) 40px
+    );
+    border-bottom: 2px solid rgba(245,240,232,0.12);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(15,37,87,0.25);
+  }
+  .logo {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #f5f0e8;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(245,240,232,0.12);
+    border: 1px solid rgba(245,240,232,0.2);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+  .logo span {
+    color: #f5f0e8;
+    font-weight: 700;
+  }
+  .nav-tabs {
+    display: flex;
+    gap: 4px;
+  }
+  .nav-tab {
+    padding: 7px 18px;
+    border-radius: var(--radius);
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    color: rgba(255,255,255,0.6);
+    transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out), transform 150ms var(--ease-out);
+    font-weight: 500;
+  }
+  .nav-tab.active {
+    background: rgba(216,180,112,0.18);
+    color: var(--gold-light);
+    border: 1px solid rgba(216,180,112,0.4);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .nav-tab:hover:not(.active) { background: rgba(255,255,255,0.08); color: #fff; }
+  }
+  .nav-tab:active { transform: scale(0.97); }
+  .nav-tab-badge {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    font-size: 10px; font-weight: 700;
+    padding: 1px 6px; border-radius: 99px;
+    margin-left: 4px;
+  }
+
+  /* VIEWS */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── form block ─────────────────────────── */
+  .form-page {
+    max-width: 680px;
+    margin: 48px auto;
+    padding: 0 24px 80px;
+  }
+  .form-header { margin-bottom: 32px; }
+  .form-eyebrow {
+    display: inline-block;
+    font-family: system-ui, sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    /* a11y: --gold-deep (#c39a44) on the tinted badge computed to ~2.4:1,
+       well under the 4.5:1 AA minimum for 11px text. This deeper bronze
+       lands ~5.4:1. Scoped here so the brand gold is unchanged elsewhere. */
+    color: #7d5f1b;
+    background: rgba(211,172,95,0.14);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+  .form-header h1 { font-size: 30px; font-weight: 700; margin-bottom: 10px; color: var(--navy); letter-spacing: -0.01em; line-height: 1.12; }
+  .form-header p { color: var(--text-muted); font-size: 15px; line-height: 1.6; font-family: system-ui, sans-serif; max-width: 560px; }
+  .trust-strip { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+  .trust-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--navy);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 7px 13px;
+    border-radius: 999px;
+  }
+  .trust-item .ti-ico { font-size: 13px; line-height: 1; }
+
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border-subtle);
+    border-top: 3px solid var(--gold);
+    border-radius: var(--radius);
+    padding: 32px;
+    box-shadow: var(--shadow-card);
+  }
+
+  .form-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-bright);
+    font-family: system-ui, sans-serif;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent-light);
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: bold;
+    font-family: system-ui, sans-serif;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  label .req { color: var(--red); margin-left: 2px; }
+  input, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    transition: border-color 0.15s;
+    outline: none;
+  }
+  input:focus, textarea:focus {
+    border-color: var(--accent);
+    background: var(--surface);
+  }
+  textarea { resize: vertical; min-height: 80px; }
+
+  /* ── select-wrap ─────────────────────────── */
+  .select-wrap {
+    position: relative;
+    width: 100%;
+  }
+  .select-wrap::after {
+    content: '';
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid var(--text-muted);
+    pointer-events: none;
+    transition: transform 0.2s;
+  }
+  .select-wrap select {
+    width: 100%;
+    padding: 10px 36px 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  }
+  .select-wrap select:focus {
+    border-color: var(--accent);
+    background: var(--surface);
+    box-shadow: 0 0 0 3px rgba(26,26,26,0.07);
+  }
+  .select-wrap select:focus + .select-wrap::after,
+  .select-wrap:focus-within::after {
+    border-top-color: var(--accent);
+  }
+  .select-wrap select option {
+    background: var(--surface);
+    color: var(--text);
+    padding: 8px;
+  }
+
+  /* ── budget-row ─────────────────────────── */
+  .budget-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* Must-Have Features — selectable chips (same visual family as the
+     referral grid). The native <input type=checkbox> stays as the data
+     source (submit reads .checkbox-group input:checked); it's just
+
+  /* ── checkbox group ─────────────────────────── */
+  .checkbox-group {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+    gap: 10px;
+  }
+  .checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    transition: border-color 150ms var(--ease-out), background 150ms var(--ease-out),
+                color 150ms var(--ease-out), transform 120ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .checkbox-item:hover { border-color: var(--accent); background: rgba(15,37,87,0.03); }
+  }
+  .checkbox-item:active { transform: scale(0.98); }
+  .checkbox-item:has(input:checked) {
+    border-color: var(--accent);
+    background: rgba(15,37,87,0.05);
+    color: var(--navy);
+  }
+  .checkbox-item input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    flex-shrink: 0;
+    border: 1.5px solid var(--border);
+    border-radius: 5px;
+    background: #fff;
+    cursor: pointer;
+    position: relative;
+    transition: border-color 150ms var(--ease-out), background 150ms var(--ease-out);
+  }
+  .checkbox-item input[type="checkbox"]:checked {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+  .checkbox-item input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 2px;
+    width: 4px;
+    height: 8px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+
+  /* ── payment / finance ─────────────────────────── */
+  .payment-method-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .payment-method-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    background: #fff;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .payment-method-card:hover { border-color: var(--accent); }
+  .payment-method-card input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+  .payment-method-card input[type="radio"]:checked + .payment-method-label { color: var(--accent); }
+  .payment-method-card:has(input[type="radio"]:checked) {
+    border-color: var(--accent);
+    background: rgba(15, 37, 87, 0.04);
+  }
+  .payment-method-label-sub { display: block; font-size: 12px; font-weight: 400; color: var(--text-muted); margin-top: 2px; }
+  .finance-fields { display: none; margin-top: 14px; }
+  .finance-fields.show { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .finance-hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; font-family: system-ui, sans-serif; line-height: 1.5; }
+
+  /* ── referral grid ─────────────────────────── */
+  .referral-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    gap: 10px;
+  }
+  .referral-chip {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 12px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 150ms var(--ease-out), background 150ms var(--ease-out),
+                color 150ms var(--ease-out), transform 120ms var(--ease-out);
+  }
+  .referral-chip .ico {
+    font-size: 16px;
+    line-height: 1;
+    flex-shrink: 0;
+    filter: grayscale(0.25);
+    transition: filter 150ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .referral-chip:hover { border-color: var(--accent); background: rgba(15,37,87,0.03); }
+  }
+  .referral-chip:active { transform: scale(0.97); }
+  .referral-chip.selected {
+    border-color: var(--accent);
+    background: var(--navy);
+    color: #f5f0e8;
+  }
+  .referral-chip.selected .ico { filter: none; }
+  .referral-grid.invalid .referral-chip { border-color: var(--red); }
+
+
+  /* ── sms card ─────────────────────────── */
+  .sms-card {
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 15px 18px;
+    margin: 22px 0 8px;
+    transition: border-color 150ms var(--ease-out), background 150ms var(--ease-out),
+                box-shadow 150ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .sms-card:hover { border-color: var(--accent); }
+  }
+  .sms-card:has(input:checked) {
+    border-color: var(--accent);
+    background: rgba(15,37,87,0.035);
+    box-shadow: inset 0 0 0 1px rgba(15,37,87,0.10);
+  }
+  .sms-card__top { display: flex; align-items: center; gap: 12px; cursor: pointer; }
+  .sms-card__badge {
+    width: 38px; height: 38px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--navy-light);
+    font-size: 18px;
+    transition: background 150ms var(--ease-out);
+  }
+  .sms-card:has(input:checked) .sms-card__badge { background: var(--navy); }
+  .sms-card__titles { flex: 1; min-width: 0; }
+  .sms-card__title {
+    display: block;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--navy);
+  }
+  .sms-card__sub {
+    display: block;
+    margin-top: 1px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: system-ui, sans-serif;
+    line-height: 1.4;
+  }
+  .sms-card__check {
+    width: 22px; height: 22px;
+    flex-shrink: 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .sms-card__fine {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.55;
+    font-family: system-ui, sans-serif;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .sms-card__fine a { color: var(--accent); text-decoration: underline; }
+  .sms-card__legal {
+    display: block;
+    margin-top: 7px;
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ── form divider ─────────────────────────── */
+  .form-divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  /* ── submit button ─────────────────────────── */
+  .submit-btn {
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    padding: 14px;
+    background: var(--gold-grad);
+    color: #33260a;
+    border: none;
+    border-radius: var(--radius);
+    font-family: system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(180,140,50,0.28), inset 0 1px 0 rgba(255,255,255,0.4);
+    transition: filter 150ms var(--ease-out), box-shadow 150ms var(--ease-out), transform 150ms var(--ease-out);
+    margin-top: 8px;
+    letter-spacing: 0.01em;
+  }
+  /* A soft light streak sweeps across the button on hover — gold catching light. */
+  .submit-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.55) 50%, transparent 65%);
+    transform: translateX(-130%);
+    pointer-events: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .submit-btn:hover { filter: brightness(1.04); box-shadow: 0 6px 20px rgba(180,140,50,0.36), inset 0 1px 0 rgba(255,255,255,0.5); }
+    .submit-btn:hover::after { transform: translateX(130%); transition: transform 700ms var(--ease-out); }
+  }
+  .submit-btn:active { transform: scale(0.98); }
+
+
+  /* ── success screen + portal ticket ─────────────────────────── */
+  .success-msg {
+    display: none;
+    text-align: center;
+    padding: 44px 32px 40px;
+  }
+  .success-badge {
+    width: 66px;
+    height: 66px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    background: var(--green-light);
+    display: grid;
+    place-items: center;
+    color: var(--green);
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 0 0 6px rgba(26,92,50,0.08);
+    animation: successPop 460ms var(--ease-out) both;
+  }
+  .success-body { animation: successRise 460ms var(--ease-out) 90ms both; }
+  @keyframes successPop { from { transform: scale(0.82); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes successRise { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .success-badge, .success-body { animation: none; }
+  }
+  .success-msg h2 { font-size: 23px; margin-bottom: 8px; color: var(--navy); letter-spacing: -0.01em; }
+  .success-subhead { color: var(--text-muted); font-family: system-ui, sans-serif; font-size: 14px; line-height: 1.6; max-width: 480px; margin: 0 auto 24px; }
+
+  .success-cta {
+    display: inline-block;
+    padding: 15px 30px;
+    background: var(--navy);
+    color: #f5f0e8;
+    border-radius: 12px;
+    text-decoration: none;
+    font-family: system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    box-shadow: 0 4px 14px rgba(15,37,87,0.18);
+    transition: transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out), background 150ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .success-cta:hover { background: var(--navy-mid); box-shadow: 0 6px 20px rgba(15,37,87,0.24); }
+  }
+  .success-cta:active { transform: scale(0.97); }
+
+  .success-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin: 22px auto 0;
+    max-width: 440px;
+    text-align: left;
+  }
+  .success-panel__eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    text-align: center;
+    font-family: system-ui, sans-serif;
+  }
+  .success-checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 9px; }
+  .success-checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .success-checklist li::before {
+    content: '✓';
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--green-light);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .success-avail {
+    font-family: system-ui, sans-serif;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 18px 0 24px;
+  }
+
+  .portal-ticket {
+    background: var(--navy);
+    border: 1px solid rgba(216,180,112,0.4);
+    border-radius: 14px;
+    padding: 18px 22px;
+    margin: 20px auto 0;
+    max-width: 340px;
+    text-align: center;
+    box-shadow: 0 6px 20px rgba(15,37,87,0.18);
+  }
+  .portal-ticket__label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold-light);
+    margin-bottom: 10px;
+    font-family: system-ui, sans-serif;
+  }
+  .portal-ticket__row { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .portal-ticket__code {
+    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: #f5f0e8;
+    letter-spacing: 0.08em;
+  }
+  .portal-ticket__copy {
+    border: 1px solid rgba(245,240,232,0.28);
+    background: rgba(245,240,232,0.08);
+    color: #f5f0e8;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: system-ui, sans-serif;
+    transition: background 150ms var(--ease-out), transform 120ms var(--ease-out);
+  }
+  .portal-ticket__copy:hover { background: rgba(245,240,232,0.16); }
+  .portal-ticket__copy:active { transform: scale(0.95); }
+  .portal-ticket__note { font-size: 11px; color: rgba(245,240,232,0.55); line-height: 1.5; margin-top: 10px; }
+
+  .success-skip { font-size: 13px; color: var(--text-muted); margin: 22px 0 0; line-height: 1.6; }
+  .success-skip a { color: var(--navy); font-weight: 600; text-decoration: underline; }
+  .success-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+  .success-actions a, .success-actions button {
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 150ms var(--ease-out), border-color 150ms var(--ease-out),
+                color 150ms var(--ease-out), transform 120ms var(--ease-out);
+  }
+  .success-actions a { background: rgba(15,37,87,0.06); color: var(--navy); border: 1px solid transparent; }
+  .success-actions a:hover { background: rgba(15,37,87,0.10); }
+  .success-actions button { background: none; border: 1px solid var(--border); color: var(--text-muted); }
+  .success-actions button:hover { border-color: var(--accent); color: var(--navy); }
+  .success-actions a:active, .success-actions button:active { transform: scale(0.97); }
+
+  /* ── search toggle ─────────────────────────── */
+  .search-toggle {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--bg);
+  }
+  .search-toggle-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    background: none;
+    font-family: system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out), transform 150ms var(--ease-out);
+    text-align: center;
+  }
+  .search-toggle-btn.active {
+    background: var(--navy);
+    color: #f5f0e8;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .search-toggle-btn:hover:not(.active) { background: var(--accent-light); color: var(--text); }
+  }
+  .search-toggle-btn:active { transform: scale(0.97); }
+
+  /* ── nav mobile ─────────────────────────── */
+  @media (max-width: 768px) {
+
+    /* Top nav — horizontal scroll instead of overflow */
+    .nav-tabs {
+      padding: 8px 12px;
+      gap: 4px;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .nav-tabs::-webkit-scrollbar { display: none; }
+    .nav-tab {
+      padding: 6px 12px;
+      font-size: 13px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    /* Layout: sidebar moves to top as a horizontal scroll strip */
+    .dash-layout { grid-template-columns: 1fr; }
+    .dash-sidebar {
+      padding: 12px 8px;
+
+  /* ── client form mobile ─────────────────────────── */
+  @media (max-width: 768px) {
+    .form-page { margin: 24px auto; padding: 0 16px 60px; }
+    .form-header h1 { font-size: 22px; }
+    .form-header p { font-size: 14px; }
+    .form-card { padding: 20px 18px; }
+    .form-row { grid-template-columns: 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-group { margin-bottom: 14px; }
+    input, textarea, select { font-size: 16px !important; }
+  }
+
+
+  /* ── a11y additions (parity with home.html) ─────────────────────── */
+  .skip-link {
+    position: absolute; left: -9999px; top: 0; z-index: 1000;
+    background: var(--navy); color: var(--cream);
+    padding: 10px 18px; border-radius: 0 0 8px 0;
+    font-family: system-ui, sans-serif; font-size: 14px; font-weight: 600;
+    text-decoration: none;
+  }
+  .skip-link:focus { left: 0; }
+  a, button, input, textarea, select, [role="button"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(15,37,87,0.12);
+  }
+</style>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to main content</a>
+
+<!-- NAV — client-facing only. No staff tabs, no showView(): the dashboard
+     is a separate page now (form.html). -->
+<nav>
+  <div class="logo">
+    <div class="logo-icon" style="background:none;border:none;width:38px;height:38px;">
+      <img src="/images/logo-dark.png" alt="Auto Pals USA" style="width:42px;height:42px;object-fit:contain;display:block;">
+    </div>
+    <div>
+      <div style="font-size:18px;font-weight:700;color:var(--cream);letter-spacing:0.3px;">Auto Pals USA</div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <a href="home.html" class="nav-tab" style="text-decoration:none;">← Home</a>
+  </div>
+</nav>
+
+<main id="main">
+
+<div id="view-client" class="view active">
+  <div class="form-page">
+    <div class="form-header">
+      <span class="form-eyebrow">Vehicle Sourcing Request</span>
+      <h1>Find Your Vehicle</h1>
+      <p>Tell us what you're looking for and we'll source it through dealer-only auctions. A member of our team will follow up within 24 hours.</p>
+      <div class="trust-strip">
+        <span class="trust-item"><span class="ti-ico">🔑</span> Dealer-only auction access</span>
+        <span class="trust-item"><span class="ti-ico">🛡️</span> Licensed Florida dealer</span>
+        <span class="trust-item"><span class="ti-ico">💬</span> Free, no-obligation intro call</span>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div id="form-content">
+
+        <!-- Contact Info -->
+        <div class="form-section-title">Contact Information</div>
+        <!-- Honeypot field — invisible to humans, irresistible to most form bots.
+             autocomplete="off" + tabindex="-1" + offscreen positioning keeps it
+             out of the way of users. Server-side check in api/db.js rejects too. -->
+        <div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;height:0;overflow:hidden;width:1px;">
+          <label for="f-website">Website (do not fill)</label>
+          <input type="text" id="f-website" name="website" autocomplete="off" tabindex="-1" value="">
+        </div>
+        <div class="form-row">
+          <div>
+            <label for="f-firstname">First Name <span class="req">*</span></label>
+            <input type="text" id="f-firstname" placeholder="John">
+          </div>
+          <div>
+            <label for="f-lastname">Last Name <span class="req">*</span></label>
+            <input type="text" id="f-lastname" placeholder="Smith">
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label for="f-email">Email <span class="req">*</span></label>
+            <input type="email" id="f-email" placeholder="john@email.com">
+          </div>
+          <div>
+            <label for="f-phone">Phone Number <span class="req">*</span></label>
+            <input type="tel" id="f-phone" placeholder="(555) 000-0000">
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label for="f-date">Date of Request <span class="req">*</span></label>
+            <input type="date" id="f-date" style="color:var(--text);">
+          </div>
+          <div>
+            <label style="color:var(--text-muted);font-size:11px;padding-top:18px;display:block;">60-day search window begins from this date.</label>
+          </div>
+        </div>
+
+        <hr class="form-divider">
+
+        <!-- Vehicle Info -->
+        <div class="form-section-title">Vehicle Details</div>
+        <div class="search-toggle">
+          <button type="button" class="search-toggle-btn active" id="toggle-specific" onclick="setSearchMode('specific')">I have a specific car in mind</button>
+          <button type="button" class="search-toggle-btn" id="toggle-open" onclick="setSearchMode('open')">Help me find something</button>
+        </div>
+        <div id="specific-fields">
+        <div class="form-row">
+          <div>
+            <label for="f-make">Make <span class="req">*</span></label>
+            <div class="select-wrap">
+            <select id="f-make">
+              <option value="">Select make...</option>
+              <option>Acura</option><option>Audi</option><option>BMW</option>
+              <option>Buick</option><option>Cadillac</option><option>Chevrolet</option>
+              <option>Chrysler</option><option>Dodge</option><option>Ford</option>
+              <option>GMC</option><option>Honda</option><option>Hyundai</option>
+              <option>Infiniti</option><option>Jeep</option><option>Kia</option>
+              <option>Land Rover</option><option>Lexus</option><option>Lincoln</option>
+              <option>Mazda</option><option>Mercedes-Benz</option><option>Nissan</option>
+              <option>Porsche</option><option>Ram</option><option>Subaru</option>
+              <option>Tesla</option><option>Toyota</option><option>Volkswagen</option>
+              <option>Volvo</option><option>Other</option>
+            </select>
+            </div>
+          </div>
+          <div>
+            <label for="f-model">Model <span class="req">*</span></label>
+            <input type="text" id="f-model" placeholder="e.g. F-150, Camry, Civic">
+          </div>
+        </div>
+        </div><!-- /specific-fields -->
+        <div class="form-row">
+          <div>
+            <label for="f-year-from">Year (From) <span class="req">*</span></label>
+            <input type="number" id="f-year-from" placeholder="2018" min="2000" max="2025">
+          </div>
+          <div>
+            <label for="f-year-to">Year (To)</label>
+            <input type="number" id="f-year-to" placeholder="2024" min="2000" max="2025">
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label for="f-body">Body Style</label>
+            <div class="select-wrap">
+            <select id="f-body">
+              <option value="">No preference</option>
+              <option>Sedan</option><option>SUV / Crossover</option>
+              <option>Truck</option><option>Coupe</option>
+              <option>Convertible</option><option>Van / Minivan</option>
+              <option>Wagon</option>
+            </select>
+            </div>
+          </div>
+          <div>
+            <label for="f-mileage">Max Mileage</label>
+            <input type="number" id="f-mileage" placeholder="e.g. 60000">
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label for="f-fuel">Fuel Type</label>
+            <div class="select-wrap">
+            <select id="f-fuel">
+              <option value="">No preference</option>
+              <option>Gasoline</option>
+              <option>Diesel</option>
+              <option>Hybrid</option>
+              <option>Plug-In Hybrid (PHEV)</option>
+              <option>Electric (EV)</option>
+              <option>Flex Fuel (E85)</option>
+            </select>
+            </div>
+          </div>
+          <div>
+            <label for="f-transmission">Transmission</label>
+            <div class="select-wrap">
+            <select id="f-transmission">
+              <option value="">No preference</option>
+              <option>Automatic</option>
+              <option>Manual</option>
+            </select>
+            </div>
+          </div>
+        </div>
+
+        <hr class="form-divider">
+
+        <!-- Budget -->
+        <div class="form-section-title">Budget</div>
+        <div class="budget-row">
+          <div>
+            <label for="f-budget-min">Minimum Budget ($) <span class="req">*</span></label>
+            <input type="number" id="f-budget-min" placeholder="e.g. 15000" autocomplete="off" inputmode="numeric" min="0" step="1">
+          </div>
+          <div>
+            <label for="f-budget-max">Maximum Budget ($) <span class="req">*</span></label>
+            <input type="number" id="f-budget-max" placeholder="e.g. 25000" autocomplete="off" inputmode="numeric" min="0" step="1">
+          </div>
+        </div>
+
+        <hr class="form-divider">
+
+        <!-- FINANCING HIDDEN: whole block kept in DOM (so the JS still finds
+             its IDs) but invisible. Remove the wrapping div + flip
+             SHOW_FINANCING to true to restore. -->
+        <div id="financing-section" style="display:none;">
+          <!-- Payment Method -->
+          <div class="form-section-title">How will you pay? <span class="req">*</span></div>
+          <div class="payment-method-row">
+            <label class="payment-method-card">
+              <input type="radio" name="paymentMethod" value="cash" id="f-pay-cash">
+              <span>
+                <span class="payment-method-label">Pay cash</span>
+                <span class="payment-method-label-sub">Full payment on delivery</span>
+              </span>
+            </label>
+            <label class="payment-method-card">
+              <input type="radio" name="paymentMethod" value="financing" id="f-pay-finance">
+              <span>
+                <span class="payment-method-label">Finance</span>
+                <span class="payment-method-label-sub">Through Westlake Financial</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="finance-fields" id="finance-fields">
+            <div>
+              <label for="f-down-payment">Down Payment ($) <span class="req">*</span></label>
+              <input type="number" id="f-down-payment" placeholder="e.g. 3000" autocomplete="off" inputmode="numeric" min="0" step="1">
+            </div>
+            <div>
+              <label for="f-monthly-payment">Preferred Monthly Payment ($) <span class="req">*</span></label>
+              <input type="number" id="f-monthly-payment" placeholder="e.g. 450" autocomplete="off" inputmode="numeric" min="0" step="1">
+            </div>
+          </div>
+          <div class="finance-hint" id="finance-hint" style="display:none;">We finance through Westlake Financial and match rates from tier-1 banks. Your numbers above help us structure the deal , final terms depend on credit and the vehicle. We'll confirm everything before you commit.</div>
+
+          <hr class="form-divider">
+        </div>
+
+        <!-- Preferences -->
+        <div class="form-section-title">Preferences</div>
+        <div class="form-group">
+          <label>Must-Have Features</label>
+          <div class="checkbox-group">
+            <label class="checkbox-item"><input type="checkbox" value="Backup Camera"> Backup Camera</label>
+            <label class="checkbox-item"><input type="checkbox" value="Sunroof / Moonroof"> Sunroof / Moonroof</label>
+            <label class="checkbox-item"><input type="checkbox" value="Leather Seats"> Leather Seats</label>
+            <label class="checkbox-item"><input type="checkbox" value="Navigation"> Navigation</label>
+            <label class="checkbox-item"><input type="checkbox" value="Heated Seats"> Heated Seats</label>
+            <label class="checkbox-item"><input type="checkbox" value="Apple CarPlay / Android Auto"> CarPlay / Android Auto</label>
+            <label class="checkbox-item"><input type="checkbox" value="4WD / AWD"> 4WD / AWD</label>
+            <label class="checkbox-item"><input type="checkbox" value="Third Row Seating"> Third Row Seating</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="f-color">Preferred Color</label>
+          <input type="text" id="f-color" placeholder="e.g. Black, White, No preference">
+        </div>
+
+        <hr class="form-divider">
+
+        <!-- ZIP Code (for shipping estimate) -->
+        <div class="form-section-title">Shipping</div>
+        <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-family:system-ui,sans-serif;font-size:13px;color:#92400e;">
+          ⚠ We currently serve the <strong>contiguous United States only (lower 48 states)</strong>. We are unable to ship to Hawaii or Alaska.
+        </div>
+        <div class="form-group" style="margin-bottom:14px;">
+          <label for="f-zip">ZIP Code <span class="req">*</span></label>
+          <input type="text" id="f-zip" placeholder="33101" maxlength="10" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?">
+          <div style="font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.5;">For accurate shipping estimates. We'll collect the full delivery address once you've decided on a vehicle.</div>
+        </div>
+
+        <hr class="form-divider">
+
+        <!-- Notes -->
+        <div class="form-section-title">Additional Notes</div>
+        <div class="form-group">
+          <label for="f-notes">Anything else we should know?</label>
+          <textarea id="f-notes" placeholder="Trade-in, financing needs, urgency, specific trim levels, etc."></textarea>
+        </div>
+
+        <!-- Skip the Line option -->
+        <div style="background:linear-gradient(135deg, #fef3c7, #fde68a);border-radius:12px;padding:18px 20px;margin:24px 0;border:1px solid #f59e0b;">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <input type="checkbox" id="f-skip-line" onchange="toggleSkipLineUI()" style="margin-top:4px;width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+            <label for="f-skip-line" style="cursor:pointer;flex:1;">
+              <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:#78350f;margin-bottom:4px;">⚡ Skip the Line</div>
+              <div style="font-size:13px;color:#78350f;line-height:1.6;">Already know what you want and ready to roll? Skip the intro call and get started immediately. You'll go straight to signing the contract and submitting your $850 deposit. We start sourcing the same day.</div>
+            </label>
+          </div>
+        </div>
+
+        <hr class="form-divider">
+
+        <!-- Referral source — required, mirrored to the Leads tab of the team
+             Google Sheet. Rendered as a selectable chip grid (backed by the
+             hidden #f-referral-source input) so it reads as an intentional
+             step rather than a bolted-on dropdown. Chip LABELS are friendly;
+             the stored VALUE passed to selectReferral() must stay in sync with
+             the Sheet / DB (was the old <option value> set). -->
+        <div class="form-section-title">How did you hear about us? <span class="req">*</span></div>
+        <input type="hidden" id="f-referral-source" required>
+        <div class="referral-grid" id="referral-grid" role="group" aria-label="How did you hear about us?">
+          <button type="button" class="referral-chip" aria-pressed="false" onclick="selectReferral(this,'Google Search')"><span class="ico">🔍</span> Google search</button>
+          <button type="button" class="referral-chip" aria-pressed="false" onclick="selectReferral(this,'Instagram')"><span class="ico">📸</span> Instagram</button>
+          <button type="button" class="referral-chip" aria-pressed="false" onclick="selectReferral(this,'Facebook')"><span class="ico">👍</span> Facebook</button>
+          <button type="button" class="referral-chip" aria-pressed="false" onclick="selectReferral(this,'TikTok')"><span class="ico">🎵</span> TikTok</button>
+          <button type="button" class="referral-chip" aria-pressed="false" onclick="selectReferral(this,'YouTube')"><span class="ico">▶️</span> YouTube</button>
+          <button type="button" class="referral-chip" aria-pressed="false" onclick="selectReferral(this,'Friend / Word of Mouth')"><span class="ico">🗣️</span> Word of mouth</button>
+          <button type="button" class="referral-chip" aria-pressed="false" onclick="selectReferral(this,'Drove By / Saw In Person')"><span class="ico">🚗</span> Saw in person</button>
+          <button type="button" class="referral-chip" aria-pressed="false" onclick="selectReferral(this,'Other')"><span class="ico">💬</span> Other</button>
+        </div>
+
+        <!-- SMS opt-in — explicit checkbox, unchecked by default. Required for
+             A2P 10DLC compliance (TCR rejected our previous campaign for
+             implicit "by submitting" consent). Submitting the form WITHOUT
+             checking is still allowed — they just won't receive SMS. Every bit
+             of the compliance copy below (agree language, msg frequency,
+             msg & data rates, STOP/HELP, Privacy + Terms links) is legally
+             required and TCR-reviewed — restyle freely, but do not remove it. -->
+        <div class="sms-card">
+          <label class="sms-card__top">
+            <span class="sms-card__badge">💬</span>
+            <span class="sms-card__titles">
+              <span class="sms-card__title">Text me updates about my request</span>
+              <span class="sms-card__sub">Booking confirmations, deposit &amp; contract notices, and portal replies</span>
+            </span>
+            <input type="checkbox" id="f-sms-consent" class="sms-card__check">
+          </label>
+          <div class="sms-card__fine">
+            By checking this box, <strong>I agree to receive SMS messages from Auto Pals USA</strong> about my vehicle request. Message frequency varies. Msg &amp; data rates may apply. Reply <strong>STOP</strong> to unsubscribe, <strong>HELP</strong> for help. See our <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy</a> and <a href="/terms.html" target="_blank" rel="noopener">Terms of Service</a>.
+            <span class="sms-card__legal">Optional — leave unchecked and we'll only reach you by email and through the portal.</span>
+          </div>
+        </div>
+
+        <button class="submit-btn" onclick="submitForm()">Submit Vehicle Request</button>
+      </div>
+
+      <!-- Success message
+           Active conversion path: primary CTA pushes them to book the call
+           immediately (peak intent moment, post-form-submit). The submitForm()
+           handler in JS rewrites headline/subhead/CTA based on req.skipTheLine
+           so skip-the-line clients see a "go pay deposit" path instead. -->
+      <div class="success-msg" id="success-msg">
+        <div class="success-badge">✓</div>
+        <div class="success-body">
+          <h2 id="success-headline">Got it — now book your call.</h2>
+          <p id="success-subhead" class="success-subhead">A 30-min discovery call is the fastest way to lock in your search. Pick a time that works below.</p>
+
+          <!-- Primary CTA — book the call -->
+          <a id="primary-cta" class="success-cta" href="booking.html"
+             onclick="try{track('success_primary_cta_click',{cta:(document.getElementById('primary-cta')||{}).textContent||''});}catch(e){}">
+            📅 Book your 30-min call →
+          </a>
+
+          <!-- What you'll cover on the call -->
+          <div id="what-youll-learn" class="success-panel">
+            <div class="success-panel__eyebrow">On the call we'll cover</div>
+            <ul class="success-checklist">
+              <li>What you can realistically expect to land for your budget</li>
+              <li>How auctions work and where the savings actually come from</li>
+              <li>Timeline — most clients see matches within 2–4 weeks</li>
+            </ul>
+          </div>
+
+          <!-- Availability hint -->
+          <div id="availability-hint" class="success-avail">
+            📅 Mon–Fri 9am–5pm EST &nbsp;•&nbsp; up to 10 call slots a day
+          </div>
+
+          <!-- Portal access code — clients must save this to track their request -->
+          <div id="portal-code-box" class="portal-ticket">
+            <div class="portal-ticket__label">Your Portal Access Code</div>
+            <div class="portal-ticket__row">
+              <span id="portal-code-display" class="portal-ticket__code"></span>
+              <button type="button" class="portal-ticket__copy" onclick="copyPortalCode(this)">Copy</button>
+            </div>
+            <div class="portal-ticket__note">Save this — you'll need it to track your request</div>
+          </div>
+
+          <!-- Skip-the-call alternative (hidden for skip-the-line submissions) -->
+          <p id="skip-cta-wrap" class="success-skip">
+            Want to skip the call and start sourcing today?
+            <a href="portal.html" onclick="try{track('success_skip_pay_click');}catch(e){}">Pay your $850 deposit →</a>
+          </p>
+
+          <!-- Secondary actions -->
+          <div class="success-actions">
+            <a id="secondary-cta" href="portal.html" onclick="try{track('success_portal_click');}catch(e){}">Go to portal</a>
+            <button type="button" onclick="resetForm()">Submit another</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DASHBOARD VIEW ============ -->
+
+</main>
+
+<script>
+  /* ────────────────────────────────────────────────────────────────
+     Standalone client request form.
+
+     Extracted from form.html by line range so nothing was retyped.
+     Two functions are deliberately REWRITTEN rather than copied — see
+     the notes on each below. Everything else is byte-identical to the
+     original so behaviour can't drift on the lead-capture path.
+     ──────────────────────────────────────────────────────────────── */
+
+  /* dbHeaders — REWRITTEN.
+     The original decided whether to attach the staff token by checking
+     whether #view-client was the active view. On this page there is no
+     dashboard and no staff session, so the answer is always "no token".
+     Hard-coding that is strictly safer than porting a DOM-dependent
+     check that would start attaching tokens if the markup ever changed. */
+  function dbHeaders() {
+    return { 'Content-Type': 'application/json' };
+  }
+
+  /* handleSessionExpired — REWRITTEN.
+     The original alerted the user and opened the staff login when it
+     fired outside the client form. Neither exists here, so this clears
+     any stray keys and stays silent — a client must never be shown a
+     staff session prompt. */
+  function handleSessionExpired() {
+    if (sessionExpiredHandled) return;
+    sessionExpiredHandled = true;
+    try {
+      sessionStorage.removeItem('staff_auth');
+      sessionStorage.removeItem('staff_token');
+    } catch (_) {}
+    setTimeout(() => { sessionExpiredHandled = false; }, 2000);
+  }
+
+  /* ── feature flag ─────────────────────────── */
+  const SHOW_FINANCING = false;
+
+  /* ── db base ─────────────────────────── */
+  const DB_BASE = '/api/db';
+  const isLocal = window.location.protocol === 'file:';
+
+  /* ── session flag ─────────────────────────── */
+  let sessionExpiredHandled = false;
+
+  /* ── dbPost ─────────────────────────── */
+  async function dbPost(table, body) {
+    if (isLocal) return null;
+    try {
+      const res = await fetch(`${DB_BASE}?table=${table}`, {
+        method: 'POST', headers: dbHeaders(),
+        body: JSON.stringify(body)
+      });
+      if (res.status === 401) { handleSessionExpired(); return null; }
+      return res.ok ? res.json() : null;
+    } catch { return null; }
+  }
+
+  /* ── session id + track ─────────────────────────── */
+  let _sessionId = null;
+  function _getSessionId() {
+    if (_sessionId) return _sessionId;
+    try {
+      let s = localStorage.getItem('aup_session_id');
+      if (!s) {
+        s = (window.crypto && window.crypto.randomUUID)
+          ? window.crypto.randomUUID()
+          : 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem('aup_session_id', s);
+      }
+      _sessionId = s;
+      return s;
+    } catch (e) {
+      return 's_' + Date.now();
+    }
+  }
+  function track(name, props, requestId) {
+    if (isLocal) return;
+    try {
+      fetch(`${DB_BASE}?table=events`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          sessionId: _getSessionId(),
+          page: (window.location && window.location.pathname) || '',
+          props: props || null,
+          requestId: requestId || null
+        }),
+        keepalive: true
+      }).catch(() => {});
+    } catch (e) { /* never throw */ }
+  }
+
+  /* ── pixel ─────────────────────────── */
+  function pixel(event, params, eventId) {
+    try {
+      if (typeof fbq === 'function') {
+        // The 4th arg is Meta's dedup handle: when the same event_name +
+        // eventID also arrives from our server via the Conversions API,
+        // Meta collapses the pair into one conversion instead of
+        // counting the lead twice.
+        if (eventId) fbq('track', event, params || {}, { eventID: eventId });
+        else fbq('track', event, params || {});
+      }
+    } catch (e) { /* never throw */ }
+  }
+
+  /* ── event id ─────────────────────────── */
+  function newEventId(prefix) {
+    try {
+      const rand = (window.crypto && window.crypto.randomUUID)
+        ? window.crypto.randomUUID()
+        : Math.random().toString(36).slice(2) + Date.now().toString(36);
+      return prefix + '-' + rand;
+    } catch (e) {
+      return prefix + '-' + Date.now();
+    }
+  }
+
+  /* ── local request cache ─────────────────────────── */
+  let requests = JSON.parse(localStorage.getItem('am_requests') || '[]');
+  let activeRequestId = null;
+  function save() {
+    localStorage.setItem('am_requests', JSON.stringify(requests));
+    // Sync individual request fields that change (status, AI results) — not a full overwrite
+    // Called explicitly with the specific request after changes
+  }
+
+  /* ── referral / toggles ─────────────────────────── */
+  function selectReferral(el, value) {
+    document.querySelectorAll('.referral-chip').forEach(c => {
+      const on = c === el;
+      c.classList.toggle('selected', on);
+      c.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    document.getElementById('f-referral-source').value = value;
+    const grid = document.getElementById('referral-grid');
+    if (grid) grid.classList.remove('invalid');
+  }
+
+  function toggleSkipLineUI() {
+    const checked = document.getElementById('f-skip-line').checked;
+    const submitBtn = document.querySelector('button.submit-btn');
+    if (submitBtn && submitBtn.textContent.includes('Submit Vehicle Request')) {
+      submitBtn.textContent = checked
+        ? 'Skip the Line — Continue to Contract & Deposit'
+        : 'Submit Vehicle Request';
+    }
+  }
+
+  function setSearchMode(mode) {
+    document.getElementById('toggle-specific').classList.toggle('active', mode === 'specific');
+    document.getElementById('toggle-open').classList.toggle('active', mode === 'open');
+    document.getElementById('specific-fields').style.display = mode === 'specific' ? 'block' : 'none';
+  }
+
+  /* ── payment fields + init ─────────────────────────── */
+  function syncPaymentFields() {
+    const finance = document.getElementById('f-pay-finance');
+    const fields = document.getElementById('finance-fields');
+    const hint   = document.getElementById('finance-hint');
+    const show = finance && finance.checked;
+    fields.classList.toggle('show', !!show);
+    hint.style.display = show ? 'block' : 'none';
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const cash = document.getElementById('f-pay-cash');
+    const fin  = document.getElementById('f-pay-finance');
+    if (cash) cash.addEventListener('change', syncPaymentFields);
+    if (fin)  fin.addEventListener('change', syncPaymentFields);
+
+    // Fire form_view only when the public client form is the active view —
+    // skips the staff dashboard, which also lives in this file.
+    try {
+      const clientView = document.getElementById('view-client');
+      if (clientView && clientView.classList.contains('active')) {
+        track('form_view');
+      }
+    } catch (e) { /* swallow */ }
+  });
+
+  /* ── submit guards ─────────────────────────── */
+  let _submitting = false;
+  const _formLoadedAt = Date.now();
+
+  /* ── submitForm ─────────────────────────── */
+  function submitForm() {
+    if (_submitting) return;
+
+    // ── Bot signals (silent — don't tell the bot why we rejected) ──
+    const hp = document.getElementById('f-website');
+    if (hp && hp.value && hp.value.trim() !== '') {
+      console.warn('[bot] honeypot tripped');
+      return; // pretend nothing happened
+    }
+    const elapsed = Date.now() - _formLoadedAt;
+    if (elapsed < 2500) {
+      console.warn('[bot] form submitted in', elapsed, 'ms — suspiciously fast');
+      return;
+    }
+
+    const required = ['f-firstname','f-lastname','f-email','f-phone','f-date','f-zip','f-year-from','f-budget-min','f-budget-max','f-referral-source'];
+    // When the client says "I have a specific car in mind" (the default), the
+    // make and model become required so we can scope the search. Open searches
+    // skip these fields entirely.
+    const isSpecific = document.getElementById('toggle-specific') &&
+                       document.getElementById('toggle-specific').classList.contains('active');
+    if (isSpecific) {
+      required.push('f-make', 'f-model');
+    }
+    let valid = true;
+    required.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el.value.trim()) { el.style.borderColor = 'var(--red)'; valid = false; }
+      else el.style.borderColor = '';
+    });
+    // #f-referral-source is a hidden input (chip grid) — reflect its invalid
+    // state on the grid instead, since a red border on a hidden input is
+    // invisible.
+    const _refGrid = document.getElementById('referral-grid');
+    if (_refGrid) _refGrid.classList.toggle('invalid', !document.getElementById('f-referral-source').value.trim());
+    if (!valid) {
+      alert(isSpecific
+        ? 'Please fill in all required fields, including Make and Model.'
+        : 'Please fill in all required fields.');
+      return;
+    }
+
+    // Payment method is required — radios aren't covered by the generic
+    // "value.trim()" check above so handle them separately.
+    const payCash    = document.getElementById('f-pay-cash');
+    const payFinance = document.getElementById('f-pay-finance');
+    const paymentMethod = payCash && payCash.checked ? 'cash'
+                       : (payFinance && payFinance.checked ? 'financing' : '');
+    // FINANCING HIDDEN: skip the "must pick a method" gate while the section
+    // is invisible — radios stay unchecked, paymentMethod stays ''. Backend
+    // treats empty as null so nothing downstream breaks.
+    if (SHOW_FINANCING && !paymentMethod) {
+      alert('Please select how you plan to pay (cash or financing).');
+      const row = document.querySelector('.payment-method-row');
+      if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    // If financing, down payment + preferred monthly are required.
+    let downPayment = null, monthlyPayment = null;
+    if (SHOW_FINANCING && paymentMethod === 'financing') {
+      const dpEl = document.getElementById('f-down-payment');
+      const mpEl = document.getElementById('f-monthly-payment');
+      downPayment = parseInt(dpEl.value, 10);
+      monthlyPayment = parseInt(mpEl.value, 10);
+      if (!Number.isFinite(downPayment) || downPayment < 0) {
+        dpEl.style.borderColor = 'var(--red)';
+        alert('Please enter a valid down payment amount (a non-negative number).');
+        dpEl.focus();
+        return;
+      }
+      if (!Number.isFinite(monthlyPayment) || monthlyPayment <= 0) {
+        mpEl.style.borderColor = 'var(--red)';
+        alert('Please enter a valid preferred monthly payment.');
+        mpEl.focus();
+        return;
+      }
+      dpEl.style.borderColor = '';
+      mpEl.style.borderColor = '';
+    }
+
+    // Email format validation
+    const emailEl = document.getElementById('f-email');
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(emailEl.value.trim())) {
+      emailEl.style.borderColor = 'var(--red)';
+      alert('Please enter a valid email address.');
+      return;
+    }
+
+    // Guard against double-submit
+    _submitting = true;
+    const submitBtn = document.querySelector('button[onclick="submitForm()"]');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
+    const release = () => {
+      _submitting = false;
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Submit Vehicle Request'; }
+    };
+    // Safety net: release guard after 8s so user is never stuck
+    setTimeout(release, 8000);
+
+    const features = [...document.querySelectorAll('.checkbox-group input:checked')].map(cb => cb.value);
+
+    const req = {
+      id: Date.now(),
+      submitted: new Date().toISOString(),
+      status: 'new',
+      portalCode: '', // assigned by generateAccessCode() below
+      firstName: document.getElementById('f-firstname').value.trim(),
+      lastName: document.getElementById('f-lastname').value.trim(),
+      email: document.getElementById('f-email').value.trim(),
+      phone: document.getElementById('f-phone').value.trim(),
+      address: '',
+      city: '',
+      state: '',
+      zip: document.getElementById('f-zip').value.trim(),
+      requestDate: document.getElementById('f-date').value,
+      deadline: (() => {
+        const d = new Date(document.getElementById('f-date').value);
+        d.setDate(d.getDate() + 60);
+        return d.toISOString().split('T')[0];
+      })(),
+      make: document.getElementById('f-make').value,
+      model: document.getElementById('f-model').value.trim() || '—',
+      yearFrom: document.getElementById('f-year-from').value,
+      yearTo: document.getElementById('f-year-to').value || document.getElementById('f-year-from').value,
+      body: document.getElementById('f-body').value || 'No preference',
+      mileage: document.getElementById('f-mileage').value || 'No limit',
+      budgetMin: parseInt(document.getElementById('f-budget-min').value),
+      budgetMax: parseInt(document.getElementById('f-budget-max').value),
+      paymentMethod: paymentMethod,            // 'cash' | 'financing'
+      downPayment: downPayment,                // null when cash
+      monthlyPayment: monthlyPayment,          // null when cash
+      color: document.getElementById('f-color').value.trim() || 'No preference',
+      transmission: document.getElementById('f-transmission').value || 'No preference',
+      fuel: document.getElementById('f-fuel').value || 'No preference',
+      searchMode: document.getElementById('toggle-open').classList.contains('active') ? 'open' : 'specific',
+      features: features,
+      notes: document.getElementById('f-notes').value.trim() || '—',
+      internalNotes: '',
+      skipTheLine: document.getElementById('f-skip-line') ? document.getElementById('f-skip-line').checked : false,
+      referralSource: document.getElementById('f-referral-source').value || '',
+      // Explicit SMS opt-in from the checkbox. Stored on the row + used as
+      // a hard gate downstream — false means absolutely no SMS to this
+      // client, true means transactional SMS is fine.
+      smsConsent: document.getElementById('f-sms-consent') ? document.getElementById('f-sms-consent').checked : false
+    };
+
+    // ── Input validation ──────────────────────────────────────
+    // budgetMin / budgetMax came from parseInt; empty inputs become NaN which
+    // breaks downstream sorting, AI scoring, and email rendering. Reject early.
+    if (!Number.isFinite(req.budgetMin) || req.budgetMin < 0) {
+      release();
+      alert('Please enter a valid minimum budget (a non-negative number).');
+      document.getElementById('f-budget-min').focus();
+      return;
+    }
+    if (!Number.isFinite(req.budgetMax) || req.budgetMax < 0) {
+      release();
+      alert('Please enter a valid maximum budget (a non-negative number).');
+      document.getElementById('f-budget-max').focus();
+      return;
+    }
+    if (req.budgetMin > req.budgetMax) {
+      release();
+      alert('Minimum budget cannot exceed maximum budget. Please double-check.');
+      document.getElementById('f-budget-min').focus();
+      return;
+    }
+    // Year range sanity (yearFrom and yearTo are strings from a select/input)
+    const _yFrom = parseInt(req.yearFrom, 10);
+    const _yTo   = parseInt(req.yearTo, 10);
+    if (Number.isFinite(_yFrom) && Number.isFinite(_yTo) && _yFrom > _yTo) {
+      release();
+      alert('"From" year cannot be later than "To" year. Please correct.');
+      return;
+    }
+
+    // If skip-the-line, auto-mark call complete and bump status forward
+    // so the contract section is immediately accessible in the portal.
+    if (req.skipTheLine) {
+      req.callCompletedAt = new Date().toISOString();
+      req.status = 'qualified';
+    }
+
+    // Auto-reject if max budget is under $4,000
+    if (req.budgetMax <= 4000) {
+      req.status = 'rejected';
+      req.rejectionReason = 'budget_too_low';
+    }
+
+    // Generate portal code FIRST so it's included in everything
+    const accessCode = generateAccessCode(req.firstName, req.id);
+    req.portalCode = accessCode;
+    req.accessCode = accessCode;
+
+    // Minted before the POST so the same id rides along to the server,
+    // which sends its own Lead via the Conversions API. Matching ids let
+    // Meta collapse the two into one conversion.
+    req.leadEventId = newEventId('lead');
+
+    requests.unshift(req);
+    save();
+    dbPost('requests', req); // Push to Supabase with portal code already set
+
+    // Meta conversion event. Deliberately NOT fired for auto-rejected rows
+    // (budget under $4k) — Meta optimizes toward whoever we call a Lead, so
+    // counting people we just turned away would train the ad account to find
+    // more of them. searchMode and the budget ride along as custom params for
+    // audience building; `value` is left off on purpose so a future
+    // value-optimized campaign doesn't read a car's price as our revenue.
+    if (req.status !== 'rejected') {
+      pixel('Lead', {
+        content_name: 'Vehicle Request',
+        content_category: req.searchMode === 'open' ? 'Open Search' : 'Specific Vehicle',
+        budget_max: req.budgetMax,
+        skip_the_line: !!req.skipTheLine
+      }, req.leadEventId);
+    }
+
+    // Server-side now fires staffNewRequest + (confirmation|rejected) email
+    // and (new_request|rejected) SMS as part of POST /requests in api/db.js.
+    // The client used to fire these directly via /api/email and /api/sms, but
+    // those endpoints were unauthenticated and abusable (phishing, bill drain),
+    // so the triggers moved server-side. /api/email and /api/sms are now
+    // staff-only HTTP endpoints, used below for staff dashboard actions.
+
+    // Trigger AI request scoring (color/reason) in background.
+    if (typeof runAIReview === 'function') runAIReview(req);
+    // Also generate vehicle recommendations now so they're ready by the time
+    // staff opens the detail view. Fires for every submit regardless of
+    // searchMode — staff can ignore them or use them either way.
+    if (req.status !== 'rejected') {
+      if (typeof runOpenSearchAI === 'function') runOpenSearchAI(req);
+    }
+
+    // Show success with code
+    document.getElementById('portal-code-display').textContent = accessCode;
+
+    // Branch the success screen by Skip-the-Line. Non-skip clients see the
+    // "book your call" path (primary conversion); skip-the-line clients see
+    // a "pay deposit" path since they explicitly opted out of the call.
+    const isSkipLine = !!req.skipTheLine;
+    const headline    = document.getElementById('success-headline');
+    const subhead     = document.getElementById('success-subhead');
+    const primaryCta  = document.getElementById('primary-cta');
+    const learnBox    = document.getElementById('what-youll-learn');
+    const availHint   = document.getElementById('availability-hint');
+    const skipCtaWrap = document.getElementById('skip-cta-wrap');
+    if (isSkipLine) {
+      headline.textContent = `Got it, ${req.firstName} — head to your portal.`;
+      subhead.textContent  = `You opted in to Skip the Line, so we go straight to sourcing. Pay your $850 deposit and we start hunting auctions the same day.`;
+      primaryCta.textContent = '💳 Pay $850 deposit & start sourcing →';
+      primaryCta.setAttribute('href', 'portal.html');
+      learnBox.style.display    = 'none';
+      availHint.style.display   = 'none';
+      skipCtaWrap.style.display = 'none';
+    } else {
+      headline.textContent = `Got it, ${req.firstName} — now lock in your call.`;
+    }
+
+    // Stash for the booking page so the user doesn't re-type 5 fields. Read
+    // by booking.html on DOMContentLoaded; sessionStorage clears when the tab
+    // closes so this doesn't leak across browser sessions.
+    try {
+      sessionStorage.setItem('bookingPrefill', JSON.stringify({
+        firstName: req.firstName || '',
+        lastName:  req.lastName  || '',
+        email:     req.email     || '',
+        phone:     req.phone     || '',
+        vehicle:   (req.make && req.make !== '—')
+          ? `${req.make}${req.model && req.model !== '—' ? ' ' + req.model : ''}`
+          : ''
+      }));
+    } catch (e) { /* sessionStorage can throw in private-mode browsers; non-fatal */ }
+
+    document.getElementById('form-content').style.display = 'none';
+    document.getElementById('success-msg').style.display = 'block';
+
+    // Funnel event — capturing the minimum useful set for drop-off analysis.
+    // Linked to the new request_id so we can join events ⨯ requests later.
+    track('form_submit_success', {
+      budget_max:       req.budgetMax,
+      skip_the_line:    !!req.skipTheLine,
+      vehicle:          req.make ? `${req.make}${req.model && req.model !== '—' ? ' ' + req.model : ''}` : 'open_search',
+      referral_source:  req.referralSource || null,
+      search_mode:      req.searchMode || null
+    }, req.id);
+  }
+
+  /* ── access code ─────────────────────────── */
+  function generateAccessCode(firstName, id) {
+    // Format: first 3 letters of name + 6 cryptographic chars + last 3 of id.
+    // Math.random() is non-cryptographic and predictable; portal_code is the
+    // only auth on the client portal, so we use crypto.getRandomValues so
+    // codes can't be reproduced by guessing PRNG state.
+    // Strip non-letters first; if nothing's left (numeric / emoji / symbols only),
+    // fall back to APU rather than padding to "XXX" which carries no info.
+    const cleanedPrefix = String(firstName || '').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase();
+    const prefix = cleanedPrefix.length ? cleanedPrefix.padEnd(3, 'X') : 'APU';
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to reduce confusion
+    const buf = new Uint8Array(6);
+    (window.crypto || window.msCrypto).getRandomValues(buf);
+    const rand = Array.from(buf, b => alphabet[b % alphabet.length]).join('');
+    const suffix = String(id).slice(-3).padStart(3, '0');
+    return `${prefix}-${rand}-${suffix}`;
+  }
+
+  /* ── copy + reset ─────────────────────────── */
+  function copyPortalCode(btn) {
+    const code = (document.getElementById('portal-code-display') || {}).textContent || '';
+    if (!code) return;
+    const flash = () => {
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = orig; }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(flash).catch(flash);
+    } else {
+      flash();
+    }
+  }
+
+  function resetForm() {
+    document.getElementById('form-content').style.display = 'block';
+    document.getElementById('success-msg').style.display = 'none';
+    document.querySelectorAll('input:not([type=checkbox]):not([type=radio]), select, textarea').forEach(el => el.value = '');
+    document.querySelectorAll('.checkbox-group input').forEach(cb => cb.checked = false);
+    document.querySelectorAll('input[name="paymentMethod"]').forEach(r => r.checked = false);
+    syncPaymentFields();
+    setSearchMode('specific');
+  }
+
+  /* ── date prefill ─────────────────────────── */
+  // Pre-fill today's date on the form
+  const dateField = document.getElementById('f-date');
+  if (dateField) dateField.value = new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>
