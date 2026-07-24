@@ -445,6 +445,55 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     font-size: 14px; font-weight: 600; transition: opacity 0.15s;
   }
   .confirmed-home:hover { opacity: 0.85; }
+  /* When the portal handoff is present it becomes the primary action, so the
+     homepage link steps down to a quiet text link beneath it. */
+  .confirmed-home.as-secondary {
+    background: none; color: var(--text-muted);
+    padding: 10px; font-size: 13px; font-weight: 500;
+    text-decoration: underline; text-underline-offset: 2px;
+  }
+  .confirmed-home.as-secondary:hover { color: var(--navy); }
+
+  /* Portal handoff card — brand gold, shown on the booking confirmation. */
+  .portal-handoff {
+    margin: 24px auto 14px; max-width: 400px;
+    background: var(--white); border: 1px solid #ead9ad;
+    border-radius: 16px; padding: 20px 22px;
+    box-shadow: 0 6px 24px rgba(180,140,50,0.12);
+    text-align: center;
+  }
+  .portal-handoff-eyebrow {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: #a9812f; margin-bottom: 10px;
+  }
+  .portal-handoff-code-row {
+    display: flex; align-items: center; justify-content: center;
+    gap: 10px; margin-bottom: 10px;
+  }
+  .portal-handoff-code {
+    font-family: 'SF Mono','Menlo','Consolas',monospace;
+    font-size: 22px; font-weight: 700; letter-spacing: 0.06em; color: var(--navy);
+  }
+  .portal-handoff-copy {
+    border: 1px solid var(--border); background: #fff; color: var(--text-muted);
+    border-radius: 8px; padding: 5px 12px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: border-color 140ms var(--ease-out), color 140ms var(--ease-out), transform 140ms var(--ease-out);
+  }
+  .portal-handoff-copy:hover { border-color: #d3ac5f; color: var(--navy); }
+  .portal-handoff-copy:active { transform: scale(0.97); }
+  .portal-handoff-note {
+    font-size: 12px; color: var(--text-muted); line-height: 1.55; margin-bottom: 16px;
+  }
+  .portal-handoff-cta {
+    display: block; width: 100%;
+    background: linear-gradient(135deg,#f2e0af,#d3ac5f 55%,#c39a44); color: #33260a;
+    border: none; border-radius: 10px; padding: 13px 20px;
+    font-family: 'DM Sans', system-ui, sans-serif; font-size: 15px; font-weight: 700;
+    cursor: pointer; box-shadow: 0 4px 16px rgba(180,140,50,0.28);
+    transition: transform 140ms var(--ease-out), filter 140ms var(--ease-out);
+  }
+  .portal-handoff-cta:hover { filter: brightness(1.04); }
+  .portal-handoff-cta:active { transform: scale(0.98); }
 
   @media (max-width: 768px) {
     .booking-wrap { grid-template-columns: 1fr; gap: 24px; padding: 24px 16px; }
@@ -513,6 +562,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 </div>
 
 <div class="booking-wrap" id="booking-content" style="display:none;">
+
+  <!-- Welcome ribbon — shown when arriving straight from the form. Spans
+       both grid columns; populated + revealed once by the init script. -->
+  <div id="booking-welcome-ribbon" style="display:none;grid-column:1/-1;align-items:center;gap:10px;background:linear-gradient(135deg,#f2e0af,#d3ac5f 55%,#c39a44);color:#33260a;border-radius:14px;padding:13px 20px;margin-bottom:4px;font-weight:600;font-size:14px;box-shadow:0 4px 16px rgba(180,140,50,0.22);">
+    <span style="font-size:18px;line-height:1;">✓</span>
+    <span id="booking-welcome-text">Request received — pick a time for your call below.</span>
+  </div>
 
   <!-- LEFT INFO -->
   <div class="booking-info">
@@ -691,7 +747,18 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
             Confirmation sent to <strong id="conf-email"></strong>
           </div>
         </div>
-        <br>
+        <!-- Portal handoff — the access code surfaces here now, once the call
+             is booked, instead of on the form's success screen. Hidden if we
+             arrived without a portal_code (e.g. a returning direct booker). -->
+        <div class="portal-handoff" id="portal-handoff" style="display:none;">
+          <div class="portal-handoff-eyebrow">🔑 Your portal access code</div>
+          <div class="portal-handoff-code-row">
+            <span class="portal-handoff-code" id="conf-portal-code">—</span>
+            <button type="button" class="portal-handoff-copy" onclick="copyConfCode(this)">Copy</button>
+          </div>
+          <div class="portal-handoff-note">Saved to your email too. Your portal is where you track the search, pay your deposit, and message the team.</div>
+          <button type="button" class="portal-handoff-cta" onclick="explorePortal()">Let's explore your portal →</button>
+        </div>
         <a href="home.html" class="confirmed-home">Back to Homepage</a>
       </div>
     </div>
@@ -1045,6 +1112,22 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.getElementById('conf-time').textContent = selectedTime;
     document.getElementById('conf-email').textContent = email;
 
+    // Reveal the portal access code now that the call is booked. It rode
+    // here in sessionStorage.portal_code from the form (or from a returning
+    // portal user). If absent, the handoff stays hidden and "Back to
+    // Homepage" remains the primary action.
+    try {
+      const pc = (sessionStorage.getItem('portal_code') || '').trim();
+      if (pc) {
+        const codeEl = document.getElementById('conf-portal-code');
+        if (codeEl) codeEl.textContent = pc;
+        const box = document.getElementById('portal-handoff');
+        if (box) box.style.display = 'block';
+        const home = document.querySelector('#step-3 .confirmed-home');
+        if (home) home.classList.add('as-secondary');
+      }
+    } catch (e) { /* sessionStorage unavailable; keep default confirmation */ }
+
     // Funnel close-event: caller booked a call. Linked to the portal code
     // if we have one in sessionStorage so we can join back to the request.
     try {
@@ -1206,6 +1289,42 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     set('b-phone',   pre.phone);
     set('b-vehicle', pre.vehicle);
   } catch (e) { /* sessionStorage unavailable; non-fatal */ }
+
+  // Greet arrivals coming straight from the form. Read once, then cleared so
+  // a mid-booking refresh doesn't keep re-announcing it.
+  try {
+    const w = JSON.parse(sessionStorage.getItem('bookingWelcome') || 'null');
+    if (w) {
+      sessionStorage.removeItem('bookingWelcome');
+      const ribbon = document.getElementById('booking-welcome-ribbon');
+      const txt = document.getElementById('booking-welcome-text');
+      if (txt) txt.textContent = (w.firstName ? `Request received, ${w.firstName}` : 'Request received')
+        + ' — pick a time for your call below.';
+      if (ribbon) ribbon.style.display = 'flex';
+    }
+  } catch (e) { /* non-fatal */ }
+
+  // Copy the access code shown on the confirmation screen.
+  function copyConfCode(btn) {
+    const code = (document.getElementById('conf-portal-code') || {}).textContent || '';
+    if (!code || code === '—') return;
+    const flash = () => { const o = btn.textContent; btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = o; }, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(flash).catch(flash);
+    else flash();
+  }
+
+  // Hand off to the portal: stash the code + a tour flag in a one-time key
+  // (its own name so it survives the portal's fresh-entry wipe) and navigate.
+  // The code goes via sessionStorage, never the URL, so it can't leak through
+  // history or a referer header.
+  function explorePortal() {
+    const code = (document.getElementById('conf-portal-code') || {}).textContent || '';
+    try {
+      if (code && code !== '—') sessionStorage.setItem('portalWelcome', JSON.stringify({ code, tour: true }));
+      track('booking_explore_portal_click');
+    } catch (e) { /* non-fatal */ }
+    window.location.href = 'portal.html';
+  }
 </script>
 </body>
 </html>

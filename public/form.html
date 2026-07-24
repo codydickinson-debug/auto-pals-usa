@@ -4596,13 +4596,63 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       runOpenSearchAI(req);
     }
 
-    // Show success with code
-    document.getElementById('portal-code-display').textContent = accessCode;
+    // Stash everything the booking page needs. booking.html gates its
+    // calendar on sessionStorage.portal_code, auto-fills from bookingPrefill,
+    // greets the arrival from bookingWelcome, and (new) reveals the access
+    // code on its confirmation screen — so for the normal flow the code now
+    // surfaces AFTER the call is booked instead of here. It's also in the
+    // confirmation email as a safety net for anyone who doesn't book.
+    // sessionStorage clears when the tab closes so none of this leaks across
+    // browser sessions.
+    let stashOk = false;
+    try {
+      sessionStorage.setItem('portal_code', accessCode);
+      sessionStorage.setItem('bookingPrefill', JSON.stringify({
+        firstName: req.firstName || '',
+        lastName:  req.lastName  || '',
+        email:     req.email     || '',
+        phone:     req.phone     || '',
+        vehicle:   (req.make && req.make !== '—')
+          ? `${req.make}${req.model && req.model !== '—' ? ' ' + req.model : ''}`
+          : ''
+      }));
+      sessionStorage.setItem('bookingWelcome', JSON.stringify({ firstName: req.firstName || '' }));
+      // Confirm the write actually stuck — booking.html's calendar is gated on
+      // sessionStorage.portal_code, so if this failed a redirect would strand
+      // the client on the gate. We fall back to the success card instead.
+      stashOk = sessionStorage.getItem('portal_code') === accessCode;
+    } catch (e) { /* sessionStorage can throw in private-mode browsers; non-fatal */ }
 
-    // Branch the success screen by Skip-the-Line. Non-skip clients see the
-    // "book your call" path (primary conversion); skip-the-line clients see
-    // a "pay deposit" path since they explicitly opted out of the call.
+    // Funnel event — fire before we navigate away so it isn't lost to the
+    // redirect. (track() already uses keepalive, but ordering it first is
+    // belt-and-braces.)
+    track('form_submit_success', {
+      budget_max:       req.budgetMax,
+      skip_the_line:    !!req.skipTheLine,
+      vehicle:          req.make ? `${req.make}${req.model && req.model !== '—' ? ' ' + req.model : ''}` : 'open_search',
+      referral_source:  req.referralSource || null,
+      search_mode:      req.searchMode || null
+    }, req.id);
+
     const isSkipLine = !!req.skipTheLine;
+    const isRejected = req.status === 'rejected';
+
+    // ── NORMAL PATH ────────────────────────────────────────────────
+    // Straight to the booking page, auto-filled — no portal-code screen.
+    // The code now waits on the booking confirmation ("let's explore your
+    // portal"). Skip-the-line and rejected submissions fall through to the
+    // on-screen success card below, since neither books a call; so does a
+    // failed sessionStorage write, so a private-mode client still sees their
+    // code rather than a locked booking gate.
+    if (!isSkipLine && !isRejected && stashOk) {
+      window.location.href = 'booking.html';
+      return;
+    }
+
+    // ── SKIP-THE-LINE / REJECTED ───────────────────────────────────
+    // These clients don't book a call, so the success card stays their
+    // place to get the code and the next step.
+    document.getElementById('portal-code-display').textContent = accessCode;
     const headline    = document.getElementById('success-headline');
     const subhead     = document.getElementById('success-subhead');
     const primaryCta  = document.getElementById('primary-cta');
@@ -4621,33 +4671,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       headline.textContent = `Got it, ${req.firstName} — now lock in your call.`;
     }
 
-    // Stash for the booking page so the user doesn't re-type 5 fields. Read
-    // by booking.html on DOMContentLoaded; sessionStorage clears when the tab
-    // closes so this doesn't leak across browser sessions.
-    try {
-      sessionStorage.setItem('bookingPrefill', JSON.stringify({
-        firstName: req.firstName || '',
-        lastName:  req.lastName  || '',
-        email:     req.email     || '',
-        phone:     req.phone     || '',
-        vehicle:   (req.make && req.make !== '—')
-          ? `${req.make}${req.model && req.model !== '—' ? ' ' + req.model : ''}`
-          : ''
-      }));
-    } catch (e) { /* sessionStorage can throw in private-mode browsers; non-fatal */ }
-
     document.getElementById('form-content').style.display = 'none';
     document.getElementById('success-msg').style.display = 'block';
-
-    // Funnel event — capturing the minimum useful set for drop-off analysis.
-    // Linked to the new request_id so we can join events ⨯ requests later.
-    track('form_submit_success', {
-      budget_max:       req.budgetMax,
-      skip_the_line:    !!req.skipTheLine,
-      vehicle:          req.make ? `${req.make}${req.model && req.model !== '—' ? ' ' + req.model : ''}` : 'open_search',
-      referral_source:  req.referralSource || null,
-      search_mode:      req.searchMode || null
-    }, req.id);
   }
 
   function generateAccessCode(firstName, id) {

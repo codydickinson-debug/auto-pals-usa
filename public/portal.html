@@ -704,6 +704,67 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     .portal-wrap { padding: 0 12px 60px; }
     .greeting h1 { font-size: 22px; }
   }
+
+  /* ── Guided tour ─────────────────────────────────────────────────
+     A dim scrim with a "hole" cut over the current step's element (the
+     box-shadow-spread trick), plus a tooltip card. The spotlight is
+     pointer-events:none so the page underneath can't be misclicked
+     mid-tour; the tooltip captures interaction. */
+  .tour-spot {
+    position: absolute; z-index: 10000; border-radius: 14px;
+    box-shadow: 0 0 0 9999px rgba(15,37,87,0.66);
+    pointer-events: none;
+    transition: all 320ms var(--ease-out);
+  }
+  .tour-tip {
+    position: fixed; z-index: 10001; width: min(320px, calc(100vw - 32px));
+    background: var(--white); border: 1px solid var(--border);
+    border-radius: 16px; padding: 18px 20px 16px;
+    box-shadow: 0 18px 48px rgba(15,37,87,0.28);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+  }
+  .tour-tip.show { opacity: 1; transform: translateY(0); }
+  .tour-tip-eyebrow {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--gold-deep, #c39a44); margin-bottom: 6px;
+  }
+  .tour-tip-title {
+    font-family: 'Playfair Display', serif; font-size: 19px; font-weight: 700;
+    color: var(--navy); line-height: 1.25; margin-bottom: 7px;
+  }
+  .tour-tip-body { font-size: 13.5px; color: var(--text); line-height: 1.6; margin-bottom: 16px; }
+  .tour-tip-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .tour-dots { display: flex; gap: 6px; }
+  .tour-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); transition: background 200ms var(--ease-out); }
+  .tour-dot.active { background: var(--gold, #d3ac5f); }
+  .tour-tip-btns { display: flex; align-items: center; gap: 8px; }
+  .tour-back {
+    background: none; border: none; color: var(--text-muted);
+    font-size: 13px; font-weight: 600; cursor: pointer; padding: 6px 4px;
+  }
+  .tour-back:hover { color: var(--navy); }
+  .tour-next {
+    background: var(--gold-grad, linear-gradient(135deg,#f2e0af,#d3ac5f 55%,#c39a44));
+    color: #33260a; border: none; border-radius: 9px;
+    padding: 9px 16px; font-size: 13.5px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 3px 12px rgba(180,140,50,0.26);
+    transition: transform 140ms var(--ease-out), filter 140ms var(--ease-out);
+  }
+  .tour-next:hover { filter: brightness(1.04); }
+  .tour-next:active { transform: scale(0.97); }
+  .tour-skip {
+    position: fixed; z-index: 10001; top: 16px; right: 16px;
+    background: rgba(255,255,255,0.92); border: 1px solid var(--border);
+    color: var(--text-muted); border-radius: 99px; padding: 7px 14px;
+    font-family: 'DM Sans', system-ui, sans-serif; font-size: 12px; font-weight: 600;
+    cursor: pointer; box-shadow: 0 4px 14px rgba(15,37,87,0.14);
+  }
+  .tour-skip:hover { color: var(--navy); }
+  @media (prefers-reduced-motion: reduce) {
+    .tour-spot, .tour-tip { transition: none; }
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -820,7 +881,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       </div>
 
       <!-- Progress bar — filled track with checkpoints on top -->
-      <div class="hero-progress">
+      <div class="hero-progress" data-tour="progress">
         <div class="hero-progress-track"><div class="hero-progress-fill" id="hero-progress-fill"></div></div>
         <div class="hero-progress-steps">
           <div class="hero-step done" id="step-1">
@@ -856,7 +917,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
       <!-- YOUR REQUEST — clean grid, breathing room -->
       <div class="portal-section">
-        <div class="your-request-card">
+        <div class="your-request-card" data-tour="request">
           <div class="yr-header">
             <div class="yr-title">Your Request</div>
             <div class="yr-sub" id="req-sub">Submitted —</div>
@@ -887,7 +948,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       </div>
 
       <!-- DEPOSIT RECEIPT — moved up next to Your Request -->
-      <div class="deposit-receipt">
+      <div class="deposit-receipt" data-tour="deposit">
       <div class="card-title">Deposit Receipt</div>
       <div class="receipt-row"><span style="color:var(--text-muted);">Deposit Amount</span><span style="font-weight:600;">$850.00</span></div>
       <div class="receipt-row"><span style="color:var(--text-muted);">Date Paid</span><span style="font-weight:600;" id="deposit-date">—</span></div>
@@ -933,7 +994,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     </div><!-- /portal-top-duo -->
 
   <!-- MESSAGES -->
-  <div class="portal-section">
+  <div class="portal-section" data-tour="messages">
     <div class="portal-section-title">Messages</div>
     <div class="progress-card" style="margin-bottom:0;">
       <div class="messages" id="messages-list">
@@ -999,7 +1060,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
 
   <!-- DOCUMENTS -->
-  <div class="portal-section">
+  <div class="portal-section" data-tour="documents">
     <div class="portal-section-title">Documents</div>
     <div class="progress-card" style="margin-bottom:0;">
       <div style="display:inline-flex;align-items:center;gap:6px;padding:5px 11px;background:var(--green-light,#dcfce7);border:1px solid #a7f3d0;border-radius:99px;font-size:11px;font-weight:700;color:var(--green,#166534);letter-spacing:0.05em;text-transform:uppercase;margin-bottom:14px;">
@@ -1091,7 +1152,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
 
   <!-- CONTRACT -->
-  <div class="portal-section" id="contract-section">
+  <div class="portal-section" id="contract-section" data-tour="contract">
     <div class="portal-section-title">Service Agreement</div>
     <div class="progress-card" style="margin-bottom:0;padding:0;overflow:hidden;">
 
@@ -1447,6 +1508,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // was 401'ing the portal). If we have a local signature but the server
     // doesn't, re-push it.
     maybeResyncStaleSignature();
+
+    // First-visit walkthrough. Runs when handed off from booking (_pendingTour)
+    // or on a genuine first entry on this device (no seen-flag). The short
+    // delay lets the portal finish its entrance render + scroll-to-top before
+    // we start measuring element positions.
+    if (_pendingTour || !localStorage.getItem('aup_portal_tour_seen')) {
+      _pendingTour = false;
+      setTimeout(() => { try { startPortalTour(); } catch (e) {} }, 700);
+    }
   }
 
   function loadPortalForClient(client) {
@@ -1795,6 +1865,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     list.scrollTop = list.scrollHeight;
   }
 
+  // Set true by the booking→portal welcome handoff to run the guided tour
+  // after login. Module-scoped so portalLogin() (defined above) can read it.
+  let _pendingTour = false;
+
   // Always require fresh code entry — clear any saved session
   sessionStorage.removeItem('portal_code');
 
@@ -1804,6 +1878,23 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.getElementById('portal-code-input').value = savedCode;
     portalLogin();
   }
+
+  // One-time welcome handoff from the booking confirmation. Uses its own key
+  // (portalWelcome) so it survives the portal_code wipe above — that wipe
+  // forces fresh entry on ordinary visits, but arriving straight from a
+  // just-completed booking is a legitimate auto-entry. Auto-logs in with the
+  // freshly-minted code and flags the guided tour to run once the portal
+  // renders. The code lives in sessionStorage, never the URL.
+  try {
+    const welcome = JSON.parse(sessionStorage.getItem('portalWelcome') || 'null');
+    if (welcome && welcome.code) {
+      sessionStorage.removeItem('portalWelcome');
+      _pendingTour = !!welcome.tour;
+      const input = document.getElementById('portal-code-input');
+      if (input) input.value = String(welcome.code).toUpperCase();
+      portalLogin();
+    }
+  } catch (e) { /* non-fatal */ }
 
   // ── ZELLE DEPOSIT ───────────────────────────────────────────────
   const ZELLE_ADDRESS = 'automotivationent@gmail.com';
@@ -2838,6 +2929,150 @@ window.__sendBetaFeedback = async function () {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.getElementById('beta-fb-overlay').classList.remove('open');
 });
+
+  // ── GUIDED PORTAL TOUR ──────────────────────────────────────────
+  // A first-visit walkthrough that spotlights each part of the portal in
+  // turn. Steps whose target is missing or hidden (e.g. the locked contract
+  // for a pre-deposit client) are skipped, so the tour always matches what
+  // the client can actually see. Runs once — a localStorage flag prevents
+  // repeats. startPortalTour is exposed on window for a future "take a tour"
+  // link. (These are function declarations, so hoisting makes them reachable
+  // from the trigger in portalLogin above and from inline onclick handlers.)
+  const TOUR_STEPS = [
+    { sel: '[data-tour="request"]',   eyebrow: 'Your portal',  title: 'Your request',      body: "Everything we're hunting for — your vehicle, budget, and must-haves. Need to tweak something? Just message us below." },
+    { sel: '[data-tour="progress"]',  eyebrow: 'Your portal',  title: 'Where things stand', body: 'This tracker shows exactly where your search is — moving from review, to actively searching, to a match found.' },
+    { sel: '[data-tour="deposit"]',   eyebrow: 'Your portal',  title: 'Your deposit',       body: "Kick off the search by sending your $850 deposit here. It's fully refundable if we don't land your match within 60 days." },
+    { sel: '[data-tour="messages"]',  eyebrow: 'Your portal',  title: 'Message the team',   body: "Talk to Alex or Josh anytime, right here. Sent your deposit? Drop the Zelle receipt in this thread and we'll confirm fast." },
+    { sel: '[data-tour="documents"]', eyebrow: 'Your portal',  title: 'Documents',          body: 'Upload your license and insurance here when you’re ready — it keeps everything moving toward closing.' },
+    { sel: '[data-tour="contract"]',  eyebrow: 'Your portal',  title: 'Service agreement',  body: "Review and e-sign your agreement here once your deposit's in — the final step before we're fully underway." }
+  ];
+  let _tourSteps = [], _tourIdx = 0, _tourEls = null;
+
+  function startPortalTour() {
+    if (document.getElementById('tour-spot')) return; // already running
+    _tourSteps = TOUR_STEPS.filter(s => {
+      const el = document.querySelector(s.sel);
+      return el && el.offsetParent !== null; // exists AND visible
+    });
+    if (!_tourSteps.length) { _markTourSeen(); return; }
+
+    const spot = document.createElement('div'); spot.className = 'tour-spot'; spot.id = 'tour-spot';
+    const tip  = document.createElement('div'); tip.className = 'tour-tip'; tip.id = 'tour-tip';
+    const skip = document.createElement('button'); skip.className = 'tour-skip'; skip.id = 'tour-skip'; skip.type = 'button'; skip.textContent = 'Skip tour ✕';
+    skip.addEventListener('click', endPortalTour);
+    document.body.appendChild(spot); document.body.appendChild(tip); document.body.appendChild(skip);
+    _tourEls = { spot, tip, skip };
+    document.addEventListener('keydown', _tourKey);
+    // Track scroll + resize so the fixed tooltip stays glued to its target
+    // even while a smooth scroll is still settling or the page reflows. The
+    // spotlight uses document coordinates so it's stable on its own, but the
+    // tooltip is viewport-fixed and must follow. Passive listeners keep
+    // scrolling smooth.
+    window.addEventListener('scroll', _tourReposition, { passive: true });
+    window.addEventListener('resize', _tourReposition);
+    _tourIdx = 0;
+    _renderTourStep();
+  }
+
+  function _tourKey(e) {
+    if (e.key === 'Escape') endPortalTour();
+    else if (e.key === 'ArrowRight') tourNext();
+    else if (e.key === 'ArrowLeft') tourBack();
+  }
+
+  function _tourCurrentEl() {
+    const step = _tourSteps[_tourIdx];
+    return step ? document.querySelector(step.sel) : null;
+  }
+
+  function _renderTourStep() {
+    const step = _tourSteps[_tourIdx];
+    const el = document.querySelector(step.sel);
+    if (!el) { tourNext(); return; }
+    _buildTip(step);                       // content first so its height is known
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+    // Position immediately, then reveal once the scroll has settled. The
+    // scroll listener keeps it aligned throughout, so timing isn't critical.
+    _positionTourEls(el);
+    setTimeout(() => {
+      _positionTourEls(el);
+      if (_tourEls) _tourEls.tip.classList.add('show');
+    }, reduce ? 0 : 360);
+  }
+
+  function _buildTip(step) {
+    if (!_tourEls) return;
+    const last = _tourIdx === _tourSteps.length - 1;
+    const dots = _tourSteps.map((_, i) => '<span class="tour-dot ' + (i === _tourIdx ? 'active' : '') + '"></span>').join('');
+    _tourEls.tip.innerHTML =
+      '<div class="tour-tip-eyebrow">' + step.eyebrow + ' · ' + (_tourIdx + 1) + '/' + _tourSteps.length + '</div>' +
+      '<div class="tour-tip-title">' + step.title + '</div>' +
+      '<div class="tour-tip-body">' + step.body + '</div>' +
+      '<div class="tour-tip-foot"><div class="tour-dots">' + dots + '</div>' +
+      '<div class="tour-tip-btns">' +
+        (_tourIdx > 0 ? '<button class="tour-back" type="button" onclick="tourBack()">Back</button>' : '') +
+        '<button class="tour-next" type="button" onclick="tourNext()">' + (last ? 'Done' : 'Next') + '</button>' +
+      '</div></div>';
+  }
+
+  function _positionTourEls(el) {
+    if (!_tourEls || !el) return;
+    const r = el.getBoundingClientRect();
+    const pad = 8;
+    const { spot, tip } = _tourEls;
+    // Spotlight in document coordinates (absolute + scroll offset) — stable
+    // relative to the element regardless of scroll.
+    spot.style.top    = (r.top + window.scrollY - pad) + 'px';
+    spot.style.left   = (r.left + window.scrollX - pad) + 'px';
+    spot.style.width  = (r.width + pad * 2) + 'px';
+    spot.style.height = (r.height + pad * 2) + 'px';
+    // Tooltip in viewport coordinates (fixed): below the target if it fits,
+    // else above; clamped to the viewport on both axes so it's never
+    // off-screen even if the target is only partly visible.
+    const tipW = Math.min(320, window.innerWidth - 32);
+    const tipH = tip.offsetHeight || 190;
+    let top = (r.bottom + 14 + tipH < window.innerHeight) ? (r.bottom + 14) : (r.top - tipH - 14);
+    top = Math.max(16, Math.min(top, window.innerHeight - tipH - 16));
+    let left = r.left + r.width / 2 - tipW / 2;
+    left = Math.max(16, Math.min(left, window.innerWidth - tipW - 16));
+    tip.style.top = top + 'px';
+    tip.style.left = left + 'px';
+  }
+
+  function _tourReposition() {
+    const el = _tourCurrentEl();
+    if (el) _positionTourEls(el);
+  }
+
+  function tourNext() {
+    if (_tourIdx >= _tourSteps.length - 1) { endPortalTour(); return; }
+    _tourIdx++;
+    if (_tourEls) _tourEls.tip.classList.remove('show');
+    _renderTourStep();
+  }
+  function tourBack() {
+    if (_tourIdx === 0) return;
+    _tourIdx--;
+    if (_tourEls) _tourEls.tip.classList.remove('show');
+    _renderTourStep();
+  }
+
+  function endPortalTour() {
+    document.removeEventListener('keydown', _tourKey);
+    window.removeEventListener('scroll', _tourReposition);
+    window.removeEventListener('resize', _tourReposition);
+    if (_tourEls) {
+      ['spot', 'tip', 'skip'].forEach(k => {
+        const n = _tourEls[k];
+        if (n && n.parentNode) n.parentNode.removeChild(n);
+      });
+      _tourEls = null;
+    }
+    _markTourSeen();
+  }
+  function _markTourSeen() { try { localStorage.setItem('aup_portal_tour_seen', '1'); } catch (e) {} }
+  window.startPortalTour = startPortalTour;
 </script>
 <!-- ── /BETA FEEDBACK ── -->
 
