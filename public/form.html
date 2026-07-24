@@ -2004,21 +2004,21 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         </div>
         <div class="form-row">
           <div>
-            <label>First Name <span class="req">*</span></label>
+            <label for="f-firstname">First Name <span class="req">*</span></label>
             <input type="text" id="f-firstname" placeholder="John">
           </div>
           <div>
-            <label>Last Name <span class="req">*</span></label>
+            <label for="f-lastname">Last Name <span class="req">*</span></label>
             <input type="text" id="f-lastname" placeholder="Smith">
           </div>
         </div>
         <div class="form-row">
           <div>
-            <label>Email <span class="req">*</span></label>
+            <label for="f-email">Email <span class="req">*</span></label>
             <input type="email" id="f-email" placeholder="john@email.com">
           </div>
           <div>
-            <label>Phone Number <span class="req">*</span></label>
+            <label for="f-phone">Phone Number <span class="req">*</span></label>
             <input type="tel" id="f-phone" placeholder="(555) 000-0000">
           </div>
         </div>
@@ -2061,18 +2061,18 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
             </div>
           </div>
           <div>
-            <label>Model <span class="req">*</span></label>
+            <label for="f-model">Model <span class="req">*</span></label>
             <input type="text" id="f-model" placeholder="e.g. F-150, Camry, Civic">
           </div>
         </div>
         </div><!-- /specific-fields -->
         <div class="form-row">
           <div>
-            <label>Year (From) <span class="req">*</span></label>
+            <label for="f-year-from">Year (From) <span class="req">*</span></label>
             <input type="number" id="f-year-from" placeholder="2018" min="2000" max="2025">
           </div>
           <div>
-            <label>Year (To)</label>
+            <label for="f-year-to">Year (To)</label>
             <input type="number" id="f-year-to" placeholder="2024" min="2000" max="2025">
           </div>
         </div>
@@ -2090,7 +2090,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
             </div>
           </div>
           <div>
-            <label>Max Mileage</label>
+            <label for="f-mileage">Max Mileage</label>
             <input type="number" id="f-mileage" placeholder="e.g. 60000">
           </div>
         </div>
@@ -2110,7 +2110,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
             </div>
           </div>
           <div>
-            <label>Transmission</label>
+            <label for="f-transmission">Transmission</label>
             <div class="select-wrap">
             <select id="f-transmission">
               <option value="">No preference</option>
@@ -2127,11 +2127,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <div class="form-section-title">Budget</div>
         <div class="budget-row">
           <div>
-            <label>Minimum Budget ($) <span class="req">*</span></label>
+            <label for="f-budget-min">Minimum Budget ($) <span class="req">*</span></label>
             <input type="number" id="f-budget-min" placeholder="e.g. 15000" autocomplete="off" inputmode="numeric" min="0" step="1">
           </div>
           <div>
-            <label>Maximum Budget ($) <span class="req">*</span></label>
+            <label for="f-budget-max">Maximum Budget ($) <span class="req">*</span></label>
             <input type="number" id="f-budget-max" placeholder="e.g. 25000" autocomplete="off" inputmode="numeric" min="0" step="1">
           </div>
         </div>
@@ -2163,11 +2163,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
           <div class="finance-fields" id="finance-fields">
             <div>
-              <label>Down Payment ($) <span class="req">*</span></label>
+              <label for="f-down-payment">Down Payment ($) <span class="req">*</span></label>
               <input type="number" id="f-down-payment" placeholder="e.g. 3000" autocomplete="off" inputmode="numeric" min="0" step="1">
             </div>
             <div>
-              <label>Preferred Monthly Payment ($) <span class="req">*</span></label>
+              <label for="f-monthly-payment">Preferred Monthly Payment ($) <span class="req">*</span></label>
               <input type="number" id="f-monthly-payment" placeholder="e.g. 450" autocomplete="off" inputmode="numeric" min="0" step="1">
             </div>
           </div>
@@ -2192,7 +2192,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           </div>
         </div>
         <div class="form-group">
-          <label>Preferred Color</label>
+          <label for="f-color">Preferred Color</label>
           <input type="text" id="f-color" placeholder="e.g. Black, White, No preference">
         </div>
 
@@ -2204,7 +2204,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           ⚠ We currently serve the <strong>contiguous United States only (lower 48 states)</strong>. We are unable to ship to Hawaii or Alaska.
         </div>
         <div class="form-group" style="margin-bottom:14px;">
-          <label>ZIP Code <span class="req">*</span></label>
+          <label for="f-zip">ZIP Code <span class="req">*</span></label>
           <input type="text" id="f-zip" placeholder="33101" maxlength="10" inputmode="numeric" pattern="[0-9]{5}(-[0-9]{4})?">
           <div style="font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.5;">For accurate shipping estimates. We'll collect the full delivery address once you've decided on a vehicle.</div>
         </div>
@@ -2214,7 +2214,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <!-- Notes -->
         <div class="form-section-title">Additional Notes</div>
         <div class="form-group">
-          <label>Anything else we should know?</label>
+          <label for="f-notes">Anything else we should know?</label>
           <textarea id="f-notes" placeholder="Trade-in, financing needs, urgency, specific trim levels, etc."></textarea>
         </div>
 
