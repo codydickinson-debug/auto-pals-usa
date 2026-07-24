@@ -1530,7 +1530,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       requestAnimationFrame(applyNavScroll);
     };
     window.addEventListener('scroll', onNavScroll, { passive: true });
-    applyNavScroll();
+    // Seed the initial state inside rAF, NOT synchronously. Calling it
+    // directly here reads window.scrollY mid-script-eval, which forces the
+    // page's first full layout to happen synchronously at that point (the
+    // trace blamed ~130ms of forced reflow on exactly this). In a rAF
+    // callback layout is already clean, so the read is free.
+    requestAnimationFrame(applyNavScroll);
   }
 
   // Safety net: if the team photo was already cached/complete before its inline
