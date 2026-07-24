@@ -51,7 +51,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
   .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
   .nav-logo-text { color: var(--cream); font-size: 18px; font-weight: 700; }
-  .nav-logo-sub  { font-size: 10px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(245,240,232,0.45); margin-top: 1px; }
+  /* a11y: 0.45 alpha measured 3.65:1, under the 4.5:1 AA floor for 10px. */
+  .nav-logo-sub  { font-size: 10px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: rgba(245,240,232,0.72); margin-top: 1px; }
   .nav-back {
     padding: 8px 16px;
     background: rgba(245,240,232,0.08);
