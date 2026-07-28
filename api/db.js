@@ -77,6 +77,7 @@ async function patchConditional(table, body, filter) {
   return text ? JSON.parse(text) : [];
 }
 
+const crypto = require('crypto');
 const { verifyToken } = require('./auth.js');
 const sms = require('./_sms.js');
 const emailModule = require('./email.js');
@@ -87,6 +88,112 @@ const { DEPOSIT_STR_BARE } = require('./_constants.js');
 
 const PORTAL_URL  = process.env.PORTAL_URL  || 'https://autopalsusa.com/portal.html';
 const BOOKING_URL = process.env.BOOKING_URL || 'https://autopalsusa.com/booking.html';
+
+// ── Booking → request backstop ──────────────────────────────────────
+// Every booked call should have a matching request (a "lead") in the
+// dashboard + Pipedrive. It usually does: the web form and the voice agent
+// both create one before the booking lands. But the web form fires that
+// create as fire-and-forget and generates the portal code CLIENT-side, so a
+// dropped/failed request POST still lets the client through the booking gate
+// — they book, and no request ever persists. Result: calendar entries with
+// no lead behind them. crossLinkOrCreateRequest() closes that gap at the one
+// place every booking is written, by CREATING a request from the booking's
+// own contact info when none exists.
+
+// Mirrors genPortalCode in api/voice.js and generateAccessCode in the web
+// form so an auto-created lead's code has the same shape as any other.
+function genPortalCode(firstName, id) {
+  const cleaned = String(firstName || '').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase();
+  const prefix = cleaned.length ? cleaned.padEnd(3, 'X') : 'APU';
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to reduce confusion
+  const rand = Array.from(crypto.randomBytes(6), b => alphabet[b % alphabet.length]).join('');
+  const suffix = String(id).slice(-3).padStart(3, '0');
+  return `${prefix}-${rand}-${suffix}`;
+}
+
+// Guard against auto-creating a lead from junk contact info. Some bookings
+// arrive with placeholder values (example@example.com, +10000000000) from a
+// source that isn't the website form or the voice agent — a request built
+// from those is un-actionable noise, so we skip it and log instead.
+function looksRealEmail(email) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!e || e.indexOf('@') < 1) return false;
+  if (!/@[^@\s]+\.[a-z]{2,}$/.test(e)) return false;
+  if (/^(example|placeholder|test|none|na|noemail|no-reply|noreply)@/.test(e)) return false;
+  if (/@(example|placeholder|test)\./.test(e)) return false;
+  return true;
+}
+
+// Given a booking POST body, either cross-link an existing request (mark it
+// booked, nudge Pipedrive) or, when the booker has no request at all, create
+// a lightweight one so the booked call shows up as a real lead. Resolves,
+// never throws — a booking must succeed even if this backstop fails.
+//
+// deps are injectable for testing; they default to the module's real query +
+// pipedrive so the handler can call it with no arguments beyond the body.
+async function crossLinkOrCreateRequest(body, deps = {}) {
+  const q  = deps.query    || query;
+  const pd = deps.pipedrive || pipedrive;
+  const now = deps.now || (() => new Date().toISOString());
+  const newId = deps.newId || (() => Date.now());
+
+  if (!body || !body.email) return { action: 'skipped', reason: 'no_email' };
+  const enc = encodeURIComponent(body.email);
+
+  // Look for ANY request under this email — not just un-booked ones — so we
+  // never create a duplicate for a client who already has a lead on file.
+  const anyMatch = await q('requests', 'GET', null, `?email=eq.${enc}&order=submitted.desc&limit=1`);
+
+  if (anyMatch && anyMatch.length) {
+    const prior = anyMatch[0];
+    // Already linked to a booking? Nothing to do.
+    if (prior.booking_confirmed_at) return { action: 'already_linked', id: prior.id };
+    const patch = { booking_confirmed_at: now() };
+    if (prior.status === 'new' || prior.status === 'review') patch.status = 'qualified';
+    await q('requests', 'PATCH', patch, `?id=eq.${prior.id}`);
+    if (patch.status && patch.status !== prior.status) {
+      await pd.syncStatusChange({ ...prior, ...patch }, patch.status)
+        .catch(err => console.warn('[pipedrive] booking cross-link sync failed', err && err.message));
+    }
+    return { action: 'cross_linked', id: prior.id };
+  }
+
+  // No request exists. Skip obvious placeholder contacts.
+  if (!looksRealEmail(body.email)) {
+    console.warn('[DB] booking with no request and placeholder email — auto-create skipped:', body.email);
+    return { action: 'skipped', reason: 'placeholder_email' };
+  }
+
+  // Build a real lead from the booking's own fields. Only `id` is NOT NULL on
+  // the requests table, so the rest are best-effort. sms_consent is FALSE on
+  // purpose — this person booked a call but never opted into texts, so they
+  // stay out of every SMS drip until staff capture consent on the call.
+  const id = newId();
+  const reqRow = {
+    id,
+    submitted: now(),
+    first_name: (body.firstName || '').trim(),
+    last_name:  (body.lastName  || '').trim(),
+    email:      body.email,
+    phone:      body.phone || '',
+    make:       (body.vehicle || '').trim(),
+    model:      '',
+    search_mode: (body.vehicle || '').trim() ? 'specific' : 'open',
+    status:     'qualified',
+    portal_code: genPortalCode(body.firstName, id),
+    referral_source: 'Booked a call (no request form)',
+    notes: 'Auto-created from a booked call — this client booked without submitting the request form, so their details were captured from the booking.',
+    sms_consent: false,
+    deposit_paid: false,
+    booking_confirmed_at: now()
+  };
+
+  await q('requests', 'POST', reqRow);
+  await pd.syncNewRequest(reqRow)
+    .catch(err => console.warn('[pipedrive] auto-created-lead sync failed', err && err.message));
+  console.log('[DB] auto-created request from booking for', body.email, '→ portal', reqRow.portal_code);
+  return { action: 'created', id, portalCode: reqRow.portal_code };
+}
 
 // ── safeSendEmail ───────────────────────────────────────────────
 // Root cause of the 2026-05-14 outage was variable shadowing: the POST
@@ -1058,43 +1165,18 @@ module.exports = async function handler(req, res) {
           throw err;
         }
 
-        // Cross-link: if the booker's email matches a pending request, mark
-        // that request as booked so the cron stops sending booking reminders.
-        // Fires Pipedrive syncStatusChange on the status flip so the CRM stays
-        // in sync — was previously skipped, causing deals to sit at "New Lead"
-        // in Pipedrive even after the client booked.
-        if (body.email) {
-          try {
-            const matches = await query(
-              'requests',
-              'GET',
-              null,
-              `?email=eq.${encodeURIComponent(body.email)}&booking_confirmed_at=is.null&order=submitted.desc&limit=1`
-            );
-            if (matches && matches.length) {
-              const priorMatch  = matches[0];
-              const matchStatus = priorMatch.status;
-              const bookingPatch = { booking_confirmed_at: new Date().toISOString() };
-              if (matchStatus === 'new' || matchStatus === 'review') {
-                bookingPatch.status = 'qualified';
-              }
-              await query(
-                'requests',
-                'PATCH',
-                bookingPatch,
-                `?id=eq.${priorMatch.id}`
-              );
-              // Mirror to Pipedrive if the status actually changed. Swallowed
-              // errors — a Pipedrive outage should never block a booking.
-              if (bookingPatch.status && bookingPatch.status !== matchStatus) {
-                await pipedrive
-                  .syncStatusChange({ ...priorMatch, ...bookingPatch }, bookingPatch.status)
-                  .catch(err => console.warn('[pipedrive] booking-cross-link sync failed', err && err.message));
-              }
-            }
-          } catch (e) {
-            console.warn('[DB] booking cross-link failed', e && e.message);
-          }
+        // Cross-link the booking to its lead — or CREATE that lead when the
+        // booker has none. Marking the request booked stops the reminder cron
+        // and moves the Pipedrive deal past "New Lead"; creating one when it's
+        // missing is what keeps a booked call from becoming a calendar entry
+        // with no lead behind it (see crossLinkOrCreateRequest for why that
+        // gap exists). Awaited so its Supabase + Pipedrive writes finish
+        // before we respond; it never throws, so a failure here can't block
+        // the booking the client already made.
+        try {
+          await crossLinkOrCreateRequest(body);
+        } catch (e) {
+          console.warn('[DB] booking cross-link/create failed', e && e.message);
         }
 
         return res.json(data);
@@ -1109,4 +1191,10 @@ module.exports = async function handler(req, res) {
     console.error('DB error:', err && err.stack || err);
     return res.status(500).json({ error: 'internal_error' });
   }
-}
+};
+
+// Exposed for unit testing (see scratchpad/test_booking_backstop.js). The
+// handler is the module's default export; these ride alongside it.
+module.exports.crossLinkOrCreateRequest = crossLinkOrCreateRequest;
+module.exports.looksRealEmail = looksRealEmail;
+module.exports.genPortalCode = genPortalCode;
