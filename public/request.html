@@ -191,7 +191,68 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     margin: 48px auto;
     padding: 0 24px 80px;
   }
-  .form-header { margin-bottom: 32px; }
+  .form-header {
+    position: relative;
+    overflow: hidden;
+    background: var(--navy);
+    border-radius: 18px;
+    padding: 34px 32px;
+    margin-bottom: 34px;
+  }
+  /* Animated aurora — the homepage hero effect carried onto the request
+     page's header band. Pure CSS (transform/opacity), stills under
+     prefers-reduced-motion. Content is lifted above it below. */
+  .form-aurora {
+    position: absolute; inset: 0; z-index: 0;
+    pointer-events: none; overflow: hidden; border-radius: inherit;
+    filter: blur(30px) saturate(135%);
+  }
+  .form-aurora span {
+    position: absolute; display: block; border-radius: 50%;
+    mix-blend-mode: screen; will-change: transform, opacity;
+  }
+  .form-aurora .forb-1 {
+    width: 320px; height: 320px; top: -80px; right: -70px;
+    background: radial-gradient(circle at 50% 50%, rgba(245,228,180,0.55), rgba(211,172,95,0.28) 44%, transparent 70%);
+    animation: fAurora1 16s ease-in-out infinite alternate;
+  }
+  .form-aurora .forb-2 {
+    width: 360px; height: 360px; bottom: -110px; left: -90px;
+    background: radial-gradient(circle at 50% 50%, rgba(72,116,214,0.48), rgba(30,60,132,0.30) 46%, transparent 72%);
+    animation: fAurora2 20s ease-in-out infinite alternate;
+  }
+  .form-aurora .forb-3 {
+    width: 240px; height: 240px; top: 30%; left: 40%;
+    background: radial-gradient(circle at 50% 50%, rgba(226,190,120,0.38), transparent 68%);
+    animation: fAurora3 18s ease-in-out infinite alternate;
+  }
+  @keyframes fAurora1 {
+    from { transform: translate3d(0,0,0) scale(1);       opacity: 0.50; }
+    to   { transform: translate3d(-13%,10%,0) scale(1.2); opacity: 0.78; }
+  }
+  @keyframes fAurora2 {
+    from { transform: translate3d(0,0,0) scale(1);       opacity: 0.38; }
+    to   { transform: translate3d(12%,-8%,0) scale(1.22); opacity: 0.62; }
+  }
+  @keyframes fAurora3 {
+    from { transform: translate3d(0,0,0) scale(0.90);    opacity: 0.30; }
+    to   { transform: translate3d(10%,-10%,0) scale(1.2); opacity: 0.56; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .form-aurora span { animation: none !important; }
+  }
+  .form-header > :not(.form-aurora) { position: relative; z-index: 1; }
+  /* Eyebrow + trust chips re-tinted for the navy band (were styled for
+     the old light header). */
+  .form-header .form-eyebrow {
+    color: #f2e0af;
+    background: rgba(245,228,180,0.12);
+  }
+  .form-header .trust-item {
+    color: var(--cream);
+    background: rgba(245,240,232,0.08);
+    border-color: rgba(245,240,232,0.16);
+  }
   .form-eyebrow {
     display: inline-block;
     font-family: system-ui, sans-serif;
@@ -208,8 +269,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     border-radius: 999px;
     margin-bottom: 14px;
   }
-  .form-header h1 { font-size: 30px; font-weight: 700; margin-bottom: 10px; color: var(--navy); letter-spacing: -0.01em; line-height: 1.12; }
-  .form-header p { color: var(--text-muted); font-size: 15px; line-height: 1.6; font-family: system-ui, sans-serif; max-width: 560px; }
+  .form-header h1 { font-size: 30px; font-weight: 700; margin-bottom: 10px; color: var(--cream); letter-spacing: -0.01em; line-height: 1.12; }
+  .form-header p { color: rgba(245,240,232,0.74); font-size: 15px; line-height: 1.6; font-family: system-ui, sans-serif; max-width: 560px; }
   .trust-strip { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
   .trust-item {
     display: inline-flex;
@@ -866,6 +927,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <div id="view-client" class="view active">
   <div class="form-page">
     <div class="form-header">
+      <div class="form-aurora" aria-hidden="true">
+        <span class="forb-1"></span>
+        <span class="forb-2"></span>
+        <span class="forb-3"></span>
+      </div>
       <span class="form-eyebrow">Vehicle Sourcing Request</span>
       <h1>Find Your Vehicle</h1>
       <p>Tell us what you're looking for and we'll source it through dealer-only auctions. A member of our team will follow up within 24 hours.</p>
