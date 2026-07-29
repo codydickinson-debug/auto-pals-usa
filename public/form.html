@@ -3421,7 +3421,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     try {
       const res = await fetch(`${DB_BASE}?table=${table}`, {
         method: 'POST', headers: dbHeaders(),
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        // keepalive lets the write finish even if the page navigates away or
+        // the tab closes right after. Without it, the reflow's redirect to
+        // booking.html cancelled the in-flight request write mid-flight, so
+        // the lead never landed in Supabase (the booking gate only needs the
+        // sessionStorage portal_code, which is set separately) — the source
+        // of ~30% of bookings having no request behind them.
+        keepalive: true
       });
       if (res.status === 401) { handleSessionExpired(); return null; }
       return res.ok ? res.json() : null;
@@ -4360,7 +4367,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // bot signal (humans take time, drive-by bots submit instantly).
   const _formLoadedAt = Date.now();
 
-  function submitForm() {
+  async function submitForm() {
     if (_submitting) return;
 
     // ── Bot signals (silent — don't tell the bot why we rejected) ──
@@ -4563,7 +4570,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
     requests.unshift(req);
     save();
-    dbPost('requests', req); // Push to Supabase with portal code already set
+    // Keep the promise — we await it before the booking redirect below so we
+    // never navigate someone onto a booking page with no lead behind them.
+    const requestWrite = dbPost('requests', req); // Push to Supabase with portal code already set
 
     // Meta conversion event. Deliberately NOT fired for auto-rejected rows
     // (budget under $4k) — Meta optimizes toward whoever we call a Lead, so
@@ -4645,8 +4654,18 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // failed sessionStorage write, so a private-mode client still sees their
     // code rather than a locked booking gate.
     if (!isSkipLine && !isRejected && stashOk) {
-      window.location.href = 'booking.html';
-      return;
+      // Wait for the request row to actually land before leaving. keepalive
+      // already lets the write survive the navigation, but awaiting lets us
+      // fall back to the on-screen code card if the write truly failed
+      // (network/500) instead of dropping the client onto a booking page with
+      // no lead behind it. saved is the inserted row (truthy) on success.
+      const saved = await requestWrite;
+      if (saved) {
+        window.location.href = 'booking.html';
+        return;
+      }
+      // Write failed — fall through to the success card, which shows the
+      // portal code and a manual "book your call" link, rather than redirect.
     }
 
     // ── SKIP-THE-LINE / REJECTED ───────────────────────────────────
