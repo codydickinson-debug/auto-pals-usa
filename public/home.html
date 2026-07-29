@@ -302,6 +302,74 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     pointer-events: none;
     z-index: 0;
   }
+  /* ── Animated hero aurora ──────────────────────────────────────────
+     Slow-drifting champagne + navy light orbs behind the hero content —
+     an original, brand-native evolution of the static spotlight. Pure
+     CSS (transform/opacity only, GPU-friendly), sits below .hero-inner
+     (z-index:1), and fully stills under prefers-reduced-motion. Browser
+     auto-throttles CSS animations in background tabs, so no rAF pitfalls. */
+  .hero-aurora {
+    position: absolute;
+    inset: -14% -8%;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+    filter: blur(38px) saturate(140%);
+  }
+  .hero-aurora span {
+    position: absolute;
+    display: block;
+    border-radius: 50%;
+    mix-blend-mode: screen;
+    will-change: transform, opacity;
+  }
+  /* champagne orb, top-right — grows out of the existing spotlight */
+  .hero-aurora .orb-1 {
+    width: 50vw; height: 50vw; max-width: 700px; max-height: 700px;
+    top: -10%; right: 1%;
+    background: radial-gradient(circle at 50% 50%, rgba(245,228,180,0.80), rgba(211,172,95,0.42) 42%, transparent 68%);
+    animation: auroraDrift1 17s ease-in-out infinite alternate;
+  }
+  /* royal-navy orb, left — brighter blue glow keeps white text legible */
+  .hero-aurora .orb-2 {
+    width: 56vw; height: 56vw; max-width: 780px; max-height: 780px;
+    top: 12%; left: -14%;
+    background: radial-gradient(circle at 50% 50%, rgba(72,116,214,0.66), rgba(30,60,132,0.36) 46%, transparent 70%);
+    animation: auroraDrift2 21s ease-in-out infinite alternate;
+  }
+  /* gold orb, lower-center — ties the two together */
+  .hero-aurora .orb-3 {
+    width: 38vw; height: 38vw; max-width: 520px; max-height: 520px;
+    bottom: -12%; left: 36%;
+    background: radial-gradient(circle at 50% 50%, rgba(226,190,120,0.58), transparent 66%);
+    animation: auroraDrift3 19s ease-in-out infinite alternate;
+  }
+  /* bright champagne highlight, roaming the right side — the extra accent */
+  .hero-aurora .orb-4 {
+    width: 27vw; height: 27vw; max-width: 380px; max-height: 380px;
+    top: 34%; left: 46%;
+    background: radial-gradient(circle at 50% 50%, rgba(255,240,200,0.55), rgba(216,180,112,0.22) 40%, transparent 64%);
+    animation: auroraDrift4 15s ease-in-out infinite alternate;
+  }
+  @keyframes auroraDrift1 {
+    from { transform: translate3d(0,0,0) scale(1);       opacity: 0.62; }
+    to   { transform: translate3d(-11%,8%,0) scale(1.20); opacity: 0.92; }
+  }
+  @keyframes auroraDrift2 {
+    from { transform: translate3d(0,0,0) scale(1);        opacity: 0.50; }
+    to   { transform: translate3d(13%,-7%,0) scale(1.22); opacity: 0.74; }
+  }
+  @keyframes auroraDrift3 {
+    from { transform: translate3d(0,0,0) scale(0.92);      opacity: 0.40; }
+    to   { transform: translate3d(-9%,-11%,0) scale(1.18); opacity: 0.70; }
+  }
+  @keyframes auroraDrift4 {
+    from { transform: translate3d(0,0,0) scale(0.90);     opacity: 0.35; }
+    to   { transform: translate3d(16%,10%,0) scale(1.25); opacity: 0.62; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-aurora span { animation: none !important; }
+  }
   .hero-inner {
     max-width: 1100px;
     margin: 0 auto;
@@ -1022,6 +1090,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <main id="main">
 <!-- HERO -->
 <section class="hero">
+  <div class="hero-aurora" aria-hidden="true">
+    <span class="orb-1"></span>
+    <span class="orb-2"></span>
+    <span class="orb-3"></span>
+    <span class="orb-4"></span>
+  </div>
   <div class="hero-inner">
     <div class="hero-content">
       <div class="hero-tag">
