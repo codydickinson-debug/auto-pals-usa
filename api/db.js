@@ -1139,6 +1139,24 @@ module.exports = async function handler(req, res) {
         if (existing && existing.length >= MAX_BOOKINGS_PER_DAY) {
           return res.status(409).json({ error: 'day_full', count: existing.length });
         }
+        // Enforce the $5,000 sourcing minimum server-side. If this email already
+        // has an auto-rejected (budget-too-low) request, refuse the booking so a
+        // rejected client can't reach the calendar even by bypassing the
+        // client-side gate (which withholds the portal_code for rejects).
+        // Fail-open: a lookup error must never block a legitimate booking — the
+        // client gate is the primary guard, this is defense-in-depth.
+        if (body.email) {
+          try {
+            const rej = await query('requests', 'GET', null,
+              `?email=eq.${encodeURIComponent(body.email)}&status=eq.rejected&rejection_reason=eq.budget_too_low&limit=1`);
+            if (rej && rej.length) {
+              console.log('[DB] booking refused — under-$5k rejected lead:', body.email);
+              return res.status(403).json({ error: 'below_minimum' });
+            }
+          } catch (e) {
+            console.warn('[DB] min-budget booking check failed (allowing):', e && e.message);
+          }
+        }
         const row = {
           id: Date.now(),
           date: body.date,

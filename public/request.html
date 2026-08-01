@@ -1669,8 +1669,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       req.status = 'qualified';
     }
 
-    // Auto-reject if max budget is under $4,000
-    if (req.budgetMax <= 4000) {
+    // Auto-reject if max budget is under $5,000 — below our sourcing minimum,
+    // so no call and no search (owner rule 2026-07-29). A rejected request
+    // withholds the booking keys below, so the client can't reach the calendar.
+    if (req.budgetMax < 5000) {
       req.status = 'rejected';
       req.rejectionReason = 'budget_too_low';
     }
@@ -1729,23 +1731,28 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // surfaces AFTER the call is booked instead of here. It's also in the
     // confirmation email as a safety net for anyone who doesn't book.
     let stashOk = false;
-    try {
-      sessionStorage.setItem('portal_code', accessCode);
-      sessionStorage.setItem('bookingPrefill', JSON.stringify({
-        firstName: req.firstName || '',
-        lastName:  req.lastName  || '',
-        email:     req.email     || '',
-        phone:     req.phone     || '',
-        vehicle:   (req.make && req.make !== '—')
-          ? `${req.make}${req.model && req.model !== '—' ? ' ' + req.model : ''}`
-          : ''
-      }));
-      sessionStorage.setItem('bookingWelcome', JSON.stringify({ firstName: req.firstName || '' }));
-      // Confirm the write actually stuck — booking.html's calendar is gated on
-      // sessionStorage.portal_code, so if this failed a redirect would strand
-      // the client on the gate. We fall back to the success card instead.
-      stashOk = sessionStorage.getItem('portal_code') === accessCode;
-    } catch (e) { /* sessionStorage can throw in private-mode browsers; non-fatal */ }
+    // Rejected (under-$5k) clients never get the booking keys — booking.html
+    // gates its calendar on sessionStorage.portal_code, so withholding it means
+    // even a manual trip to /booking.html hits the gate, not the calendar.
+    if (req.status !== 'rejected') {
+      try {
+        sessionStorage.setItem('portal_code', accessCode);
+        sessionStorage.setItem('bookingPrefill', JSON.stringify({
+          firstName: req.firstName || '',
+          lastName:  req.lastName  || '',
+          email:     req.email     || '',
+          phone:     req.phone     || '',
+          vehicle:   (req.make && req.make !== '—')
+            ? `${req.make}${req.model && req.model !== '—' ? ' ' + req.model : ''}`
+            : ''
+        }));
+        sessionStorage.setItem('bookingWelcome', JSON.stringify({ firstName: req.firstName || '' }));
+        // Confirm the write actually stuck — booking.html's calendar is gated on
+        // sessionStorage.portal_code, so if this failed a redirect would strand
+        // the client on the gate. We fall back to the success card instead.
+        stashOk = sessionStorage.getItem('portal_code') === accessCode;
+      } catch (e) { /* sessionStorage can throw in private-mode browsers; non-fatal */ }
+    }
 
     // Funnel event — fire before we navigate away.
     track('form_submit_success', {
@@ -1791,7 +1798,23 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const learnBox    = document.getElementById('what-youll-learn');
     const availHint   = document.getElementById('availability-hint');
     const skipCtaWrap = document.getElementById('skip-cta-wrap');
-    if (isSkipLine) {
+    if (isRejected) {
+      // Under the $5,000 minimum: a clear, kind decline — no call, no portal,
+      // no deposit path. "Submit another" stays so they can retry if their
+      // budget changes. Checked first so it wins over skip-the-line.
+      const badge = document.querySelector('#success-msg .success-badge');
+      if (badge) badge.textContent = 'ℹ';
+      headline.textContent = `Thanks, ${req.firstName} — but we can't take this one on.`;
+      subhead.innerHTML = `We're only able to source vehicles with a budget of <strong>$5,000 or more</strong>. Since your maximum is below that, we're not able to book a call or start a search right now. If your budget changes, we'd love to help — feel free to submit again.`;
+      primaryCta.style.display  = 'none';
+      learnBox.style.display    = 'none';
+      availHint.style.display   = 'none';
+      skipCtaWrap.style.display = 'none';
+      const codeBox = document.getElementById('portal-code-box');
+      if (codeBox) codeBox.style.display = 'none';
+      const secondary = document.getElementById('secondary-cta');
+      if (secondary) secondary.style.display = 'none';
+    } else if (isSkipLine) {
       headline.textContent = `Got it, ${req.firstName} — head to your portal.`;
       subhead.textContent  = `You opted in to Skip the Line, so we go straight to sourcing. Pay your $850 deposit and we start hunting auctions the same day.`;
       primaryCta.textContent = '💳 Pay $850 deposit & start sourcing →';
