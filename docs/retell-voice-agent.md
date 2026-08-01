@@ -104,8 +104,8 @@ The webhook always returns a `message` string you can speak, plus a
 >   inspection → **you approve it before we ever buy** → we handle purchase and
 >   delivery.
 > - The $850 deposit is taken up front, before the search begins.
-> - **Our vehicle minimum is $6,000.** Below that it's simply unworkable, so we
->   can't take a request under $6,000. If someone's budget is lower, say that
+> - **Our vehicle minimum is $5,000.** Below that it's simply unworkable, so we
+>   can't take a request under $5,000. If someone's budget is lower, say that
 >   kindly and don't book.
 > - We deliver anywhere in the contiguous US (lower 48). Not Hawaii or Alaska.
 > - Intro calls run Monday–Friday, 9:00 AM to 4:30 PM Eastern.
