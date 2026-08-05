@@ -593,6 +593,7 @@ module.exports = async function handler(req, res) {
           referral_source:   b.referralSource,
           sms_consent:       b.smsConsent,
           call_completed_at:       b.callCompletedAt,
+          no_show_at:              b.noShowAt,
           booking_confirmed_at:    b.bookingConfirmedAt,
           dormant_at:              b.dormantAt,
           booking_reminders_sent:  b.bookingRemindersSent,
@@ -639,6 +640,14 @@ module.exports = async function handler(req, res) {
         const callFlipFields = wantsCallFlip ? { call_completed_at: mapped.call_completed_at } : null;
         if (wantsCallFlip) {
           delete mapped.call_completed_at;
+        }
+        // No-show flip (null → set), same race-safe pattern as call-complete:
+        // only the writer that actually stamps no_show_at fires the instant
+        // "we missed you" follow-up below.
+        const wantsNoShowFlip = !!mapped.no_show_at && priorRow && !priorRow.no_show_at;
+        const noShowFlipFields = wantsNoShowFlip ? { no_show_at: mapped.no_show_at } : null;
+        if (wantsNoShowFlip) {
+          delete mapped.no_show_at;
         }
 
         // ── Auto-status transitions ────────────────────────────────
@@ -695,6 +704,19 @@ module.exports = async function handler(req, res) {
             wonCallRace = Array.isArray(updated) && updated.length === 1;
           } catch (e) {
             console.error('[DB] call_completed conditional PATCH failed', e && e.message);
+          }
+        }
+        let wonNoShowRace = false;
+        if (wantsNoShowFlip) {
+          try {
+            const updated = await patchConditional(
+              'requests',
+              noShowFlipFields,
+              `id=eq.${b.id}&no_show_at=is.null`
+            );
+            wonNoShowRace = Array.isArray(updated) && updated.length === 1;
+          } catch (e) {
+            console.error('[DB] no_show conditional PATCH failed', e && e.message);
           }
         }
 
@@ -852,6 +874,47 @@ module.exports = async function handler(req, res) {
             }
           }
           if (postCallFires.length) await Promise.allSettled(postCallFires);
+        }
+
+        // No-show just marked (this writer won the race): fire the instant
+        // "we missed you — grab a new time" follow-up. Email always; SMS is
+        // consent-gated inside _sms.send(). Stamp noshow0 into
+        // client_sms_reminders_sent so cron's no-show loop knows the instant
+        // fire already happened and starts from noshow1 (+24h). Skip-the-line
+        // clients can't be no-shows (no real call), so they're excluded.
+        if (wonNoShowRace && !isSkipLine && !wasDeposited && priorRow) {
+          const noShowFires = [];
+          if (priorRow.email) {
+            noShowFires.push(safeSendEmail('noShowFollowup', {
+              firstName: priorRow.first_name,
+              lastName:  priorRow.last_name,
+              email:     priorRow.email,
+              make:      priorRow.make,
+              model:     priorRow.model,
+              bookingUrl: BOOKING_URL,
+              step: 1
+            }));
+          }
+          if (priorRow.phone) {
+            noShowFires.push(sms.send('client_noshow_followup_1', {
+              firstName:  priorRow.first_name,
+              make:       priorRow.make,
+              model:      priorRow.model,
+              phone:      priorRow.phone,
+              smsConsent: priorRow.sms_consent,
+              bookingUrl: BOOKING_URL
+            }));
+            const priorSmsSent = Array.isArray(priorRow.client_sms_reminders_sent)
+              ? priorRow.client_sms_reminders_sent : [];
+            if (!priorSmsSent.includes('noshow0')) {
+              const nextSmsSent = [...priorSmsSent, 'noshow0'];
+              noShowFires.push(
+                query('requests', 'PATCH', { client_sms_reminders_sent: nextSmsSent }, `?id=eq.${priorRow.id}`)
+                  .catch(err => console.warn('[DB] noshow0 stamp failed', err && err.message))
+              );
+            }
+          }
+          if (noShowFires.length) await Promise.allSettled(noShowFires);
         }
 
         return res.json({ ok: true });

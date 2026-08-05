@@ -572,6 +572,45 @@ ${footer(d)}`)
     });
   },
 
+  // ─── NO-SHOW / MISSED-CALL FOLLOW-UPS ─────────────────────────
+  // Sent when a booked call is marked a no-show: instant (from api/db.js),
+  // then +24h and +72h from the daily cron. Warm + blame-free; the CTA
+  // rebooks the call. One template, parameterized by d.step (1/2/3).
+  // Auto-stops on call_completed_at / deposit_paid.
+  noShowFollowup: (d) => {
+    const vehicle = d.make
+      ? `${d.make}${d.model && d.model !== '—' ? ' ' + d.model : ''}`
+      : 'vehicle';
+    const step = Number(d.step) || 1;
+    const bookUrl = d.bookingUrl || 'https://autopalsusa.com/booking.html';
+    const copy = {
+      1: { subject: `We missed you, ${d.firstName} — grab a new time`,
+           head: `We missed you, ${d.firstName}.`,
+           body: `We had your intro call scheduled but couldn't reach you — no worries, it happens. We'd still love to walk you through how we source the <strong style="color:${BRAND.ink};">${vehicle}</strong> at wholesale auction pricing. It only takes about 30 minutes, and there's no obligation. Pick a new time that works and we'll take it from there.` },
+      2: { subject: `Still here whenever you're ready, ${d.firstName}`,
+           head: `Still here whenever you're ready.`,
+           body: `Just circling back on your <strong style="color:${BRAND.ink};">${vehicle}</strong> search. Auctions run every week, so the sooner we lock in your criteria the sooner we can start hunting. Whenever it's convenient, grab a new time below.` },
+      3: { subject: `One last note, ${d.firstName}`,
+           head: `One last note.`,
+           body: `We won't keep crowding your inbox. If you'd still like us to find you the right <strong style="color:${BRAND.ink};">${vehicle}</strong> below retail, just book a time and we'll pick right back up. Either way, thanks for considering us.` }
+    }[step] || {};
+    return ({
+      subject: copy.subject || `We missed you, ${d.firstName}`,
+      html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">${copy.head || 'We missed you.'}</div>
+</td></tr>
+<tr><td style="padding:0 40px 18px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0;">${copy.body || ''}</p>
+</td></tr>
+<tr><td style="padding:0 40px 14px;">${button(bookUrl, 'Book a new time →')}</td></tr>
+<tr><td style="padding:8px 40px 0;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;">Prefer to just reply? Hit reply to this email and we'll help you find a time — we read every message.</p>
+</td></tr>
+${footer(d)}`)
+    });
+  },
+
   // ─── DEPOSIT REMINDERS ────────────────────────────────────────
   // Sent at 24h, 48h, and 72h after call marked complete, if no deposit received.
   // 1 = friendly nudge, 2 = gentle middle check-in, 3 = firmer last call.

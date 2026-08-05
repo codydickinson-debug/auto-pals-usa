@@ -542,6 +542,24 @@ const TEMPLATES = {
     `Hi ${d.firstName || 'there'}, we'll leave it here so we're not crowding you. If the timing isn't right, no worries at all. If you'd still like us to find you the right car at the right price, just reply anytime and we'll pick back up. Either way, we appreciate you considering us. ` +
     `Reply STOP to opt out.`,
 
+  // ─── NO-SHOW / MISSED-CALL 3-MESSAGE DRIP ────────────────────────
+  // Fires the moment staff mark a booked call a no-show (instant, from
+  // api/db.js), then +24h and +72h from cron. Warm + blame-free ("no
+  // worries, it happens") — the goal is simply to get them rebooked.
+  // Auto-stops on call_completed_at (they showed to the rebooked call) or
+  // deposit_paid. Labels noshow0/noshow1/noshow2 in client_sms_reminders_sent.
+  client_noshow_followup_1: (d) =>
+    `Hi ${d.firstName || 'there'}, this is Auto Pals USA — we had your intro call scheduled but couldn't reach you. No worries, it happens! We'd still love to help you find the right ${vehicleRef(d)} at wholesale auction pricing. Grab a new time that works for you here: ${d.bookingUrl || BOOKING_URL} ` +
+    `Reply STOP to opt out.`,
+
+  client_noshow_followup_2: (d) =>
+    `Hi ${d.firstName || 'there'}, still happy to walk you through how we source the ${vehicleRef(d)} you're after — it's a quick 30-minute call and there's no obligation. Pick a new time whenever it's convenient: ${d.bookingUrl || BOOKING_URL} ` +
+    `Reply STOP to opt out.`,
+
+  client_noshow_followup_3: (d) =>
+    `Hi ${d.firstName || 'there'}, last note from us — if you'd still like us to hunt down the right ${vehicleRef(d)} below retail, just grab a time and we'll take it from there: ${d.bookingUrl || BOOKING_URL} Otherwise no worries at all, and thanks for considering us. ` +
+    `Reply STOP to opt out.`,
+
   // ─── DEPOSIT RECEIVED → PUSH CONTRACT SIGNATURE ─────────────────
   // Replaces the old client_contract_available. Fires the moment deposit
   // flips false→true (from api/db.js). Confirms receipt + pushes the

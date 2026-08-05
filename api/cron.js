@@ -56,6 +56,12 @@ const BOOKING_SMS_REMINDER_HOURS = [24, 48, 72, 96];
 // client_sms_reminders_sent array so the labels never collide. Auto-stops
 // the moment deposit_paid flips true.
 const POSTCALL_SMS_REMINDER_HOURS = [24, 48, 72];
+// No-show follow-up drip: 2 nudges at +24h/+72h after a booked call is marked a
+// no-show (no_show_at). The instant "we missed you" fires from api/db.js the
+// moment staff mark it (email step 1 + SMS noshow0), so cron picks up at +24h.
+// Auto-stops the moment call_completed_at (they showed to a rebooked call) or
+// deposit_paid flips.
+const NOSHOW_REMINDER_HOURS = [24, 72];
 // Long-term re-engagement for clients who go dormant (no deposit paid 14+ days
 // after signup). 14d, ~1mo after that (44d), ~3mo after the first (104d).
 // Stops the moment deposit_paid flips true.
@@ -272,6 +278,71 @@ module.exports = async function handler(req, res) {
                   await retireIfUndeliverable(r, result, smsSent);
                 }
                 break; // one post-call SMS per request per run
+              }
+            }
+          }
+        }
+
+        // ── NO-SHOW FOLLOW-UP DRIP ──
+        // Client booked a call but didn't answer (staff stamped no_show_at).
+        // The instant "we missed you" already fired from api/db.js (email step 1
+        // + SMS noshow0); here we send the +24h and +72h nudges on both
+        // channels. Auto-stops the moment call_completed_at (they showed to a
+        // rebooked call) or deposit_paid flips. Email tracked nsEmail1/nsEmail2
+        // in booking_reminders_sent; SMS noshow1/noshow2 in
+        // client_sms_reminders_sent. Skip-the-line excluded (no real call).
+        if (r.no_show_at && !r.call_completed_at && !r.deposit_paid && !r.skip_the_line && r.status !== 'dormant') {
+          const hNs = hoursSince(r.no_show_at);
+          if (hNs !== null) {
+            // Email leg — always sends.
+            const emailArr = Array.isArray(r.booking_reminders_sent) ? r.booking_reminders_sent : [];
+            for (let i = 0; i < NOSHOW_REMINDER_HOURS.length; i++) {
+              const threshold = NOSHOW_REMINDER_HOURS[i];
+              const label = `nsEmail${i + 1}`;
+              if (hNs >= threshold && !emailArr.includes(label)) {
+                const ok = await sendEmail(host, 'noShowFollowup', {
+                  firstName: r.first_name,
+                  lastName:  r.last_name,
+                  email:     r.email,
+                  make:      r.make,
+                  model:     r.model,
+                  bookingUrl: BOOKING_URL,
+                  step: i + 2
+                });
+                if (ok) {
+                  emailArr.push(label);
+                  await sb('requests', 'PATCH', { booking_reminders_sent: emailArr }, `?id=eq.${r.id}`);
+                  summary.bookingRemindersSent++;
+                }
+                break; // one no-show email per run
+              }
+            }
+            // SMS leg — consent-gated inside sms.send().
+            if (r.phone) {
+              const smsSent = Array.isArray(r.client_sms_reminders_sent) ? r.client_sms_reminders_sent : [];
+              for (let i = 0; i < NOSHOW_REMINDER_HOURS.length && !smsSent.includes('undeliverable'); i++) {
+                const threshold = NOSHOW_REMINDER_HOURS[i];
+                const label = `noshow${i + 1}`;
+                if (hNs >= threshold && !smsSent.includes(label)) {
+                  const result = await sms.send(`client_noshow_followup_${i + 2}`, {
+                    firstName:  r.first_name,
+                    make:       r.make,
+                    model:      r.model,
+                    phone:      r.phone,
+                    smsConsent: r.sms_consent,
+                    bookingUrl: BOOKING_URL
+                  });
+                  if (!(result && result.skipped)) summary.smsAttempted++;
+                  if (result && result.ok) {
+                    smsSent.push(label);
+                    await sb('requests', 'PATCH', { client_sms_reminders_sent: smsSent }, `?id=eq.${r.id}`);
+                    summary.smsRemindersSent++;
+                  } else if (result && !result.skipped) {
+                    summary.smsFailed++;
+                    await retireIfUndeliverable(r, result, smsSent);
+                  }
+                  break; // one no-show SMS per run
+                }
               }
             }
           }
