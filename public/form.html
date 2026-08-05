@@ -2371,9 +2371,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <button class="sidebar-item" onclick="filterRequests('dormant', this)">
           Dormant <span class="badge" id="badge-dormant">0</span>
         </button>
-        <button class="sidebar-item" onclick="filterRequests('rejected', this)">
-          Rejected <span class="badge" id="badge-rejected">0</span>
-        </button>
         <button class="sidebar-item" id="sidebar-opensearch" onclick="showOpenSearchPanel(this)">
           Open Searches <span class="badge" id="badge-opensearch">0</span>
         </button>
@@ -2838,7 +2835,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button class="filter-btn" onclick="moveToPsiFromDetail()">PSI Period</button>
           <button class="filter-btn" onclick="updateStatusFromDetail('repair')">Repair</button>
           <button class="filter-btn" onclick="updateStatusFromDetail('sold')">Sold</button>
-          <button class="filter-btn" onclick="updateStatusFromDetail('rejected')">Rejected</button>
           <button class="filter-btn" onclick="updateStatusFromDetail('dormant')">Dormant</button>
         </div>
       </div>
@@ -3154,7 +3150,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <button class="filter-btn" onclick="updateStatus('review')">In Review</button>
         <button class="filter-btn" onclick="updateStatus('qualified')">Qualified</button>
         <button class="filter-btn" onclick="updateStatus('called')">Called</button>
-        <button class="filter-btn" onclick="updateStatus('rejected')">Rejected</button>
         <button class="filter-btn" onclick="updateStatus('dormant')">Dormant</button>
       </div>
     </div>
@@ -4842,7 +4837,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // into the New + In Review action-queue card — we count it but no longer
     // surface a sidebar tab for it. 'searching' is the new sidebar tab.
     // 'dormant' is a derived view, counted separately.
-    const counts = { all: requests.filter(r=>r.status!=='sold').length, new: 0, review: 0, qualified: 0, called: 0, searching: 0, psi: 0, in_repair: 0, awaiting_paperwork: 0, rejected: 0 };
+    // Rejected leads are auto-declined (budget under $5k) and kept only as a
+    // quiet record + courtesy email — they're hidden from the whole dashboard,
+    // so 'All' excludes them just like 'sold'.
+    const counts = { all: requests.filter(r=>r.status!=='sold' && r.status!=='rejected').length, new: 0, review: 0, qualified: 0, called: 0, searching: 0, psi: 0, in_repair: 0, awaiting_paperwork: 0, rejected: 0 };
     requests.forEach(r => {
       if (counts[r.status] === undefined) return;
       // Skip awaiting_paperwork rows that already have a matching sale —
@@ -5022,7 +5020,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       // 'noshow' is a derived view — booked calls that weren't answered.
       filtered = requests.filter(isNoShowRequest);
     } else {
-      filtered = currentFilter === 'all' ? requests.filter(r => r.status !== 'sold') : requests.filter(r => r.status === currentFilter);
+      filtered = currentFilter === 'all' ? requests.filter(r => r.status !== 'sold' && r.status !== 'rejected') : requests.filter(r => r.status === currentFilter);
       // Mirror the badge logic — hide awaiting_paperwork rows that already
       // have a matching sale, so the list and the sidebar count agree.
       if (currentFilter === 'awaiting_paperwork') {
@@ -5564,7 +5562,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <button class="ctx-item" onclick="ctxSetStatus('qualified')"><span class="ctx-dot" style="background:var(--green)"></span>Qualified</button>
     <button class="ctx-item" onclick="ctxSetStatus('called')"><span class="ctx-dot" style="background:#6d28d9"></span>Called</button>
     <button class="ctx-item" onclick="ctxSetStatus('searching')"><span class="ctx-dot" style="background:var(--accent-bright)"></span>Actively Searching</button>
-    <button class="ctx-item" onclick="ctxSetStatus('rejected')"><span class="ctx-dot" style="background:var(--red)"></span>Rejected</button>
     <button class="ctx-item" onclick="ctxSetStatus('dormant')"><span class="ctx-dot" style="background:#6b7280"></span>Dormant</button>
     <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
     <button class="ctx-item" onclick="ctxMoveToPsi()" style="color:#4338ca;font-weight:600;"><span class="ctx-dot" style="background:#4338ca"></span>Send to PSI Period</button>
