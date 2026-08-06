@@ -6644,23 +6644,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     }
     renderRepairPanel();
 
-    // ── Auto-prompt the Sold Cars modal — ALWAYS, no exceptions. If we
-    // matched a request, hand it through so PSI prefill (miles, sale
-    // price, finder fee, repair totals) runs against real data. If we
-    // didn't (orphaned repair, name typo), still pop the modal with a
-    // car-derived stub so staff aren't left clicking "Log a Sale" by
-    // hand. Defer one tick so renderRepairPanel finishes first.
-    if (typeof openSaleModal === 'function') {
-      const prefill = req || {
-        id: null,
-        firstName: car.client || '',
-        lastName: '',
-        psiCar: car.vehicle || '',
-        psiMiles: '',
-        psiSalePrice: ''
-      };
-      setTimeout(() => openSaleModal(prefill), 50);
-    }
+    // Finishing repair moves the car to Awaiting Paperwork and STOPS there —
+    // it is NOT a sale yet. (Previously this auto-popped the Sold Cars modal
+    // "always, no exceptions"; saving that modal flips status to 'sold', so
+    // taking a car out of repair jumped it straight to Sold Cars.) Staff log
+    // the sale explicitly from the Awaiting Paperwork stage — the "Mark Sold"
+    // button in the detail view, or "+ Log a Sale" — when the deal actually
+    // closes.
   }
 
   function undoRepairDone(carId) {
