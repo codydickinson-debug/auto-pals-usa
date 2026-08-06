@@ -6112,7 +6112,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           + `</label>`;
         const rowStyle = r.done ? 'opacity:0.55;' : '';
         const descStyle = r.done ? 'text-decoration:line-through;color:var(--text-muted);' : '';
-        return `<tr style="${rowStyle}"><td style="${descStyle}">${r.desc}</td><td>${fmtUsd(r.cost)}</td><td>${chargeCell}</td><td>${profitCell}</td><td>${r.hours ? r.hours + 'h' : '—'}</td><td>${doneCell}</td></tr>`;
+        // Client's approve/deny choice from the quote email, shown so the shop
+        // knows what to actually do. Declined items also carry excluded=true.
+        const decisionPill = r.clientDecision === 'approved'
+          ? `<span style="display:inline-block;margin-top:4px;padding:1px 8px;border-radius:99px;background:var(--green-light,#dcfce7);color:var(--green,#166534);font-size:9px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">✓ Client approved</span>`
+          : r.clientDecision === 'denied'
+          ? `<span style="display:inline-block;margin-top:4px;padding:1px 8px;border-radius:99px;background:#fee2e2;color:#991b1b;font-size:9px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">✕ Client declined</span>`
+          : '';
+        return `<tr style="${rowStyle}"><td style="${descStyle}">${r.desc}${decisionPill ? '<br>' + decisionPill : ''}</td><td>${fmtUsd(r.cost)}</td><td>${chargeCell}</td><td>${profitCell}</td><td>${r.hours ? r.hours + 'h' : '—'}</td><td>${doneCell}</td></tr>`;
       }).join('') : '<tr><td colspan="6" style="color:var(--text-muted);padding:8px 10px;">No repair items added yet.</td></tr>';
 
       const parts = car.parts || [];
@@ -6142,6 +6149,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const doneBadge = isDone
         ? `<span style="display:inline-block;padding:2px 10px;border-radius:99px;background:#dbeafe;color:#1d4ed8;font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">✓ Done · awaiting paperwork</span>`
         : '';
+      // At-a-glance roll-up of the client's approve/deny responses from the
+      // quote email. Only shows once the client has actually responded.
+      const cApproved = car.repairs.filter(r => r.clientDecision === 'approved').length;
+      const cDenied   = car.repairs.filter(r => r.clientDecision === 'denied').length;
+      const cPending  = car.repairs.filter(r => !r.clientDecision && !r.excluded).length;
+      const clientBadge = (cApproved || cDenied)
+        ? `<span style="display:inline-block;margin-left:6px;padding:2px 10px;border-radius:99px;background:#eef2ff;color:#3730a3;font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;" title="Client responses from the quote email">Client: ${cApproved}✓ · ${cDenied}✕${cPending ? ` · ${cPending} pending` : ''}</span>`
+        : '';
       const doneBtn = isDone
         ? `<button class="filter-btn" onclick="undoRepairDone(${car.id})" title="Re-open this repair">Re-open</button>`
         : `<button class="filter-btn" onclick="markRepairDone(${car.id})" style="background:var(--green);color:#fff;border-color:var(--green);" title="Mark repair complete — moves request to Awaiting Paperwork">✓ Done</button>`;
@@ -6149,7 +6164,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <div class="repair-card" style="${isDone ? 'opacity:0.85;' : ''}">
           <div class="repair-card-header">
             <div>
-              <div class="repair-card-title">${car.vehicle} ${progressBadge} ${doneBadge}</div>
+              <div class="repair-card-title">${car.vehicle} ${progressBadge} ${clientBadge} ${doneBadge}</div>
               <div class="repair-card-sub">${car.client}${car.vin ? ` · <span style="font-family:monospace;letter-spacing:0.05em;font-size:11px;">${car.vin}</span>` : ''}</div>
             </div>
             <div class="repair-card-actions">
@@ -6395,6 +6410,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     return cost * markupRate(cost);
   }
 
+  // Stable per-service id so the emailed approve/deny links can target one line
+  // item even if the list is later reordered. Generated once at save time, then
+  // preserved across edits (stashed on the editor row's dataset).
+  function genItemId() {
+    return 's' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+  }
+
   // Build the client-facing quote as plain text — for texting to the group
   // chat. Only non-excluded items, with each item's client detail, and the
   // same client charges the portal/email show (wholesale cost is never shown).
@@ -6467,6 +6489,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const row = document.createElement('div');
     row.className = 'rm-item-row';
     row.id = 'rm-row-' + idx;
+    // Preserve the stable id + any client approve/deny decision across edits —
+    // these aren't editable fields, so we stash them on the row and read them
+    // back in saveRepairCar rather than losing them on every save.
+    row.dataset.itemId = (data && data.id) || '';
+    row.dataset.clientDecision = (data && data.clientDecision) || '';
+    row.dataset.clientDecidedAt = (data && data.clientDecidedAt) || '';
+    row.dataset.done = (data && data.done) ? '1' : '';   // shop completion flag — no editable field, preserve across edits
     // Two price fields:
     //   rm-cost = wholesale (what WE pay) — internal only, never sent to client
     //   rm-price = client charge — what shows on the repair receipt
@@ -6522,12 +6551,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const _detailEl = document.getElementById('rm-detail-' + idNum);
       const _exclEl = document.getElementById('rm-excl-' + idNum);
       repairs.push({
+        id: row.dataset.itemId || genItemId(),  // stable id for emailed approve/deny links
         desc,
         detail: _detailEl ? _detailEl.value.trim() : '',   // client-facing "what this includes"
         cost: _wholesale,         // internal — what your shop pays
         hours: _hrs,              // billed at LABOR_RATE on the client receipt
         excluded: _exclEl ? !!_exclEl.checked : false,     // hidden from the client quote + total
-        done: false               // internal-only completion flag, toggled in the dashboard
+        clientDecision: row.dataset.clientDecision || null,   // 'approved' | 'denied' | null (set from the email)
+        clientDecidedAt: row.dataset.clientDecidedAt || null,
+        done: row.dataset.done === '1'  // internal-only completion flag, toggled in the dashboard — preserved across edits
       });
     });
     const parts = getModalParts();
@@ -6660,8 +6692,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           vehicle,
           vin,
           services: activeRepairs.map(r => ({
+            id:     r.id || null,          // stable id → per-item approve/deny link in the email
             desc:   r.desc,
             detail: r.detail || '',
+            clientDecision: r.clientDecision || null,
             charge: (Number(r.cost) || 0) * markupRate(Number(r.cost) || 0)
           })),
           laborHours: totalHours,

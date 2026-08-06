@@ -811,38 +811,28 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <div style="text-align:center;margin-bottom:32px;">
       <div style="width:64px;height:64px;background:var(--navy);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;">🔑</div>
       <h1 style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--navy);margin-bottom:8px;">Client Portal</h1>
-      <p style="font-size:14px;color:var(--text-muted);line-height:1.6;">Enter the access code from your confirmation email to view your request status.</p>
+      <p style="font-size:14px;color:var(--text-muted);line-height:1.6;">Enter the email you used on your request and we'll send you a one-tap login link.</p>
     </div>
     <div style="background:var(--white);border:1px solid var(--border);border-radius:16px;padding:32px;box-shadow:0 4px 24px rgba(15,37,87,0.08);">
-      <label for="portal-code-input" style="display:block;font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:0.04em;text-transform:uppercase;">Access Code</label>
-      <input type="text" id="portal-code-input" placeholder="Enter your access code"
-        style="width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;color:var(--navy);background:var(--cream);outline:none;text-align:center;letter-spacing:0.08em;text-transform:uppercase;transition:border-color 0.15s;margin-bottom:12px;"
+      <!-- Primary: email magic-link login — no code to remember -->
+      <label for="portal-email-input" style="display:block;font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:0.04em;text-transform:uppercase;">Your email</label>
+      <input type="email" id="portal-email-input" placeholder="you@email.com"
+        style="width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;color:var(--navy);background:var(--cream);outline:none;text-align:center;transition:border-color 0.15s;margin-bottom:12px;"
         onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--border)'"
-        onkeydown="if(event.key==='Enter')portalLogin()">
-      <div id="portal-login-error" style="display:none;font-size:12px;color:var(--red);text-align:center;margin-bottom:12px;padding:8px;background:var(--red-light);border-radius:6px;">
-        That code wasn't found. Please check your confirmation email and try again.
-      </div>
-      <button onclick="portalLogin()" style="width:100%;padding:14px;background:var(--navy);color:var(--cream);border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
-        Access My Portal →
+        onkeydown="if(event.key==='Enter')sendLoginLink()">
+      <button id="portal-loginlink-btn" onclick="sendLoginLink()" style="width:100%;padding:14px;background:var(--navy);color:var(--cream);border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+        Email me a login link →
       </button>
+      <div id="portal-login-linkmsg" style="display:none;margin-top:12px;padding:10px 12px;background:var(--cream);border:1px solid var(--border);border-radius:8px;font-size:12.5px;color:var(--text-muted);line-height:1.55;text-align:center;"></div>
+      <!-- Access code is email-only for the client now. These two stay in the
+           DOM but hidden: portalLogin() and the booking auto-login write the
+           resolved portal_code here, and it remains the key every downstream
+           portal call authenticates with. The client never sees or types it. -->
+      <input type="hidden" id="portal-code-input">
+      <div id="portal-login-error" style="display:none;font-size:12px;color:var(--red);text-align:center;margin-top:12px;padding:8px;background:var(--red-light);border-radius:6px;"></div>
       <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:16px;line-height:1.6;">
-        Don't have a code? <a href="form.html" style="color:var(--navy);font-weight:600;text-decoration:none;">Submit a request</a> first and we'll send one to your email.
+        Don't have an account? <a href="form.html" style="color:var(--navy);font-weight:600;text-decoration:none;">Submit a request</a> first and we'll email you a login link.
       </p>
-      <div style="border-top:1px solid var(--border);margin-top:18px;padding-top:14px;text-align:center;">
-        <a id="recover-toggle-link" href="#" onclick="event.preventDefault();toggleRecoverForm()" style="font-size:13px;color:var(--text-muted);font-weight:500;text-decoration:underline;">Forgot your code?</a>
-      </div>
-
-      <!-- Code-recovery form (hidden by default) -->
-      <div id="recover-form" style="display:none;margin-top:14px;padding-top:14px;border-top:1px dashed var(--border);">
-        <label for="recover-email-input" style="display:block;font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;letter-spacing:0.04em;text-transform:uppercase;">Email on the request</label>
-        <input type="email" id="recover-email-input" placeholder="you@email.com"
-          style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:var(--cream);outline:none;margin-bottom:10px;"
-          onkeydown="if(event.key==='Enter')submitRecoverEmail()">
-        <button id="recover-submit-btn" onclick="submitRecoverEmail()" style="width:100%;padding:11px;background:var(--navy);color:var(--cream);border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:opacity 0.15s;">
-          Email me my code
-        </button>
-        <div id="recover-result" style="display:none;margin-top:10px;padding:10px 12px;background:var(--cream);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text-muted);line-height:1.55;text-align:center;"></div>
-      </div>
     </div>
   </div>
   </div>
@@ -1419,6 +1409,40 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     }
   }
 
+  // Email magic-link login — asks the server to email a one-tap link instead
+  // of the client having to remember an access code. Always shows a generic
+  // "check your inbox" so the form can't be used to probe which emails exist.
+  async function sendLoginLink() {
+    const el  = document.getElementById('portal-email-input');
+    const btn = document.getElementById('portal-loginlink-btn');
+    const msg = document.getElementById('portal-login-linkmsg');
+    const email = ((el && el.value) || '').trim();
+    if (!email || email.indexOf('@') === -1) {
+      if (msg) { msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Please enter the email you used on your request.'; }
+      return;
+    }
+    const original = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+    try {
+      const res = await fetch('/api/portal-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (msg) {
+        msg.style.display = 'block';
+        msg.style.color = 'var(--text-muted)';
+        msg.textContent = (data && data.message)
+          || "If that email matches an account, we've sent a login link. Check your inbox (and spam) in the next minute.";
+      }
+    } catch (e) {
+      if (msg) { msg.style.display = 'block'; msg.style.color = 'var(--red)'; msg.textContent = 'Network error — please try again in a moment.'; }
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = original; }
+    }
+  }
+
   async function portalLogin() {
     const input = document.getElementById('portal-code-input').value.trim().toUpperCase();
     const errorEl = document.getElementById('portal-login-error');
@@ -1898,6 +1922,34 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       portalLogin();
     }
   } catch (e) { /* non-fatal */ }
+
+  // ── Email magic-link consumption ─────────────────────────────────
+  // Arriving via "?login=<token>": verify the token server-side, then log in
+  // through the normal code path with the code it returns. The token is
+  // stripped from the URL immediately so it never lingers in history or the
+  // address bar.
+  (async () => {
+    let token = null;
+    try { token = new URLSearchParams(window.location.search).get('login'); } catch (e) { /* no-op */ }
+    if (!token) return;
+    try { history.replaceState({}, document.title, window.location.pathname); } catch (e) { /* no-op */ }
+    try {
+      const res = await fetch('/api/portal-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'verify', token })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data && data.ok && data.portalCode) {
+        const input = document.getElementById('portal-code-input');
+        if (input) input.value = String(data.portalCode).toUpperCase();
+        portalLogin();
+      } else {
+        const m = document.getElementById('portal-login-linkmsg');
+        if (m) { m.style.display = 'block'; m.style.color = 'var(--text-muted)'; m.textContent = "That login link has expired. Enter your email below and we'll send a fresh one."; }
+      }
+    } catch (e) { /* stay on the login screen */ }
+  })();
 
   // ── ZELLE DEPOSIT ───────────────────────────────────────────────
   const ZELLE_ADDRESS = 'automotivationent@gmail.com';

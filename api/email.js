@@ -13,6 +13,9 @@ const {
   SEARCH_WINDOW_DAYS
 } = require('./_constants.js');
 
+// Signed, no-login approve/deny links for the reconditioning quote email.
+const quoteLink = require('./_quote-link.js');
+
 const BRAND = {
   name: 'Auto Pals USA',
   city: 'Pompano Beach, FL',
@@ -218,6 +221,24 @@ ${c.vehicleStr ? `<div style="font-family:-apple-system,'Segoe UI',sans-serif;fo
 ${footer(d)}`)
   }),
 
+  // One-tap magic-link login. Sent when a client asks to log in with their
+  // email instead of typing an access code (api/portal-login.js). The link is
+  // the credential and goes only to the inbox on file.
+  portalLoginLink: (d) => ({
+    subject: `Your Auto Pals USA login link`,
+    html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:12px;">Here's your login link, ${d.firstName || 'there'}.</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">Tap the button below to open your portal — no code to type. This link is just for you and works for the next 30 days.</p>
+</td></tr>
+<tr><td style="padding:0 40px 14px;">${button(d.loginUrl, 'Log in to your portal →', { bg: BRAND.green })}</td></tr>
+<tr><td style="padding:0 40px 8px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;color:${BRAND.mutedSoft};line-height:1.6;margin:8px 0 0;word-break:break-all;">Button not working? Paste this into your browser:<br><span style="color:${BRAND.navy};">${d.loginUrl}</span></p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:12px 0 0;">If you didn't ask to log in, you can safely ignore this email — nothing changes and no one else can use this link.</p>
+</td></tr>
+${footer(d)}`)
+  }),
+
   rejected: (d) => ({
     subject: `About your vehicle request`,
     html: shell(`${header()}
@@ -311,8 +332,25 @@ ${footer(d)}`)
     // fall back to `repairs` for older callers.
     const services = Array.isArray(d.services) ? d.services : (Array.isArray(d.repairs) ? d.repairs : []);
     const parts   = Array.isArray(d.parts)   ? d.parts   : [];
+    // Signed, no-login approve/deny links. When a repairId is present each
+    // service row gets its own Approve / Decline buttons that act straight from
+    // the inbox — the client never has to open the portal.
+    const rid = (d.repairId != null && d.repairId !== '') ? d.repairId : null;
+    const sig = rid ? quoteLink.sign(rid) : null;
+    const respondUrl = rid ? quoteLink.pageUrl(rid, sig) : (d.portalUrl || '');
+    const actionLinks = (r) => {
+      if (!rid || r.id == null || r.id === '') return '';
+      if (r.clientDecision === 'approved') return `<div style="margin-top:8px;font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;font-weight:700;color:${BRAND.green};">&#10003; Approved</div>`;
+      if (r.clientDecision === 'denied')   return `<div style="margin-top:8px;font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;font-weight:700;color:${BRAND.red};">&#10007; Declined</div>`;
+      const approveUrl = quoteLink.itemActionUrl(rid, sig, r.id, 'approve');
+      const denyUrl    = quoteLink.itemActionUrl(rid, sig, r.id, 'deny');
+      return `<div style="margin-top:9px;">`
+        + `<a href="${approveUrl}" style="display:inline-block;font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;font-weight:700;color:${BRAND.green};text-decoration:none;border:1.5px solid ${BRAND.green};border-radius:7px;padding:6px 14px;margin-right:8px;">&#10003; Approve</a>`
+        + `<a href="${denyUrl}" style="display:inline-block;font-family:-apple-system,'Segoe UI',sans-serif;font-size:12px;font-weight:700;color:${BRAND.red};text-decoration:none;border:1.5px solid ${BRAND.red};border-radius:7px;padding:6px 14px;">&#10007; Decline</a>`
+        + `</div>`;
+    };
     const lineRow = (label, val, isLast) => `<tr><td style="padding:10px 0;color:${BRAND.ink};font-size:14px;${isLast ? '' : `border-bottom:1px solid ${BRAND.border};`}">${label}</td><td style="padding:10px 0;color:${BRAND.ink};font-weight:600;font-size:14px;text-align:right;${isLast ? '' : `border-bottom:1px solid ${BRAND.border};`}">${val}</td></tr>`;
-    const svcRow = (r, isLast) => `<tr><td style="padding:10px 0;${isLast ? '' : `border-bottom:1px solid ${BRAND.border};`}"><div style="color:${BRAND.ink};font-size:14px;font-weight:600;">${r.desc || 'Service'}</div>${r.detail ? `<div style="color:${BRAND.muted};font-size:12px;line-height:1.55;margin-top:3px;">${r.detail}</div>` : ''}</td><td style="padding:10px 0;color:${BRAND.ink};font-weight:600;font-size:14px;text-align:right;vertical-align:top;${isLast ? '' : `border-bottom:1px solid ${BRAND.border};`}">${fmt(r.charge)}</td></tr>`;
+    const svcRow = (r, isLast) => `<tr><td style="padding:10px 0;${isLast ? '' : `border-bottom:1px solid ${BRAND.border};`}"><div style="color:${BRAND.ink};font-size:14px;font-weight:600;">${r.desc || 'Service'}</div>${r.detail ? `<div style="color:${BRAND.muted};font-size:12px;line-height:1.55;margin-top:3px;">${r.detail}</div>` : ''}${actionLinks(r)}</td><td style="padding:10px 0;color:${BRAND.ink};font-weight:600;font-size:14px;text-align:right;vertical-align:top;${isLast ? '' : `border-bottom:1px solid ${BRAND.border};`}">${fmt(r.charge)}</td></tr>`;
     const servicesBlock = services.length ? `
 <tr><td style="padding:18px 0 6px;font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};" colspan="2">Services</td></tr>
 ${services.map((r, i) => svcRow(r, i === services.length - 1 && Number(d.laborCharge) <= 0 && parts.length === 0)).join('')}
@@ -334,7 +372,7 @@ ${parts.map((p, i) => lineRow(p.name || p.desc || 'Part', fmt(p.charge), i === p
 <tr><td style="padding:28px 40px 0;">
 <div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:10px;">Here's your reconditioning quote, ${d.firstName || 'there'}.</div>
 <p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 6px;">We put together a recommended reconditioning estimate for your <strong style="color:${BRAND.ink};">${d.vehicle || 'vehicle'}</strong>${d.vin ? ` (VIN ${d.vin})` : ''}. Full breakdown below.</p>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0 0 22px;font-style:italic;">This is optional — you can approve any or all of it whenever you're ready, or skip it entirely.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0 0 22px;font-style:italic;">This is optional — approve or decline each service right here in this email, whenever you're ready. No login needed.</p>
 </td></tr>
 <tr><td style="padding:0 40px 24px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:22px 26px;">
@@ -347,11 +385,11 @@ ${servicesBlock}${laborBlock}${partsBlock}${totalRow}
 </td></tr>
 <tr><td style="padding:0 40px 22px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f1f5f9;border-left:3px solid ${BRAND.navy};border-radius:0 8px 8px 0;"><tr><td style="padding:16px 22px;">
-<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.65;"><strong>How to pay (optional):</strong> You can approve the quote in your portal, or send the total via Zelle to <strong style="color:${BRAND.navy};">automotivationent@gmail.com</strong>.</div>
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.65;"><strong>How to pay (optional):</strong> Approve or decline each service using the buttons above, then send the approved total via Zelle to <strong style="color:${BRAND.navy};">automotivationent@gmail.com</strong>.</div>
 <div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin-top:8px;">Questions? Just reply to this email or message us at <a href="mailto:info@autopalsusa.com" style="color:${BRAND.navy};text-decoration:underline;">info@autopalsusa.com</a> — happy to walk through anything before you decide.</div>
 </td></tr></table>
 </td></tr>
-<tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'View & approve in portal →')}</td></tr>
+<tr><td style="padding:0 40px 12px;">${button(respondUrl, 'Review &amp; respond to your quote →')}${d.portalUrl ? buttonSecondary(d.portalUrl, 'Open portal') : ''}</td></tr>
 ${footer(d)}`)
     });
   },
@@ -829,6 +867,36 @@ ${d.portalCode ? `<tr><td style="padding:6px 0;color:${BRAND.muted};">Portal cod
 ${footer(d)}`)
   }),
 
+  // Staff fan-out when a client approves or declines a reconditioning service
+  // straight from the quote email (api/quote-response.js). Lets Josh/Alex see
+  // the client's choices without opening the dashboard. Email-only on purpose —
+  // per-item clicks are too chatty for SMS.
+  staffQuoteResponse: (d) => {
+    const isApprove = d.action === 'approved';
+    const accent = isApprove ? BRAND.green : BRAND.red;
+    const list = (arr) => (Array.isArray(arr) && arr.length)
+      ? arr.map(s => `<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.ink};line-height:1.6;">• ${s}</div>`).join('')
+      : `<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.mutedSoft};">None yet</div>`;
+    return ({
+      subject: `${isApprove ? '✅' : '🚫'} ${d.clientName || 'A client'} ${isApprove ? 'approved' : 'declined'} a service — ${d.vehicle || 'their vehicle'}`,
+      html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:8px;">Quote response from ${d.clientName || 'a client'}</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 18px;">${d.clientName || 'A client'} just <strong style="color:${accent};">${isApprove ? 'approved' : 'declined'}</strong> <strong>${d.itemDesc || 'a service'}</strong> on the reconditioning quote for their <strong>${d.vehicle || 'vehicle'}</strong>, right from the email.</p>
+</td></tr>
+<tr><td style="padding:0 40px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:18px 22px;">
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.green};margin-bottom:6px;">Approved so far</div>
+${list(d.approvedList)}
+<div style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.red};margin:14px 0 6px;">Declined</div>
+${list(d.deniedList)}
+</td></tr></table>
+</td></tr>
+${d.portalUrl ? `<tr><td style="padding:0 40px 12px;">${button(d.portalUrl, 'Open dashboard →')}</td></tr>` : ''}
+${footer(d)}`)
+    });
+  },
+
   // Staff fan-out the moment a client books an intro call. Pairs with the
   // staff_booking_made SMS — and is the "always-arrives" half until A2P
   // approval lets the SMS flow through carriers.
@@ -1021,6 +1089,7 @@ const STAFF_TEMPLATES = new Set([
   'staffPortalMessage',
   'staffContractSigned',
   'staffClientDocumentUploaded',
+  'staffQuoteResponse',
   'systemAlert'
 ]);
 
@@ -1229,8 +1298,17 @@ async function handler(req, res) {
   return res.status(result.ok ? 200 : (result.error === 'unknown_type' ? 400 : 500)).json(result);
 }
 
+// Pure render (no send) — used by tests/previews to inspect a template's HTML
+// without hitting SendGrid. Returns { subject, html } or null for unknown type.
+function renderTemplate(type, data) {
+  const t = TEMPLATES[type];
+  return t ? t(data || {}) : null;
+}
+
 handler.sendTemplate = sendTemplate;
 handler.sendEmail    = sendTemplate;   // alias for prod naming convention
+handler.renderTemplate = renderTemplate;
 module.exports = handler;
 module.exports.sendTemplate = sendTemplate;
 module.exports.sendEmail    = sendTemplate;
+module.exports.renderTemplate = renderTemplate;
