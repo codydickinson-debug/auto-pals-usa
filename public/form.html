@@ -6154,6 +6154,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
             </div>
             <div class="repair-card-actions">
               ${doneBtn}
+              <button class="filter-btn" onclick="copyQuoteText(${car.id}, this)" title="Copy the client-facing quote as text to paste into a group chat">Copy quote</button>
               <button class="filter-btn" onclick="editRepairCar(${car.id})">Edit</button>
               <button class="filter-btn" onclick="removeRepairCar(${car.id})" style="color:var(--red);">Remove</button>
             </div>
@@ -6394,6 +6395,56 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     return cost * markupRate(cost);
   }
 
+  // Build the client-facing quote as plain text — for texting to the group
+  // chat. Only non-excluded items, with each item's client detail, and the
+  // same client charges the portal/email show (wholesale cost is never shown).
+  function buildQuoteText(car) {
+    if (!car) return '';
+    const fmt = n => '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const repairs = (Array.isArray(car.repairs) ? car.repairs : []).filter(r => !r.excluded);
+    const parts   = (Array.isArray(car.parts)   ? car.parts   : []).filter(p => !p.excluded);
+    const servicesTotal = repairs.reduce((a, r) => { const c = Number(r.cost) || 0; return a + c * markupRate(c); }, 0);
+    const totalHours = repairs.reduce((a, r) => a + (Number(r.hours) || 0), 0);
+    const laborTotal = totalHours * LABOR_RATE;
+    const partsTotal = parts.reduce((a, p) => a + partItemCharge(p), 0);
+    const total = servicesTotal + laborTotal + partsTotal;
+    const lines = [
+      'RECONDITIONING QUOTE — Auto Pals USA',
+      '',
+      `Vehicle: ${car.vehicle || ''}`,
+      car.vin ? `VIN: ${car.vin}` : null,
+      '',
+      repairs.length ? 'Recommended services:' : null,
+      ...repairs.flatMap(r => {
+        const c = Number(r.cost) || 0;
+        const line = `• ${r.desc} — ${fmt(c * markupRate(c))}`;
+        return r.detail ? [line, `   ${r.detail}`] : [line];
+      }),
+      repairs.length ? '' : null,
+      totalHours > 0 ? `Labor: ${totalHours} hr — ${fmt(laborTotal)}` : null,
+      totalHours > 0 ? '' : null,
+      parts.length ? 'Parts:' : null,
+      ...parts.map(p => `• ${p.name || p.desc || 'Part'} — ${fmt(partItemCharge(p))}`),
+      parts.length ? '' : null,
+      `TOTAL: ${fmt(total)}`,
+      '',
+      "This work is optional — let us know which items you'd like and we'll get it scheduled."
+    ].filter(l => l !== null);
+    return lines.join('\n');
+  }
+
+  function copyQuoteText(carId, btn) {
+    const car = repairCars.find(c => c.id === carId);
+    if (!car) return;
+    const text = buildQuoteText(car);
+    const flash = () => { if (!btn) return; const o = btn.textContent; btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = o; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(flash).catch(() => window.prompt('Copy the quote:', text));
+    } else {
+      window.prompt('Copy the quote:', text);
+    }
+  }
+
   function updateRepairChargePreview(idx) {
     const out = document.getElementById('rm-charge-display-' + idx);
     if (!out) return;
@@ -6423,10 +6474,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // (treat it as no markup) so the math doesn't suddenly drop to zero.
     const wholesale = data && data.cost != null ? data.cost : '';
     const clientPrice = data && data.price != null ? data.price : (data && data.cost != null ? data.cost : '');
+    const _detail = data && data.detail != null ? String(data.detail).replace(/"/g, '&quot;') : '';
     row.innerHTML = `
       <div class="rm-row-top">
         <input type="text" placeholder="Repair description (e.g. Brake job, oil change)" id="rm-desc-${idx}" value="${data ? data.desc : ""}" aria-label="Repair description">
         <button class="rm-remove-btn" onclick="document.getElementById('rm-row-${idx}').remove()" title="Remove this item">✕</button>
+      </div>
+      <div style="margin:6px 0 8px;">
+        <input type="text" placeholder="What this includes — shown to the client (e.g. Replace pads + resurface rotors, all four corners)" id="rm-detail-${idx}" value="${_detail}" aria-label="Client-facing detail" style="width:100%;font-size:12px;">
       </div>
       <div class="rm-row-bot">
         <div class="rm-field">
@@ -6442,6 +6497,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <div id="rm-charge-display-${idx}" class="rm-charge-display">$${repairItemCharge({cost: Number(data && data.cost) || 0, hours: Number(data && data.hours) || 0}).toFixed(2)}</div>
         </div>
       </div>
+      <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--text-muted);cursor:pointer;">
+        <input type="checkbox" id="rm-excl-${idx}" ${data && data.excluded ? 'checked' : ''} style="width:auto;margin:0;">
+        Exclude from the client quote (client declined this item)
+      </label>
     `;
     list.appendChild(row);
   }
@@ -6460,10 +6519,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       if (!desc) return;
       const _wholesale = parseFloat(document.getElementById('rm-cost-' + idNum).value) || 0;
       const _hrs = parseFloat(document.getElementById('rm-hrs-' + idNum).value) || 0;
+      const _detailEl = document.getElementById('rm-detail-' + idNum);
+      const _exclEl = document.getElementById('rm-excl-' + idNum);
       repairs.push({
         desc,
+        detail: _detailEl ? _detailEl.value.trim() : '',   // client-facing "what this includes"
         cost: _wholesale,         // internal — what your shop pays
         hours: _hrs,              // billed at LABOR_RATE on the client receipt
+        excluded: _exclEl ? !!_exclEl.checked : false,     // hidden from the client quote + total
         done: false               // internal-only completion flag, toggled in the dashboard
       });
     });
@@ -6526,13 +6589,18 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       //   PARTS       — extra parts list, each with marked-up price
       // Cost, markup %, and per-item hours are NEVER shown to the client.
       const fmt = n => '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      const repairServicesTotal = repairs.reduce((a, r) => {
+      // Only items NOT excluded from the client quote count toward the receipt,
+      // email, and total. Excluded items (client declined) stay on the record
+      // but never reach the customer.
+      const activeRepairs = repairs.filter(r => !r.excluded);
+      const activeParts = parts.filter(p => !p.excluded);
+      const repairServicesTotal = activeRepairs.reduce((a, r) => {
         const c = Number(r.cost) || 0;
         return a + (c * markupRate(c));
       }, 0);
-      const totalHours = repairs.reduce((a, r) => a + (Number(r.hours) || 0), 0);
+      const totalHours = activeRepairs.reduce((a, r) => a + (Number(r.hours) || 0), 0);
       const laborTotal = totalHours * LABOR_RATE;
-      const partsTotal = parts.reduce((a, p) => a + partItemCharge(p), 0);
+      const partsTotal = activeParts.reduce((a, p) => a + partItemCharge(p), 0);
       const total = repairServicesTotal + laborTotal + partsTotal;
       const receiptLines = [
         '🔧 REPAIR ESTIMATE',
@@ -6540,18 +6608,19 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         `Vehicle: ${vehicle}`,
         vin ? `VIN:     ${vin}` : null,
         '',
-        repairs.length ? 'SERVICES:' : null,
-        ...repairs.map(r => {
+        activeRepairs.length ? 'SERVICES:' : null,
+        ...activeRepairs.flatMap(r => {
           const c = Number(r.cost) || 0;
-          return `  • ${r.desc} — ${fmt(c * markupRate(c))}`;
+          const line = `  • ${r.desc} — ${fmt(c * markupRate(c))}`;
+          return r.detail ? [line, `      ${r.detail}`] : [line];
         }),
-        repairs.length ? '' : null,
+        activeRepairs.length ? '' : null,
         totalHours > 0 ? 'LABOR:' : null,
         totalHours > 0 ? `  ${totalHours} hr × ${fmt(LABOR_RATE)}/hr = ${fmt(laborTotal)}` : null,
         totalHours > 0 ? '' : null,
-        parts.length ? 'PARTS:' : null,
-        ...parts.map(p => `  • ${p.name || p.desc || 'Part'} — ${fmt(partItemCharge(p))}`),
-        parts.length ? '' : null,
+        activeParts.length ? 'PARTS:' : null,
+        ...activeParts.map(p => `  • ${p.name || p.desc || 'Part'} — ${fmt(partItemCharge(p))}`),
+        activeParts.length ? '' : null,
         '──────────────────────',
         `TOTAL ESTIMATE:  ${fmt(total)}`,
         document.getElementById('rm-notes').value.trim()
@@ -6590,14 +6659,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           email:     matchedReq.email,
           vehicle,
           vin,
-          services: repairs.map(r => ({
+          services: activeRepairs.map(r => ({
             desc:   r.desc,
+            detail: r.detail || '',
             charge: (Number(r.cost) || 0) * markupRate(Number(r.cost) || 0)
           })),
           laborHours: totalHours,
           laborRate:  LABOR_RATE,
           laborCharge: laborTotal,
-          parts: parts.map(p => ({
+          parts: activeParts.map(p => ({
             name:   p.name || p.desc || 'Part',
             charge: partItemCharge(p)
           })),

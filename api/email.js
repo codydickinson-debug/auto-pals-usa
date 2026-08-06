@@ -307,12 +307,15 @@ ${footer(d)}`)
   // never appear — only what the client pays.
   reconditioningQuote: (d) => {
     const fmt = n => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const repairs = Array.isArray(d.repairs) ? d.repairs : [];
+    // Callers pass `services` (desc + optional client-facing detail + charge);
+    // fall back to `repairs` for older callers.
+    const services = Array.isArray(d.services) ? d.services : (Array.isArray(d.repairs) ? d.repairs : []);
     const parts   = Array.isArray(d.parts)   ? d.parts   : [];
     const lineRow = (label, val, isLast) => `<tr><td style="padding:10px 0;color:${BRAND.ink};font-size:14px;${isLast ? '' : `border-bottom:1px solid ${BRAND.border};`}">${label}</td><td style="padding:10px 0;color:${BRAND.ink};font-weight:600;font-size:14px;text-align:right;${isLast ? '' : `border-bottom:1px solid ${BRAND.border};`}">${val}</td></tr>`;
-    const servicesBlock = repairs.length ? `
+    const svcRow = (r, isLast) => `<tr><td style="padding:10px 0;${isLast ? '' : `border-bottom:1px solid ${BRAND.border};`}"><div style="color:${BRAND.ink};font-size:14px;font-weight:600;">${r.desc || 'Service'}</div>${r.detail ? `<div style="color:${BRAND.muted};font-size:12px;line-height:1.55;margin-top:3px;">${r.detail}</div>` : ''}</td><td style="padding:10px 0;color:${BRAND.ink};font-weight:600;font-size:14px;text-align:right;vertical-align:top;${isLast ? '' : `border-bottom:1px solid ${BRAND.border};`}">${fmt(r.charge)}</td></tr>`;
+    const servicesBlock = services.length ? `
 <tr><td style="padding:18px 0 6px;font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};" colspan="2">Services</td></tr>
-${repairs.map((r, i) => lineRow(r.desc || 'Service', fmt(r.charge), i === repairs.length - 1 && d.laborCharge <= 0 && parts.length === 0)).join('')}
+${services.map((r, i) => svcRow(r, i === services.length - 1 && Number(d.laborCharge) <= 0 && parts.length === 0)).join('')}
 ` : '';
     const laborBlock = Number(d.laborCharge) > 0 ? `
 <tr><td style="padding:18px 0 6px;font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${BRAND.mutedSoft};" colspan="2">Labor</td></tr>

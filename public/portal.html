@@ -1635,8 +1635,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
   function renderRepairQuote(repair, client) {
     activeQuote = repair;
-    const repairs = Array.isArray(repair.repairs) ? repair.repairs : [];
-    const parts   = Array.isArray(repair.parts)   ? repair.parts   : [];
+    const repairs = (Array.isArray(repair.repairs) ? repair.repairs : []).filter(r => !r.excluded);
+    const parts   = (Array.isArray(repair.parts)   ? repair.parts   : []).filter(p => !p.excluded);
 
     const servicesTotal = repairs.reduce((a, r) => {
       const c = Number(r.cost) || 0;
@@ -1663,9 +1663,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         + repairs.map(r => {
             const c = Number(r.cost) || 0;
             const charge = c * _quoteMarkupRate(c);
-            return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px;">'
-              + '<span>' + escapeHtmlSafe(r.desc || 'Service') + '</span>'
-              + '<span style="font-weight:600;color:var(--navy);">' + _fmtMoney(charge) + '</span>'
+            const detail = r.detail ? '<div style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-top:2px;">' + escapeHtmlSafe(r.detail) + '</div>' : '';
+            return '<div style="padding:8px 0;border-bottom:1px dashed var(--border);font-size:13px;">'
+              + '<div style="display:flex;justify-content:space-between;gap:12px;">'
+              + '<span style="font-weight:600;">' + escapeHtmlSafe(r.desc || 'Service') + '</span>'
+              + '<span style="font-weight:600;color:var(--navy);white-space:nowrap;">' + _fmtMoney(charge) + '</span>'
+              + '</div>' + detail
               + '</div>';
           }).join('')
         + '</div>'
