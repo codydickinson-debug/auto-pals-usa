@@ -62,13 +62,16 @@ const POSTCALL_SMS_REMINDER_HOURS = [24, 48, 72];
 // Auto-stops the moment call_completed_at (they showed to a rebooked call) or
 // deposit_paid flips.
 const NOSHOW_REMINDER_HOURS = [24, 72];
-// Long-term re-engagement for clients who go dormant (no deposit paid 14+ days
-// after signup). 14d, ~1mo after that (44d), ~3mo after the first (104d).
+// Long-term re-engagement for clients who go dormant (no deposit paid, 14+ days
+// after signup). Owner spec 2026-08-03: two touches only — ~1 month (720h) and
+// ~6 months (4320h) after signup — since dormant leads now move off the
+// dashboard into a Google Sheet but should still get a couple of nudges.
 // Stops the moment deposit_paid flips true.
-const DORMANT_REMINDER_HOURS = [336, 1056, 2496];
+const DORMANT_REMINDER_HOURS = [720, 4320];
 
 const sms = require('./_sms.js');
 const email = require('./email.js');
+const sheets = require('./sheets.js');
 
 async function sb(table, method = 'GET', body = null, params = '') {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}${params}`, {
@@ -412,6 +415,36 @@ module.exports = async function handler(req, res) {
                 }
                 break; // one per cron run
               }
+            }
+          }
+        }
+
+        // ── DORMANT → GOOGLE SHEET EXPORT ──
+        // Once a lead crosses 14 days with no deposit (i.e. it's "dormant"),
+        // append it to the Dormant tab of the leads sheet — exactly once —
+        // then stamp dormant_exported_at so it never re-appends. The dashboard
+        // hides dormant leads on its own; this is the durable off-dashboard
+        // record. Matches the dashboard's isDormantRequest(): manual 'dormant'
+        // status OR 14d+ with no deposit ('sold'/'rejected' already excluded
+        // at the query level). Non-fatal — appendDormantRow never throws.
+        if (!r.dormant_exported_at && !r.deposit_paid) {
+          const submittedMs = r.submitted ? new Date(r.submitted).getTime() : 0;
+          const dormantByAge = submittedMs > 0 &&
+            (Date.now() - submittedMs) >= 14 * 24 * 60 * 60 * 1000;
+          if (r.status === 'dormant' || dormantByAge) {
+            const exp = await sheets.appendDormantRow({
+              dormantOn: new Date().toISOString().slice(0, 10),
+              name: `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+              email: r.email || '',
+              phone: r.phone || '',
+              vehicle: [r.make, r.model].filter(v => v && v !== '—').join(' '),
+              budget: r.budget_max ? '$' + Number(r.budget_max).toLocaleString() : '',
+              referralSource: r.referral_source || '',
+              submitted: r.submitted || ''
+            });
+            if (exp && exp.ok && !exp.demo) {
+              await sb('requests', 'PATCH', { dormant_exported_at: new Date().toISOString() }, `?id=eq.${r.id}`);
+              summary.dormantExported = (summary.dormantExported || 0) + 1;
             }
           }
         }

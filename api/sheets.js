@@ -135,6 +135,42 @@ async function appendLeadRow(lead) {
   }
 }
 
+// Append a dormant lead to the "Dormant" tab of the leads spreadsheet.
+// Called by the daily cron the first time a lead crosses 14 days with no
+// deposit, so dormant leads move OFF the dashboard and into a Google Sheet
+// record. Same self-contained/never-throw/demo-mode contract as
+// appendLeadRow. Targets SHEETS_LEADS_SPREADSHEET_ID + SHEETS_DORMANT_TAB
+// (default "Dormant") — the tab must exist in the spreadsheet first.
+async function appendDormantRow(lead) {
+  const spreadsheetId = process.env.SHEETS_LEADS_SPREADSHEET_ID;
+  const demoMode = !process.env.GOOGLE_CLIENT_ID
+                || !process.env.GOOGLE_REFRESH_TOKEN
+                || !spreadsheetId;
+  if (demoMode) {
+    console.log('[SHEETS DEMO DORMANT] would append:', lead);
+    return { ok: true, demo: true };
+  }
+  const tab = process.env.SHEETS_DORMANT_TAB || 'Dormant';
+  const row = [
+    lead.dormantOn || new Date().toISOString().slice(0, 10),
+    lead.name || '',
+    lead.email || '',
+    lead.phone || '',
+    lead.vehicle || '',
+    lead.budget || '',
+    lead.referralSource || '',
+    lead.submitted || ''
+  ];
+  try {
+    const token = await getAccessToken();
+    await appendRawRow(token, spreadsheetId, tab, row);
+    return { ok: true };
+  } catch (err) {
+    console.error('[SHEETS dormant-append] failed:', err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
 const { verifyToken } = require('./auth.js');
 
 module.exports = async function handler(req, res) {
@@ -174,6 +210,7 @@ module.exports = async function handler(req, res) {
 // In-process exports so api/db.js can mirror new requests into the
 // Leads tab without an HTTP round-trip. Same pattern as api/email.js
 // exposing sendTemplate.
-module.exports.appendLeadRow = appendLeadRow;
-module.exports.appendRawRow  = appendRawRow;
+module.exports.appendLeadRow    = appendLeadRow;
+module.exports.appendDormantRow = appendDormantRow;
+module.exports.appendRawRow     = appendRawRow;
 module.exports.getAccessToken = getAccessToken;

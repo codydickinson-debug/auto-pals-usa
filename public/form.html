@@ -2368,9 +2368,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <button class="sidebar-item" onclick="filterRequests('awaiting_paperwork', this)">
           Awaiting Paperwork <span class="badge" id="badge-awaiting_paperwork">0</span>
         </button>
-        <button class="sidebar-item" onclick="filterRequests('dormant', this)">
-          Dormant <span class="badge" id="badge-dormant">0</span>
-        </button>
         <button class="sidebar-item" id="sidebar-opensearch" onclick="showOpenSearchPanel(this)">
           Open Searches <span class="badge" id="badge-opensearch">0</span>
         </button>
@@ -4788,8 +4785,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
   function updateStats() {
     // Action queue counts — drive the three clickable cards at the top.
-    const newOrReview = requests.filter(r => r.status === 'new' || r.status === 'review').length;
-    const outreach = requests.filter(r => r.status === 'qualified' && !r.callCompletedAt).length;
+    // Dormant leads (14d+ no deposit) are moved off the dashboard into the
+    // Dormant Google Sheet, so they're excluded from these queues too.
+    const newOrReview = requests.filter(r => (r.status === 'new' || r.status === 'review') && !isDormantRequest(r)).length;
+    const outreach = requests.filter(r => r.status === 'qualified' && !r.callCompletedAt && !isDormantRequest(r)).length;
     const inSearch = requests.filter(r => (r.depositReceived || r.depositPaid) && r.status !== 'sold' && r.status !== 'rejected').length;
 
     const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
@@ -4840,7 +4839,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // Rejected leads are auto-declined (budget under $5k) and kept only as a
     // quiet record + courtesy email — they're hidden from the whole dashboard,
     // so 'All' excludes them just like 'sold'.
-    const counts = { all: requests.filter(r=>r.status!=='sold' && r.status!=='rejected').length, new: 0, review: 0, qualified: 0, called: 0, searching: 0, psi: 0, in_repair: 0, awaiting_paperwork: 0, rejected: 0 };
+    const counts = { all: requests.filter(r=>r.status!=='sold' && r.status!=='rejected' && !isDormantRequest(r)).length, new: 0, review: 0, qualified: 0, called: 0, searching: 0, psi: 0, in_repair: 0, awaiting_paperwork: 0, rejected: 0 };
     requests.forEach(r => {
       if (counts[r.status] === undefined) return;
       // Skip awaiting_paperwork rows that already have a matching sale —
@@ -5008,19 +5007,18 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // Apply action-queue filter first if set, otherwise fall back to sidebar status filter.
     let filtered;
     if (currentActionFilter === 'new') {
-      filtered = requests.filter(r => r.status === 'new' || r.status === 'review');
+      filtered = requests.filter(r => (r.status === 'new' || r.status === 'review') && !isDormantRequest(r));
     } else if (currentActionFilter === 'outreach') {
-      filtered = requests.filter(r => r.status === 'qualified' && !r.callCompletedAt);
+      filtered = requests.filter(r => r.status === 'qualified' && !r.callCompletedAt && !isDormantRequest(r));
     } else if (currentActionFilter === 'search') {
       filtered = requests.filter(r => (r.depositReceived || r.depositPaid) && r.status !== 'sold' && r.status !== 'rejected');
-    } else if (currentFilter === 'dormant') {
-      // 'dormant' is a derived view, not a real status field.
-      filtered = requests.filter(isDormantRequest);
     } else if (currentFilter === 'noshow') {
       // 'noshow' is a derived view — booked calls that weren't answered.
       filtered = requests.filter(isNoShowRequest);
     } else {
-      filtered = currentFilter === 'all' ? requests.filter(r => r.status !== 'sold' && r.status !== 'rejected') : requests.filter(r => r.status === currentFilter);
+      // Dormant leads (14d+ no deposit) are moved off the dashboard into the
+      // Dormant Google Sheet, so 'All' hides them like it hides sold/rejected.
+      filtered = currentFilter === 'all' ? requests.filter(r => r.status !== 'sold' && r.status !== 'rejected' && !isDormantRequest(r)) : requests.filter(r => r.status === currentFilter);
       // Mirror the badge logic — hide awaiting_paperwork rows that already
       // have a matching sale, so the list and the sidebar count agree.
       if (currentFilter === 'awaiting_paperwork') {
