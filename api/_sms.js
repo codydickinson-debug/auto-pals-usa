@@ -584,6 +584,44 @@ const TEMPLATES = {
 const STAFF_TYPES = new Set(Object.keys(TEMPLATES).filter(k => k.startsWith('staff_')));
 const CLIENT_TYPES = new Set(Object.keys(TEMPLATES).filter(k => k.startsWith('client_')));
 
+// ── Quiet-hours guard (FTSA / TCPA) ─────────────────────────────────────────
+// Florida's FTSA and the federal TCPA bar commercial *solicitation* texts
+// outside 8:00am–8:00pm in the recipient's local time (FTSA is the tighter
+// 8–8; TCPA is 8–9). We enforce the business's Florida timezone
+// (America/New_York) — the FTSA's governing zone and where the vast majority
+// of leads live — so a scheduled follow-up can never fire in the middle of the
+// night. This gates ONLY the scheduled marketing drips below; genuinely
+// transactional texts the customer's own action triggered (call reminders,
+// deposit confirmations, portal replies, the initial "book your call" link)
+// and all staff alerts are exempt and never gated.
+//
+// Behavior: outside the window a solicitation returns {skipped:'quiet_hours'}.
+// The cron drip treats a skip like a consent-skip — it does NOT stamp the
+// reminder as sent, so it simply retries on the next eligible run (the daily
+// cron fires ~9–10am ET, always inside the window, so normal drips are
+// unaffected). Note: per-recipient timezone would require storing each lead's
+// zone; ET covers FTSA + the FL-resident majority. See privacy/compliance memo.
+const QUIET_START_HOUR = 8;   // inclusive — first allowed hour (08:00 ET)
+const QUIET_END_HOUR   = 20;  // exclusive — last allowed hour (stop at 20:00 ET)
+
+// True only for the scheduled solicitation drips (pre-call / post-call /
+// no-show follow-ups). Kept as a pattern so new follow-up numbers are covered.
+const SOLICITATION_RE = /^client_(precall|postcall|noshow)_followup_/;
+
+function currentEtHour(date) {
+  // Intl gives the wall-clock hour in ET regardless of the server's TZ or DST.
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York', hour: 'numeric', hour12: false
+  }).format(date || new Date());
+  const n = parseInt(parts, 10);
+  return Number.isFinite(n) ? (n === 24 ? 0 : n) : 12; // fail open to midday
+}
+
+function withinContactWindow(date) {
+  const h = currentEtHour(date);
+  return h >= QUIET_START_HOUR && h < QUIET_END_HOUR;
+}
+
 async function send(type, data = {}) {
   const fn = TEMPLATES[type];
   if (!fn) return { ok: false, error: 'unknown_type', type };
@@ -597,6 +635,11 @@ async function send(type, data = {}) {
     if (data.smsConsent === false) {
       console.log('[SMS] skipped — sms_consent=false for', type, data.phone || '');
       return { ok: false, skipped: true, reason: 'sms_consent_false' };
+    }
+    // Quiet-hours gate for scheduled solicitation drips only.
+    if (SOLICITATION_RE.test(type) && !withinContactWindow()) {
+      console.log('[SMS] deferred — outside 8am–8pm ET quiet-hours window for', type, data.phone || '');
+      return { ok: false, skipped: true, reason: 'quiet_hours' };
     }
     return sendToClient(data.phone, body);
   }
@@ -613,6 +656,8 @@ module.exports = {
   closeContactConversation,
   staffNumbers,
   normalize,
+  withinContactWindow,
+  currentEtHour,
   TEMPLATES,
   PORTAL_URL,
   BOOKING_URL
