@@ -1519,6 +1519,25 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 </footer>
 
 <script>
+  // Discreet staff access — the public "Employee Access" footer link was
+  // removed (security audit: don't advertise the admin door). Staff get in by
+  // clicking the footer copyright line 5× quickly, which opens the same
+  // password-gated dashboard. Invisible to visitors, one gesture for the team.
+  (function () {
+    var el = document.querySelector('.footer-copy');
+    if (!el) return;
+    var clicks = 0, timer = null;
+    el.addEventListener('click', function () {
+      clicks++;
+      clearTimeout(timer);
+      timer = setTimeout(function () { clicks = 0; }, 2000); // reset if the taps slow down
+      if (clicks >= 5) {
+        clicks = 0;
+        window.location.href = '/form.html?staff=1';
+      }
+    });
+  })();
+
   // FAQ toggle
   function toggleFaq(btn) {
     const item = btn.parentElement;
