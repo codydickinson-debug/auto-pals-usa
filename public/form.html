@@ -2523,11 +2523,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button class="filter-btn active" onclick="sortRequests('date-desc', this)">Newest First</button>
           <button class="filter-btn" onclick="sortRequests('date-asc', this)">Oldest First</button>
           <button class="filter-btn" onclick="sortRequests('budget', this)">Budget ↓</button>
-          <select id="dash-source-filter" onchange="filterBySource(this.value)" title="Filter leads by where they came from" style="display:none;margin-left:4px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--white,#fff);color:var(--text);font-family:system-ui,sans-serif;font-size:12px;font-weight:600;cursor:pointer;">
-            <option value="all">All sources</option>
-          </select>
         </div>
       </div>
+      <!-- Source filter row — sort leads by where they came from -->
+      <div id="source-filter-row" class="filter-row" style="flex-wrap:wrap;margin:0 0 12px;"></div>
 
       <div class="requests-table">
         <table>
@@ -5221,26 +5220,38 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     return `<span class="source-badge" title="Lead source: ${sourceLabel(s)}" style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;background:${bg};color:#fff;font-size:10px;font-weight:700;letter-spacing:0.02em;vertical-align:middle;white-space:nowrap;">${icon}${escapeHtml(sourceLabel(s))}</span>`;
   }
   function filterBySource(v) { currentSourceFilter = v || 'all'; renderTable(); }
-  // Rebuild the source dropdown from whatever sources actually exist, with
-  // per-source counts. Hidden entirely until at least one lead has a source.
-  function populateSourceFilter() {
-    const sel = document.getElementById('dash-source-filter');
-    if (!sel) return;
-    const counts = {};
-    let noneCount = 0;
-    requests.forEach(r => {
-      const s = (r.source || '').trim().toLowerCase();
-      if (s) counts[s] = (counts[s] || 0) + 1; else noneCount++;
-    });
-    const keys = Object.keys(counts).sort();
-    if (!keys.length) { sel.style.display = 'none'; return; }
-    sel.style.display = '';
-    let html = '<option value="all">All sources</option>';
-    keys.forEach(s => { html += `<option value="${s}">${escapeHtml(sourceLabel(s))} (${counts[s]})</option>`; });
-    if (noneCount) html += `<option value="__none">No source (${noneCount})</option>`;
-    sel.innerHTML = html;
-    sel.value = currentSourceFilter;
-    if (sel.value !== currentSourceFilter) { currentSourceFilter = 'all'; sel.value = 'all'; } // selected source no longer present
+  // Source filter buttons in the All Requests toolbar:
+  //   All · 🎵 TikTok · 📸 Instagram · 📘 Meta · Everything else
+  // Counts are computed over the CURRENT view (status + search) so the numbers
+  // always match the table. "Everything else" = any lead not from the three
+  // named channels (other sources + untagged), so the buttons partition the list.
+  const MAIN_SOURCES = ['tiktok', 'instagram', 'meta'];
+  function computeSourceCounts(list) {
+    const nm = r => (r.source || '').trim().toLowerCase();
+    return {
+      all:       list.length,
+      tiktok:    list.filter(r => nm(r) === 'tiktok').length,
+      instagram: list.filter(r => nm(r) === 'instagram').length,
+      meta:      list.filter(r => nm(r) === 'meta').length,
+      __other:   list.filter(r => !MAIN_SOURCES.includes(nm(r))).length
+    };
+  }
+  function renderSourceFilters(counts) {
+    const row = document.getElementById('source-filter-row');
+    if (!row) return;
+    const defs = [
+      { key: 'all',       label: 'All' },
+      { key: 'tiktok',    label: '🎵 TikTok' },
+      { key: 'instagram', label: '📸 Instagram' },
+      { key: 'meta',      label: '📘 Meta' },
+      { key: '__other',   label: 'Everything else' }
+    ];
+    row.innerHTML =
+      '<span style="font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-muted);margin-right:2px;">Source</span>'
+      + defs.map(d => {
+          const active = currentSourceFilter === d.key ? ' active' : '';
+          return `<button class="filter-btn${active}" onclick="filterBySource('${d.key}')">${d.label} <span style="opacity:0.55;font-weight:700;">${counts[d.key]}</span></button>`;
+        }).join('');
   }
 
   function renderTable() {
@@ -5290,11 +5301,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       });
     }
 
-    // Lead-source (channel) filter — rebuild the dropdown from live data, then
-    // narrow to the chosen source. '__none' = leads with no source (direct).
-    populateSourceFilter();
-    if (currentSourceFilter === '__none') {
-      filtered = filtered.filter(r => !(r.source || '').trim());
+    // Lead-source (channel) filter. Paint the filter buttons with counts over
+    // the current view, then narrow. '__other' = anything not tiktok/ig/meta.
+    renderSourceFilters(computeSourceCounts(filtered));
+    if (currentSourceFilter === '__other') {
+      filtered = filtered.filter(r => !MAIN_SOURCES.includes((r.source || '').trim().toLowerCase()));
     } else if (currentSourceFilter && currentSourceFilter !== 'all') {
       filtered = filtered.filter(r => (r.source || '').trim().toLowerCase() === currentSourceFilter);
     }
