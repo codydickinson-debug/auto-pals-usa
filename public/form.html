@@ -3590,6 +3590,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
 
   async function dbPost(table, body) {
+    _markWritten(table, body);
     if (isLocal) return null;
     try {
       const res = await fetch(`${DB_BASE}?table=${table}`, {
@@ -3609,6 +3610,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
 
   async function dbPut(table, body) {
+    _markWritten(table, body);
     if (isLocal) return true;
     try {
       const res = await fetch(`${DB_BASE}?table=${table}`, {
@@ -3790,7 +3792,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const mapped = dbReqs.map(mapRequestFromDB).filter(r => !isDeleted(r.id));
       // Preserve any local-only fields (e.g. aiPending) for requests still present
       const localById = Object.fromEntries(requests.map(r => [r.id, r]));
-      requests = mapped.map(r => ({ ...localById[r.id], ...r }));
+      const _now = Date.now();
+      requests = mapped.map(r => {
+        const local = localById[r.id];
+        // If we wrote this row in the last few seconds, keep OUR optimistic
+        // version so a stale poll can't revert a just-clicked change before the
+        // write lands. Otherwise the DB row wins (cross-device sync) while still
+        // preserving local-only fields.
+        const wroteAt = _recentWrites.get(String(r.id)) || 0;
+        if (local && (_now - wroteAt) < POLL_QUIET_MS) return { ...r, ...local };
+        return { ...local, ...r };
+      });
       localStorage.setItem('am_requests', JSON.stringify(requests));
     }
     // v165: only sync down from the server when it has at least one row.
@@ -3917,8 +3929,19 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   let currentSourceFilter = 'all';   // lead-source (channel) dropdown filter
   let activeRequestId = null;
 
-  let lastSaveTime = 0;
+  // After a local write we keep that request's optimistic value for a short
+  // window, so the 20s auto-refresh poll can't revert a just-clicked change
+  // before the write lands in Supabase. Fixes the "click No-show / Actively
+  // Searching, it flips back, click again" glitch. Keyed by request id → write
+  // timestamp; self-prunes so it can't grow across a long session.
   const POLL_QUIET_MS = 8000;
+  const _recentWrites = new Map();
+  function _markWritten(table, body) {
+    if (table !== 'requests' || !body || body.id == null) return;
+    const now = Date.now();
+    _recentWrites.set(String(body.id), now);
+    for (const [k, t] of _recentWrites) { if (now - t > POLL_QUIET_MS) _recentWrites.delete(k); }
+  }
   const deletedIds = new Set();
 
   function save() {
