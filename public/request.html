@@ -1490,11 +1490,25 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
    * back to ?utm_source / ?ref so ad-platform auto-tagged links also work.
    * Normalized to a short lowercase slug. Nothing is published — the URLs just
    * get shared per channel; they all load this same form. */
+  function normalizeSrc(raw) {
+    return String(raw || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
+  }
   function getLeadSource() {
     try {
       const p = new URLSearchParams(window.location.search);
-      const raw = p.get('src') || p.get('utm_source') || p.get('ref') || '';
-      return String(raw).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
+      const fromUrl = normalizeSrc(p.get('src') || p.get('utm_source') || p.get('ref') || '');
+      if (fromUrl) {
+        // A fresh tagged link is authoritative — use it and refresh the stored copy.
+        try { localStorage.setItem('am_lead_src', fromUrl); localStorage.setItem('am_lead_src_ts', String(Date.now())); } catch (e) {}
+        return fromUrl;
+      }
+      // No ?src here — fall back to a source captured earlier (e.g. on the
+      // homepage before the visitor clicked through), as long as it's recent so
+      // we don't credit an ancient visit. 30-day window.
+      const stored = localStorage.getItem('am_lead_src') || '';
+      const ts = Number(localStorage.getItem('am_lead_src_ts') || 0);
+      if (stored && ts && (Date.now() - ts) < 30 * 24 * 60 * 60 * 1000) return stored;
+      return '';
     } catch (e) { return ''; }
   }
 

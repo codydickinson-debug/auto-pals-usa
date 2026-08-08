@@ -1519,6 +1519,23 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 </footer>
 
 <script>
+  // Lead-source capture — if an ad points at the homepage with a ?src tag
+  // (e.g. autopalsusa.com/?src=tiktok, which the root redirect carries here as
+  // /home.html?src=tiktok), stash the channel so it follows the visitor into
+  // the request form. request.html's getLeadSource() reads this as a fallback
+  // when its own URL has no ?src. Mirrors the normalize + 30-day rules there.
+  (function () {
+    try {
+      var p = new URLSearchParams(window.location.search);
+      var s = String(p.get('src') || p.get('utm_source') || p.get('ref') || '')
+        .trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
+      if (s) {
+        localStorage.setItem('am_lead_src', s);
+        localStorage.setItem('am_lead_src_ts', String(Date.now()));
+      }
+    } catch (e) { /* private-mode / no storage — non-fatal */ }
+  })();
+
   // Discreet staff access — the public "Employee Access" footer link was
   // removed (security audit: don't advertise the admin door). Staff get in by
   // clicking the footer copyright line 5× quickly, which opens the same
