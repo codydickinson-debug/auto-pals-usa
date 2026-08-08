@@ -2028,7 +2028,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v175 · 2026-08-07</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v176 · 2026-08-07</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2465,6 +2465,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button class="sidebar-subitem" onclick="filterRequests('fu3', this)"><span class="sub-dot" style="background:#0369a1"></span>Follow-up 3 <span class="badge" id="badge-fu3">0</span></button>
           <button class="sidebar-subitem" onclick="filterRequests('fu4', this)"><span class="sub-dot" style="background:#075985"></span>Follow-up 4 <span class="badge" id="badge-fu4">0</span></button>
         </div>
+        <button class="sidebar-item" onclick="filterRequests('pending_deposit', this)">
+          Pending Deposit <span class="badge" id="badge-pending_deposit">0</span>
+        </button>
         <button class="sidebar-item" onclick="filterRequests('searching', this)">
           Actively Searching <span class="badge" id="badge-searching">0</span>
         </button>
@@ -5027,6 +5030,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     counts.fu3 = requests.filter(r => effectiveFollowUp(r) === 3).length;
     counts.fu4 = requests.filter(r => effectiveFollowUp(r) === 4).length;
     counts.followups = counts.fu1 + counts.fu2 + counts.fu3 + counts.fu4;
+    counts.pending_deposit = requests.filter(isPendingDeposit).length;
     Object.entries(counts).forEach(([k,v]) => {
       const el = document.getElementById('badge-' + k);
       if (el) el.textContent = v;
@@ -5041,7 +5045,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.querySelectorAll('.action-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.sidebar-item, .sidebar-subitem').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
-    const titles = { all: 'All Requests', new: 'New Requests', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Follow-ups', fu1: 'Follow-up 1', fu2: 'Follow-up 2', fu3: 'Follow-up 3', fu4: 'Follow-up 4', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
+    const titles = { all: 'All Requests', new: 'New Requests', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Follow-ups', fu1: 'Follow-up 1', fu2: 'Follow-up 2', fu3: 'Follow-up 3', fu4: 'Follow-up 4', pending_deposit: 'Pending Deposit — good call, no deposit yet', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
     document.getElementById('table-title').textContent = titles[f] || 'Requests';
     renderTable();
   }
@@ -5196,6 +5200,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       filtered = requests.filter(r => callDisposition(r) === 'good');
     } else if (currentFilter === 'called_bad') {
       filtered = requests.filter(r => callDisposition(r) === 'bad');
+    } else if (currentFilter === 'pending_deposit') {
+      filtered = requests.filter(isPendingDeposit);
     } else if (currentFilter === 'followups') {
       filtered = requests.filter(r => effectiveFollowUp(r) > 0);
     } else if (currentFilter === 'fu1' || currentFilter === 'fu2' || currentFilter === 'fu3' || currentFilter === 'fu4') {
@@ -5796,6 +5802,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   function isCold(r) {
     return !!r && effectiveFollowUp(r) > 0 && !hasReplied(r)
       && !(r.depositPaid || r.depositReceived) && r.status !== 'sold';
+  }
+  // Pending deposit — completed a call (and didn't go badly) but hasn't paid
+  // the deposit yet: "said they'd sign up but never did." Overlaps with Good
+  // call / Follow-up tabs by design.
+  function isPendingDeposit(r) {
+    return !!r && !!r.callCompletedAt && r.callOutcome !== 'bad'
+      && !(r.depositPaid || r.depositReceived)
+      && r.status !== 'sold' && r.status !== 'rejected';
   }
   function replyBadge(r) {
     if (hasReplied(r)) {
