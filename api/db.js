@@ -596,6 +596,7 @@ module.exports = async function handler(req, res) {
           call_completed_at:       b.callCompletedAt,
           no_show_at:              b.noShowAt,
           call_outcome:            b.callOutcome,
+          call_outcome_reason:     b.callOutcomeReason,
           follow_up_stage:         b.followUpStage,
           follow_up_updated_at:    b.followUpUpdatedAt,
           booking_confirmed_at:    b.bookingConfirmedAt,

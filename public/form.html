@@ -2963,6 +2963,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
             <button onclick="setCallOutcome(activeRequestId,'noshow')" style="padding:5px 10px;background:none;color:#92400e;border:1px solid #fcd34d;border-radius:6px;font-family:system-ui,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">No-show</button>
             <button onclick="clearCallOutcome(activeRequestId)" style="padding:5px 10px;background:none;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Clear</button>
           </div>
+          <!-- Bad-call reason — only shown when the call is graded bad. -->
+          <div id="dv-bad-reason-wrap" style="display:none;margin-top:10px;">
+            <label for="dv-bad-reason" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.02em;color:#b91c1c;margin-bottom:4px;font-family:system-ui,sans-serif;">Why was it a bad call?</label>
+            <textarea id="dv-bad-reason" rows="2" placeholder="e.g. budget too low, not serious, just browsing, wrong number…" onblur="saveBadCallReason()" style="width:100%;box-sizing:border-box;font-family:system-ui,sans-serif;font-size:12px;padding:8px;border:1px solid #fecaca;border-radius:6px;resize:vertical;color:var(--text);background:var(--white,#fff);"></textarea>
+            <div id="dv-bad-reason-status" style="font-size:11px;color:var(--text-muted);margin-top:3px;min-height:14px;font-family:system-ui,sans-serif;"></div>
+          </div>
         </div>
         <!-- No-show -->
         <div id="dv-call-noshow" style="display:none;padding:10px 12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;font-weight:700;color:#92400e;">
@@ -3737,6 +3743,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       callCompletedAt: r.call_completed_at,
       noShowAt: r.no_show_at,
       callOutcome: r.call_outcome || null,
+      callOutcomeReason: r.call_outcome_reason || '',
       followUpStage: Number(r.follow_up_stage) || 0,
       followUpUpdatedAt: r.follow_up_updated_at || null,
       // The automated SMS drip logs every follow-up it sends here (pre1-4 before
@@ -5634,6 +5641,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       if (badge) badge.innerHTML = `<span class="disp-badge" style="background:${m.bg};color:${m.color};border:1px solid ${m.border};">${m.label}</span>`;
       const dateEl = document.getElementById('dv-call-date');
       if (dateEl) dateEl.textContent = r.callCompletedAt ? '· ' + new Date(r.callCompletedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' }) + ' EST' : '';
+      // Bad-call reason box: only for bad calls. Don't clobber the text while
+      // staff are typing (the 20s auto-refresh re-renders this view).
+      const _brWrap = document.getElementById('dv-bad-reason-wrap');
+      const _brInput = document.getElementById('dv-bad-reason');
+      if (_brWrap) _brWrap.style.display = (_disp === 'bad') ? 'block' : 'none';
+      if (_brInput && _disp === 'bad' && document.activeElement !== _brInput) _brInput.value = r.callOutcomeReason || '';
+      const _brStatus = document.getElementById('dv-bad-reason-status');
+      if (_brStatus && document.activeElement !== _brInput) _brStatus.textContent = '';
     } else if (_disp === 'noshow') {
       _pendDiv.style.display = 'none';
       _doneDiv.style.display = 'none';
@@ -5821,21 +5836,46 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (!r.callCompletedAt) { r.callCompletedAt = new Date().toISOString(); patch.callCompletedAt = r.callCompletedAt; }
     if (r.noShowAt) { r.noShowAt = null; patch.noShowAt = null; }
     if (['new', 'review', 'qualified'].includes(r.status)) { r.status = 'called'; patch.status = 'called'; }
+    // A good call clears any prior bad-call reason — it no longer applies.
+    if (outcome !== 'bad' && r.callOutcomeReason) { r.callOutcomeReason = ''; patch.callOutcomeReason = ''; }
     save();
     dbPut('requests', patch);
     renderDashboard();
     if (activeRequestId === id) populateDetailView(r);
     _refreshPipelineIfOpen();
+    // Bad call → drop focus straight into the reason box so staff can jot why.
+    if (outcome === 'bad' && activeRequestId === id) {
+      const el = document.getElementById('dv-bad-reason');
+      if (el) el.focus();
+    }
   }
   function clearCallOutcome(id) {
     const r = requests.find(x => x.id === id);
     if (!r) return;
     r.callOutcome = null;
+    const _patch = { id: r.id, callOutcome: null };
+    if (r.callOutcomeReason) { r.callOutcomeReason = ''; _patch.callOutcomeReason = ''; }
     save();
-    dbPut('requests', { id: r.id, callOutcome: null });
+    dbPut('requests', _patch);
     renderDashboard();
     if (activeRequestId === id) populateDetailView(r);
     _refreshPipelineIfOpen();
+  }
+  // Persist the bad-call reason (fires on blur of the reason box). Narrow PATCH,
+  // only writes when the text actually changed.
+  function saveBadCallReason() {
+    if (activeRequestId == null) return;
+    const el = document.getElementById('dv-bad-reason');
+    if (!el) return;
+    const r = requests.find(x => x.id === activeRequestId);
+    if (!r) return;
+    const val = el.value.trim().slice(0, 1000);
+    if ((r.callOutcomeReason || '') === val) return;   // no change → no write
+    r.callOutcomeReason = val;
+    save();
+    dbPut('requests', { id: r.id, callOutcomeReason: val });
+    const status = document.getElementById('dv-bad-reason-status');
+    if (status) { status.textContent = 'Saved ✓'; setTimeout(() => { if (status && status.textContent === 'Saved ✓') status.textContent = ''; }, 1500); }
   }
 
   // Manual follow-up funnel: 0 = not in follow-up, 1..4 = follow-up #1..#4.
