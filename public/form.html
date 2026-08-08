@@ -2028,7 +2028,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v174 · 2026-08-07</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v175 · 2026-08-07</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -5039,7 +5039,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // Sidebar takes priority — clear action-queue card highlight
     currentActionFilter = null;
     document.querySelectorAll('.action-card').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item, .sidebar-subitem').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
     const titles = { all: 'All Requests', new: 'New Requests', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Follow-ups', fu1: 'Follow-up 1', fu2: 'Follow-up 2', fu3: 'Follow-up 3', fu4: 'Follow-up 4', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
     document.getElementById('table-title').textContent = titles[f] || 'Requests';
@@ -5173,7 +5173,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       if (el) el.classList.add('active');
     }
     // Reset sidebar status filter so the action queue takes over
-    document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item, .sidebar-subitem').forEach(el => el.classList.remove('active'));
     const titles = { new: 'New requests — needs review', outreach: 'Outreach due — call these next', search: 'Active searches — deposit paid' };
     document.getElementById('table-title').textContent = currentActionFilter ? titles[kind] : 'All Requests';
     renderTable();
@@ -7537,7 +7537,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
 
   function showPsiPanel(btn) {
-    document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item, .sidebar-subitem').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
     ['panel-requests','panel-opensearch','panel-repair','panel-sold'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
@@ -7589,7 +7589,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
 
   function showOpenSearchPanel(btn) {
-    document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.sidebar-item, .sidebar-subitem').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
     ['panel-requests','panel-psi','panel-repair','panel-sold'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
     document.getElementById('panel-opensearch').style.display = 'block';
