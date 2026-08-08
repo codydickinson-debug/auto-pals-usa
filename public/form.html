@@ -810,6 +810,31 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .sidebar-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
   .sidebar-item.active { background: var(--gold-grad); color: #33260a; }
   .sidebar-item.active .badge { background: rgba(51,38,10,0.18); color: #33260a; }
+  /* Post-call disposition sub-pipeline under Called */
+  .sidebar-sub { margin: 2px 0 6px 10px; padding-left: 8px; border-left: 2px solid rgba(255,255,255,0.12); display: flex; flex-direction: column; gap: 1px; }
+  .sidebar-subitem {
+    display: flex; align-items: center; gap: 7px;
+    padding: 6px 10px; border-radius: var(--radius); cursor: pointer;
+    font-family: system-ui, sans-serif; font-size: 12px; color: rgba(255,255,255,0.6);
+    border: none; background: none; width: 100%; text-align: left; font-weight: 500;
+    transition: background 0.12s, color 0.12s;
+  }
+  .sidebar-subitem .badge { margin-left: auto; }
+  .sidebar-subitem:hover { background: rgba(255,255,255,0.08); color: #fff; }
+  .sidebar-subitem.active { background: rgba(255,255,255,0.14); color: #fff; }
+  .sub-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  /* Canonical pipeline-stage pill (requests table) */
+  .stage-pill {
+    display: inline-block; padding: 1px 8px; border-radius: 99px;
+    font-size: 11px; font-weight: 700; font-family: system-ui, sans-serif;
+    border: 1px solid; white-space: nowrap;
+  }
+  /* "auto" marker — stage advanced by the drip, not a manual set */
+  .pl-auto {
+    margin-left: 6px; font-size: 9px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.05em; color: #0369a1; background: #e0f2fe; border: 1px solid #bae6fd;
+    border-radius: 4px; padding: 0 4px; vertical-align: middle;
+  }
   .badge {
     background: rgba(255,255,255,0.12);
     color: rgba(255,255,255,0.6);
@@ -1989,7 +2014,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v172 · 2026-08-07</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v173 · 2026-08-07</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2410,9 +2435,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <button class="sidebar-item" onclick="filterRequests('called', this)">
           Called <span class="badge" id="badge-called">0</span>
         </button>
-        <button class="sidebar-item" onclick="filterRequests('noshow', this)">
-          No-Shows <span class="badge" id="badge-noshow">0</span>
-        </button>
+        <!-- Post-call disposition pipeline under Called -->
+        <div class="sidebar-sub" id="called-sub">
+          <button class="sidebar-subitem" onclick="filterRequests('called_good', this)"><span class="sub-dot" style="background:#047857"></span>Good call <span class="badge" id="badge-called_good">0</span></button>
+          <button class="sidebar-subitem" onclick="filterRequests('called_bad', this)"><span class="sub-dot" style="background:#b91c1c"></span>Bad call <span class="badge" id="badge-called_bad">0</span></button>
+          <button class="sidebar-subitem" onclick="filterRequests('called_noshow', this)"><span class="sub-dot" style="background:#f59e0b"></span>No-show <span class="badge" id="badge-called_noshow">0</span></button>
+        </div>
         <button class="sidebar-item" onclick="filterRequests('searching', this)">
           Actively Searching <span class="badge" id="badge-searching">0</span>
         </button>
@@ -3675,6 +3703,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       callOutcome: r.call_outcome || null,
       followUpStage: Number(r.follow_up_stage) || 0,
       followUpUpdatedAt: r.follow_up_updated_at || null,
+      // The automated SMS drip logs every follow-up it sends here (pre1-4 before
+      // the call, post0-3 after). Lets the dashboard auto-track follow-up
+      // progress with no staff action — see dripStage()/effectiveFollowUp().
+      smsRemindersSent: Array.isArray(r.client_sms_reminders_sent) ? r.client_sms_reminders_sent : [],
       bookingConfirmedAt: r.booking_confirmed_at,
       // When the request was last flipped to status='dormant'. Used by the
       // Messages tab to hide stale dormant threads until either side sends
@@ -4960,6 +4992,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     });
     counts.dormant = requests.filter(isDormantRequest).length;
     counts.noshow = requests.filter(isNoShowRequest).length;
+    // Post-call disposition sub-tabs under Called.
+    counts.called_good = requests.filter(r => callDisposition(r) === 'good').length;
+    counts.called_bad = requests.filter(r => callDisposition(r) === 'bad').length;
+    counts.called_noshow = counts.noshow;
     Object.entries(counts).forEach(([k,v]) => {
       const el = document.getElementById('badge-' + k);
       if (el) el.textContent = v;
@@ -4974,7 +5010,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.querySelectorAll('.action-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
-    const titles = { all: 'All Requests', new: 'New Requests', qualified: 'Qualified Leads', called: 'Called', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
+    const titles = { all: 'All Requests', new: 'New Requests', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
     document.getElementById('table-title').textContent = titles[f] || 'Requests';
     renderTable();
   }
@@ -5122,9 +5158,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       filtered = requests.filter(r => r.status === 'qualified' && !r.callCompletedAt && !isDormantRequest(r));
     } else if (currentActionFilter === 'search') {
       filtered = requests.filter(r => (r.depositReceived || r.depositPaid) && r.status !== 'sold' && r.status !== 'rejected');
-    } else if (currentFilter === 'noshow') {
+    } else if (currentFilter === 'noshow' || currentFilter === 'called_noshow') {
       // 'noshow' is a derived view — booked calls that weren't answered.
       filtered = requests.filter(isNoShowRequest);
+    } else if (currentFilter === 'called_good') {
+      filtered = requests.filter(r => callDisposition(r) === 'good');
+    } else if (currentFilter === 'called_bad') {
+      filtered = requests.filter(r => callDisposition(r) === 'bad');
     } else {
       // Dormant leads (14d+ no deposit) are moved off the dashboard into the
       // Dormant Google Sheet, so 'All' hides them like it hides sold/rejected.
@@ -5182,7 +5222,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <td data-label="Budget">${budget}${paymentBadge(r)}</td>
         <td data-label="Years">${years}</td>
         <td data-label="AI">${tlCell}</td>
-        <td data-label="Status">${sla}<span class="status-pill ${statusClass}"><span class="dot ${dotClass}"></span>${statusLabel}</span></td>
+        <td data-label="Status">${sla}<span class="status-pill ${statusClass}"><span class="dot ${dotClass}"></span>${statusLabel}</span><div style="margin-top:4px;">${stagePill(r)}</div></td>
         <td data-label="Submitted" style="color:var(--text-muted)">${date}</td>
         <td style="width:80px;text-align:center;">
           <div style="display:flex;align-items:center;gap:6px;justify-content:center;">
@@ -5641,12 +5681,37 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (!r) return;
     setFollowUpStage(id, (Number(r.followUpStage) || 0) + delta);
   }
+  // ── Automatic follow-up tracking (no staff action) ─────────────────
+  // The daily cron sends the follow-up drip and logs each one in
+  // smsRemindersSent: pre1..pre4 while chasing a booking, post0..post3 after
+  // the call. dripStage() turns that log into a follow-up number 1..4 so the
+  // funnel advances on its own. effectiveFollowUp() = the higher of the
+  // auto-derived stage and any manual override staff set — so staff can push a
+  // lead further, but they never have to touch it for it to move.
+  function dripStage(r) {
+    const sent = Array.isArray(r && r.smsRemindersSent) ? r.smsRemindersSent : [];
+    const seq = r && r.callCompletedAt
+      ? ['post0', 'post1', 'post2', 'post3']   // after the call
+      : ['pre1', 'pre2', 'pre3', 'pre4'];      // before the call (chasing a booking)
+    let n = 0;
+    seq.forEach((label, i) => { if (sent.includes(label)) n = i + 1; });
+    return n;
+  }
+  function effectiveFollowUp(r) {
+    return Math.max(Number(r && r.followUpStage) || 0, dripStage(r));
+  }
+  // True when the shown stage came from the drip, not a manual set.
+  function followUpIsAuto(r) {
+    return dripStage(r) > (Number(r && r.followUpStage) || 0);
+  }
+
   function followUpChip(r) {
-    const s = Number(r && r.followUpStage) || 0;
+    const s = effectiveFollowUp(r);
     if (!s) return '';
     const days = followUpDays(r);
     const stuck = days != null && days >= 5;
-    return `<span class="fu-chip${stuck ? ' fu-chip-stuck' : ''}" title="Follow-up #${s}${days != null ? ' · ' + days + 'd in stage' : ''}">FU${s}</span>`;
+    const auto = followUpIsAuto(r);
+    return `<span class="fu-chip${stuck ? ' fu-chip-stuck' : ''}" title="Follow-up #${s}${auto ? ' (auto — drip)' : ''}${days != null ? ' · ' + days + 'd in stage' : ''}">FU${s}${auto ? '·auto' : ''}</span>`;
   }
   // Whole days since follow_up_stage last changed (for "stuck" highlighting).
   function followUpDays(r) {
@@ -5654,6 +5719,32 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const t = new Date(r.followUpUpdatedAt).getTime();
     if (!t) return null;
     return Math.floor((Date.now() - t) / 86400000);
+  }
+
+  // Canonical "where is this lead" pipeline-stage label. One clear answer,
+  // used on the requests table and the pipeline board so both agree.
+  function pipelineStage(r) {
+    if (!r) return { key: 'new', label: 'New', color: '#64748b' };
+    if (r.status === 'sold') return { key: 'sold', label: 'Sold', color: '#0f2557' };
+    if (r.depositPaid || r.depositReceived) return { key: 'deposit', label: 'Deposit paid', color: '#b45309' };
+    if (r.status === 'awaiting_paperwork') return { key: 'awaiting', label: 'Awaiting paperwork', color: '#1d4ed8' };
+    if (r.status === 'psi') return { key: 'psi', label: 'PSI period', color: '#4338ca' };
+    if (r.status === 'in_repair') return { key: 'repair', label: 'In repair', color: '#c2410c' };
+    if (r.status === 'searching') return { key: 'searching', label: 'Actively searching', color: '#047857' };
+    const fu = effectiveFollowUp(r);
+    if (fu) return { key: 'fu', label: 'Follow-up ' + fu, color: '#0ea5e9' };
+    const disp = callDisposition(r);
+    if (disp === 'good') return { key: 'good', label: 'Good call', color: '#047857' };
+    if (disp === 'bad')  return { key: 'bad',  label: 'Bad call',  color: '#b91c1c' };
+    if (disp === 'noshow') return { key: 'noshow', label: 'No-show', color: '#92400e' };
+    if (r.callCompletedAt) return { key: 'called', label: 'Called', color: '#2563eb' };
+    if (r.bookingConfirmedAt) return { key: 'booked', label: 'Booked call', color: '#6d28d9' };
+    if (r.status === 'qualified') return { key: 'qualified', label: 'Qualified', color: '#15803d' };
+    return { key: 'new', label: 'New', color: '#64748b' };
+  }
+  function stagePill(r) {
+    const s = pipelineStage(r);
+    return `<span class="stage-pill" style="color:${s.color};border-color:${s.color}33;background:${s.color}14;">${s.label}</span>`;
   }
   function _refreshPipelineIfOpen() {
     const v = document.getElementById('view-pipeline');
@@ -5665,20 +5756,22 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const wrap = document.getElementById('dv-fu-chips');
     const meta = document.getElementById('dv-fu-meta');
     if (!wrap) return;
-    const cur = Number(r.followUpStage) || 0;
+    const eff = effectiveFollowUp(r);   // auto (drip) + manual, whichever is higher
+    const auto = followUpIsAuto(r);
     const chips = [
       { n: 0, label: 'None' }, { n: 1, label: 'FU1' }, { n: 2, label: 'FU2' },
       { n: 3, label: 'FU3' }, { n: 4, label: 'FU4' }
     ];
     wrap.innerHTML = chips.map(c =>
-      `<button class="fu-stage-btn${c.n === cur ? ' active' : ''}" onclick="setFollowUpStage(activeRequestId,${c.n})">${c.label}</button>`
+      `<button class="fu-stage-btn${c.n === eff ? ' active' : ''}" onclick="setFollowUpStage(activeRequestId,${c.n})">${c.label}</button>`
     ).join('');
     if (meta) {
-      if (!cur) {
-        meta.textContent = 'Not in the follow-up funnel yet.';
+      if (!eff) {
+        meta.textContent = 'Not in the follow-up funnel yet. The SMS drip advances this automatically; you can also set it by hand.';
       } else {
         const days = followUpDays(r);
-        meta.textContent = `In Follow-up #${cur}` + (days != null ? ` · ${days} day${days === 1 ? '' : 's'} in this stage` : '');
+        const src = auto ? ' · auto-advanced by the SMS drip' : (days != null ? ` · ${days} day${days === 1 ? '' : 's'} in this stage` : '');
+        meta.textContent = `In Follow-up #${eff}${src}`;
       }
     }
   }
@@ -5734,8 +5827,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         : '<div class="pl-empty">No calls graded yet.</div>';
     }
 
-    // Follow-up stage distribution (current position)
-    const fu = [1, 2, 3, 4].map(n => all.filter(r => (Number(r.followUpStage) || 0) === n).length);
+    // Follow-up stage distribution (effective = auto drip + manual override)
+    const fu = [1, 2, 3, 4].map(n => all.filter(r => effectiveFollowUp(r) === n).length);
     const fuMax = Math.max(1, ...fu);
     const fuEl = document.getElementById('pl-fu-funnel');
     if (fuEl) {
@@ -5748,15 +5841,16 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const boardEl = document.getElementById('pl-board');
     if (boardEl) {
       boardEl.innerHTML = [1, 2, 3, 4].map(n => {
-        const leads = all.filter(r => (Number(r.followUpStage) || 0) === n)
+        const leads = all.filter(r => effectiveFollowUp(r) === n)
           .sort((a, b) => new Date(a.followUpUpdatedAt || 0) - new Date(b.followUpUpdatedAt || 0));
         const cards = leads.length ? leads.map(r => {
           const days = followUpDays(r);
           const disp = callDisposition(r);
           const dm = disp !== 'none' ? CALL_OUTCOME_META[disp] : null;
           const veh = [r.make, r.model].filter(v => v && v !== '—').join(' ') || 'Open search';
+          const auto = followUpIsAuto(r) ? '<span class="pl-auto" title="Advanced automatically by the SMS drip">auto</span>' : '';
           return `<div class="pl-lead" onclick="openDetailView(${r.id})">
-            <div class="pl-lead-name">${escapeHtml(r.firstName + ' ' + r.lastName)}</div>
+            <div class="pl-lead-name">${escapeHtml(r.firstName + ' ' + r.lastName)}${auto}</div>
             <div class="pl-lead-meta">${escapeHtml(veh)}${days != null ? ' · ' + days + 'd' : ''}</div>
             ${dm ? `<span class="disp-badge" style="background:${dm.bg};color:${dm.color};border:1px solid ${dm.border};">${dm.short}</span>` : ''}
           </div>`;
