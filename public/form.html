@@ -821,7 +821,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
   .sidebar-subitem .badge { margin-left: auto; }
   .sidebar-subitem:hover { background: rgba(255,255,255,0.08); color: #fff; }
-  .sidebar-subitem.active { background: rgba(255,255,255,0.14); color: #fff; }
+  /* Gold active state — matches the top-level sidebar tabs so clicking a
+     Good/Bad/No-show or Follow-up sub-tab reads as "selected" in the theme. */
+  .sidebar-subitem.active { background: var(--gold-grad); color: #33260a; font-weight: 700; }
+  .sidebar-subitem.active .badge { background: rgba(51,38,10,0.18); color: #33260a; }
+  .sidebar-subitem.active .sub-dot { box-shadow: 0 0 0 2px rgba(51,38,10,0.25); }
   .sub-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
   /* Canonical pipeline-stage pill (requests table) */
   .stage-pill {
@@ -1391,6 +1395,16 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     background: #e0f2fe; color: #075985; border: 1px solid #bae6fd;
   }
   .fu-chip-stuck { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+  /* Reply / engagement badges (from the SMS reply-tracking webhook) */
+  .reply-badge {
+    display: inline-block; margin-left: 6px; padding: 2px 7px;
+    border-radius: 99px; font-size: 11px; font-weight: 700;
+    font-family: system-ui, sans-serif; vertical-align: middle; white-space: nowrap;
+  }
+  .reply-badge.replied { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+  .reply-badge.cold    { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+  .pl-engage { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+  .pl-lead-cold { border-left: 3px solid #cbd5e1; }
   /* Detail-panel follow-up stage buttons */
   .fu-stage-btn {
     padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
@@ -2014,7 +2028,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v173 · 2026-08-07</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v174 · 2026-08-07</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2440,6 +2454,16 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button class="sidebar-subitem" onclick="filterRequests('called_good', this)"><span class="sub-dot" style="background:#047857"></span>Good call <span class="badge" id="badge-called_good">0</span></button>
           <button class="sidebar-subitem" onclick="filterRequests('called_bad', this)"><span class="sub-dot" style="background:#b91c1c"></span>Bad call <span class="badge" id="badge-called_bad">0</span></button>
           <button class="sidebar-subitem" onclick="filterRequests('called_noshow', this)"><span class="sub-dot" style="background:#f59e0b"></span>No-show <span class="badge" id="badge-called_noshow">0</span></button>
+        </div>
+        <button class="sidebar-item" onclick="filterRequests('followups', this)">
+          Follow-ups <span class="badge" id="badge-followups">0</span>
+        </button>
+        <!-- Follow-up funnel pipeline -->
+        <div class="sidebar-sub" id="followups-sub">
+          <button class="sidebar-subitem" onclick="filterRequests('fu1', this)"><span class="sub-dot" style="background:#0ea5e9"></span>Follow-up 1 <span class="badge" id="badge-fu1">0</span></button>
+          <button class="sidebar-subitem" onclick="filterRequests('fu2', this)"><span class="sub-dot" style="background:#0284c7"></span>Follow-up 2 <span class="badge" id="badge-fu2">0</span></button>
+          <button class="sidebar-subitem" onclick="filterRequests('fu3', this)"><span class="sub-dot" style="background:#0369a1"></span>Follow-up 3 <span class="badge" id="badge-fu3">0</span></button>
+          <button class="sidebar-subitem" onclick="filterRequests('fu4', this)"><span class="sub-dot" style="background:#075985"></span>Follow-up 4 <span class="badge" id="badge-fu4">0</span></button>
         </div>
         <button class="sidebar-item" onclick="filterRequests('searching', this)">
           Actively Searching <span class="badge" id="badge-searching">0</span>
@@ -3707,6 +3731,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       // the call, post0-3 after). Lets the dashboard auto-track follow-up
       // progress with no staff action — see dripStage()/effectiveFollowUp().
       smsRemindersSent: Array.isArray(r.client_sms_reminders_sent) ? r.client_sms_reminders_sent : [],
+      lastReplyAt: r.last_reply_at || null,
       bookingConfirmedAt: r.booking_confirmed_at,
       // When the request was last flipped to status='dormant'. Used by the
       // Messages tab to hide stale dormant threads until either side sends
@@ -4996,6 +5021,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     counts.called_good = requests.filter(r => callDisposition(r) === 'good').length;
     counts.called_bad = requests.filter(r => callDisposition(r) === 'bad').length;
     counts.called_noshow = counts.noshow;
+    // Follow-up funnel sub-tabs (effective = auto drip + manual).
+    counts.fu1 = requests.filter(r => effectiveFollowUp(r) === 1).length;
+    counts.fu2 = requests.filter(r => effectiveFollowUp(r) === 2).length;
+    counts.fu3 = requests.filter(r => effectiveFollowUp(r) === 3).length;
+    counts.fu4 = requests.filter(r => effectiveFollowUp(r) === 4).length;
+    counts.followups = counts.fu1 + counts.fu2 + counts.fu3 + counts.fu4;
     Object.entries(counts).forEach(([k,v]) => {
       const el = document.getElementById('badge-' + k);
       if (el) el.textContent = v;
@@ -5010,7 +5041,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.querySelectorAll('.action-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
-    const titles = { all: 'All Requests', new: 'New Requests', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
+    const titles = { all: 'All Requests', new: 'New Requests', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Follow-ups', fu1: 'Follow-up 1', fu2: 'Follow-up 2', fu3: 'Follow-up 3', fu4: 'Follow-up 4', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
     document.getElementById('table-title').textContent = titles[f] || 'Requests';
     renderTable();
   }
@@ -5165,6 +5196,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       filtered = requests.filter(r => callDisposition(r) === 'good');
     } else if (currentFilter === 'called_bad') {
       filtered = requests.filter(r => callDisposition(r) === 'bad');
+    } else if (currentFilter === 'followups') {
+      filtered = requests.filter(r => effectiveFollowUp(r) > 0);
+    } else if (currentFilter === 'fu1' || currentFilter === 'fu2' || currentFilter === 'fu3' || currentFilter === 'fu4') {
+      const n = Number(currentFilter.slice(2));
+      filtered = requests.filter(r => effectiveFollowUp(r) === n);
     } else {
       // Dormant leads (14d+ no deposit) are moved off the dashboard into the
       // Dormant Google Sheet, so 'All' hides them like it hides sold/rejected.
@@ -5217,7 +5253,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const dayPill = depositDayPill(r);
       const sla = slaDot(r);
       return `<tr draggable="true" data-id="${r.id}" onclick="rowClick(event,${r.id})">
-        <td><strong>${r.firstName} ${r.lastName}</strong>${callBadge(r)}${dispositionBadge(r)}${followUpChip(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
+        <td><strong>${r.firstName} ${r.lastName}</strong>${callBadge(r)}${dispositionBadge(r)}${followUpChip(r)}${replyBadge(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
         <td data-label="Vehicle">${vehicle}</td>
         <td data-label="Budget">${budget}${paymentBadge(r)}</td>
         <td data-label="Years">${years}</td>
@@ -5746,6 +5782,32 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const s = pipelineStage(r);
     return `<span class="stage-pill" style="color:${s.color};border-color:${s.color}33;background:${s.color}14;">${s.label}</span>`;
   }
+
+  // ── Reply tracking (from the Salesmsg inbound webhook → last_reply_at) ──
+  // Engagement signal: has the client texted us back, and how recently.
+  function hasReplied(r) { return !!(r && r.lastReplyAt); }
+  function replyDays(r) {
+    if (!r || !r.lastReplyAt) return null;
+    const t = new Date(r.lastReplyAt).getTime();
+    if (!t) return null;
+    return Math.floor((Date.now() - t) / 86400000);
+  }
+  // A lead we're following up who has NOT replied is going cold.
+  function isCold(r) {
+    return !!r && effectiveFollowUp(r) > 0 && !hasReplied(r)
+      && !(r.depositPaid || r.depositReceived) && r.status !== 'sold';
+  }
+  function replyBadge(r) {
+    if (hasReplied(r)) {
+      const d = replyDays(r);
+      const when = d === 0 ? 'today' : d === 1 ? '1d ago' : (d != null ? d + 'd ago' : '');
+      return `<span class="reply-badge replied" title="Client replied ${escapeHtml(when)}">💬 Replied${when ? ' · ' + when : ''}</span>`;
+    }
+    if (isCold(r)) {
+      return `<span class="reply-badge cold" title="In follow-up with no reply yet">🔇 No reply</span>`;
+    }
+    return '';
+  }
   function _refreshPipelineIfOpen() {
     const v = document.getElementById('view-pipeline');
     if (v && v.classList.contains('active') && typeof renderPipeline === 'function') renderPipeline();
@@ -5832,9 +5894,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const fuMax = Math.max(1, ...fu);
     const fuEl = document.getElementById('pl-fu-funnel');
     if (fuEl) {
+      // Engagement: of leads currently in follow-up, how many have replied vs
+      // gone cold (no reply). This is the SMS reply-tracking signal.
+      const inFu = all.filter(r => effectiveFollowUp(r) > 0);
+      const replied = inFu.filter(hasReplied).length;
+      const cold = inFu.filter(isCold).length;
+      const engagement = inFu.length
+        ? `<div class="pl-engage"><span class="reply-badge replied" style="margin-left:0;">💬 ${replied} replied</span><span class="reply-badge cold" style="margin-left:0;">🔇 ${cold} no reply</span></div>`
+        : '';
       fuEl.innerHTML = fu.map((n, i) =>
         `<div class="pl-fun-row"><div class="pl-fun-label">Follow-up ${i + 1}</div><div class="pl-fun-barwrap"><div class="pl-fun-bar" style="width:${Math.max(Math.round((n / fuMax) * 100), 4)}%;background:#0ea5e9;">${n}</div></div><div class="pl-fun-conv">&nbsp;</div></div>`
-      ).join('');
+      ).join('') + engagement;
     }
 
     // Follow-up board — one column per stage with lead cards.
@@ -5849,10 +5919,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           const dm = disp !== 'none' ? CALL_OUTCOME_META[disp] : null;
           const veh = [r.make, r.model].filter(v => v && v !== '—').join(' ') || 'Open search';
           const auto = followUpIsAuto(r) ? '<span class="pl-auto" title="Advanced automatically by the SMS drip">auto</span>' : '';
-          return `<div class="pl-lead" onclick="openDetailView(${r.id})">
+          const rep = hasReplied(r) ? '<span class="reply-badge replied" style="margin-left:0;">💬</span>' : (isCold(r) ? '<span class="reply-badge cold" style="margin-left:0;">🔇</span>' : '');
+          return `<div class="pl-lead${isCold(r) ? ' pl-lead-cold' : ''}" onclick="openDetailView(${r.id})">
             <div class="pl-lead-name">${escapeHtml(r.firstName + ' ' + r.lastName)}${auto}</div>
             <div class="pl-lead-meta">${escapeHtml(veh)}${days != null ? ' · ' + days + 'd' : ''}</div>
-            ${dm ? `<span class="disp-badge" style="background:${dm.bg};color:${dm.color};border:1px solid ${dm.border};">${dm.short}</span>` : ''}
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${dm ? `<span class="disp-badge" style="margin-left:0;background:${dm.bg};color:${dm.color};border:1px solid ${dm.border};">${dm.short}</span>` : ''}${rep}</div>
           </div>`;
         }).join('') : '<div class="pl-empty">—</div>';
         return `<div class="pl-col"><div class="pl-col-head">Follow-up ${n} <span class="pl-col-count">${leads.length}</span></div><div class="pl-col-body">${cards}</div></div>`;
