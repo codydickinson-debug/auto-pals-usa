@@ -5060,6 +5060,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
   function filterRequests(f, btn) {
     currentFilter = f;
+    resetDashSearch();   // don't carry a search across tab switches
     // Sidebar takes priority — clear action-queue card highlight
     currentActionFilter = null;
     document.querySelectorAll('.action-card').forEach(el => el.classList.remove('active'));
@@ -5181,9 +5182,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     }
     return '';
   }
-  function clearDashSearch() {
+  // Clear the search box WITHOUT re-rendering — callers that switch tabs already
+  // call renderTable() themselves, so this just wipes the text + hides the ×.
+  function resetDashSearch() {
     const input = document.getElementById('dash-search-input');
-    if (input) { input.value = ''; renderTable(); }
+    if (input) input.value = '';
+    const clr = document.getElementById('dash-search-clear');
+    if (clr) clr.style.display = 'none';
+  }
+  function clearDashSearch() {
+    resetDashSearch();
+    renderTable();
   }
   function filterByAction(kind) {
     // Toggle action-queue card filter. Click again on the same card to clear.
@@ -5200,6 +5209,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.querySelectorAll('.sidebar-item, .sidebar-subitem').forEach(el => el.classList.remove('active'));
     const titles = { new: 'New requests — needs review', outreach: 'Outreach due — call these next', search: 'Active searches — deposit paid' };
     document.getElementById('table-title').textContent = currentActionFilter ? titles[kind] : 'All Requests';
+    resetDashSearch();   // don't carry a search across tab switches
     renderTable();
   }
   let currentActionFilter = null;
@@ -7660,6 +7670,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
     document.getElementById('panel-psi').style.display = 'block';
+    resetDashSearch();   // don't carry a search across tab switches
     renderPsiList();
   }
 
@@ -7710,6 +7721,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     btn.classList.add('active');
     ['panel-requests','panel-psi','panel-repair','panel-sold'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
     document.getElementById('panel-opensearch').style.display = 'block';
+    resetDashSearch();   // don't carry a search across tab switches
     renderOpenSearchList();
   }
 
