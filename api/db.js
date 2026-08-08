@@ -676,6 +676,15 @@ module.exports = async function handler(req, res) {
           }
         }
 
+        // Deposit just flipped paid → the lead has converted past the nurture
+        // funnel, so pull them out of the follow-up stages (the follow-up board
+        // is for un-deposited leads). Runs regardless of the status guard above.
+        // The automated drips already self-stop on deposit_paid.
+        if (wantsDepositFlip && priorRow && (Number(priorRow.follow_up_stage) || 0) !== 0) {
+          mapped.follow_up_stage = 0;
+          mapped.follow_up_updated_at = new Date().toISOString();
+        }
+
         await query('requests', 'PATCH', mapped, `?id=eq.${b.id}`);
 
         // Race-safe transition writes. Each patchConditional only affects
@@ -840,7 +849,12 @@ module.exports = async function handler(req, res) {
         //     marked complete after payment)
         const isSkipLine   = !!(priorRow && priorRow.skip_the_line);
         const wasDeposited = !!(priorRow && priorRow.deposit_paid);
-        if (wonCallRace && !isSkipLine && !wasDeposited && priorRow) {
+        // Bad-call leads are worked through the manual follow-up funnel, not the
+        // automated deposit drip — so a call graded 'bad' (sent in this same PUT
+        // alongside call_completed_at) suppresses the instant post-call nudge.
+        // cron.js likewise skips bad-outcome leads for post-call FU#2-4.
+        const isBadCall    = mapped.call_outcome === 'bad';
+        if (wonCallRace && !isSkipLine && !wasDeposited && !isBadCall && priorRow) {
           const postCallFires = [];
           if (priorRow.email) {
             postCallFires.push(safeSendEmail('postCallNudge', {

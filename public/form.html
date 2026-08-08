@@ -1989,7 +1989,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v171 · 2026-08-07</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v172 · 2026-08-07</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -6356,6 +6356,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // Generate a reference number
     const ref = 'AME-' + new Date().getFullYear() + '-' + String(r.id).slice(-6);
     r.depositRef = ref;
+    // Deposit paid → out of the follow-up funnel, and into Actively Searching.
+    // The server does both authoritatively on the deposit flip (db.js); mirror
+    // locally so the dashboard/pipeline update instantly (reconciled on next
+    // DB load). We deliberately DON'T send status in the PUT below so the
+    // server's own auto-transition to 'searching' still fires.
+    r.followUpStage = 0;
+    r.followUpUpdatedAt = new Date().toISOString();
+    const _advanced = ['searching', 'psi', 'in_repair', 'awaiting_paperwork', 'sold'];
+    if (!_advanced.includes(r.status)) r.status = 'searching';
     save();
     // Sync to Supabase so the client portal sees deposit_paid=true (this was
     // the gap — the portal reads from Supabase, not localStorage, so without

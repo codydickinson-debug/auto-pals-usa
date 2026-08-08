@@ -256,7 +256,9 @@ module.exports = async function handler(req, res) {
         // are excluded because their call_completed_at is auto-set at
         // form submit (there was no real call) — sending them "great
         // talking with you" would misfire.
-        if (r.call_completed_at && !r.deposit_paid && !r.skip_the_line && r.status !== 'dormant' && r.phone) {
+        // Bad-call leads are excluded — they're worked via the manual follow-up
+        // funnel, not the automated post-call deposit push.
+        if (r.call_completed_at && !r.deposit_paid && !r.skip_the_line && r.status !== 'dormant' && r.phone && r.call_outcome !== 'bad') {
           const hCall = hoursSince(r.call_completed_at);
           if (hCall !== null) {
             const smsSent = Array.isArray(r.client_sms_reminders_sent) ? r.client_sms_reminders_sent : [];
@@ -355,8 +357,9 @@ module.exports = async function handler(req, res) {
         // Only if staff has marked call complete AND deposit is still unpaid.
         // Also skip dormant — if staff has paused the file, the deposit drip
         // should pause with it. 'rejected'/'sold' are already excluded at the
-        // query level (line 80).
-        if (r.call_completed_at && !r.deposit_paid && r.status !== 'dormant') {
+        // query level (line 80). Bad calls are excluded too — no deposit push;
+        // they're nurtured via the manual follow-up funnel instead.
+        if (r.call_completed_at && !r.deposit_paid && r.status !== 'dormant' && r.call_outcome !== 'bad') {
           const h = hoursSince(r.call_completed_at);
           if (h === null) continue;
 
