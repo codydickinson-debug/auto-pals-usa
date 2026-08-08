@@ -1483,6 +1483,21 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   let _submitting = false;
   const _formLoadedAt = Date.now();
 
+  /* ── lead source attribution ─────────────────────────────────────
+   * Reads the channel from the form URL so staff can make per-channel links
+   * (request.html?src=tiktok, ?src=instagram, ?src=meta, …) and later see +
+   * filter in the dashboard where each lead came from. Accepts ?src, and falls
+   * back to ?utm_source / ?ref so ad-platform auto-tagged links also work.
+   * Normalized to a short lowercase slug. Nothing is published — the URLs just
+   * get shared per channel; they all load this same form. */
+  function getLeadSource() {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const raw = p.get('src') || p.get('utm_source') || p.get('ref') || '';
+      return String(raw).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
+    } catch (e) { return ''; }
+  }
+
   /* ── submitForm ─────────────────────────── */
   async function submitForm() {
     if (_submitting) return;
@@ -1626,6 +1641,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       internalNotes: '',
       skipTheLine: document.getElementById('f-skip-line') ? document.getElementById('f-skip-line').checked : false,
       referralSource: document.getElementById('f-referral-source').value || '',
+      source: getLeadSource(),   // automatic channel attribution from the ?src= URL (tiktok/instagram/meta/…)
       // Explicit SMS opt-in from the checkbox. Stored on the row + used as
       // a hard gate downstream — false means absolutely no SMS to this
       // client, true means transactional SMS is fine.
@@ -1760,6 +1776,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       skip_the_line:    !!req.skipTheLine,
       vehicle:          req.make ? `${req.make}${req.model && req.model !== '—' ? ' ' + req.model : ''}` : 'open_search',
       referral_source:  req.referralSource || null,
+      source:           req.source || null,
       search_mode:      req.searchMode || null
     }, req.id);
 

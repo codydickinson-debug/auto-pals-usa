@@ -2523,6 +2523,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button class="filter-btn active" onclick="sortRequests('date-desc', this)">Newest First</button>
           <button class="filter-btn" onclick="sortRequests('date-asc', this)">Oldest First</button>
           <button class="filter-btn" onclick="sortRequests('budget', this)">Budget ↓</button>
+          <select id="dash-source-filter" onchange="filterBySource(this.value)" title="Filter leads by where they came from" style="display:none;margin-left:4px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--white,#fff);color:var(--text);font-family:system-ui,sans-serif;font-size:12px;font-weight:600;cursor:pointer;">
+            <option value="all">All sources</option>
+          </select>
         </div>
       </div>
 
@@ -2839,6 +2842,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <div class="detail-row"><span class="lbl">Email</span><span class="val" id="dv-email"></span></div>
         <div class="detail-row"><span class="lbl">Phone</span><span class="val" id="dv-phone"></span></div>
         <div class="detail-row"><span class="lbl">Address</span><span class="val" id="dv-address" style="text-align:right;"></span></div>
+        <div class="detail-row"><span class="lbl">Source</span><span class="val" id="dv-source"></span></div>
+        <div class="detail-row"><span class="lbl">Heard via</span><span class="val" id="dv-referral"></span></div>
         <div class="detail-row" style="background:rgba(167,196,176,0.12);border-radius:6px;padding:10px 12px;margin-top:8px;">
           <span class="lbl" style="font-weight:700;">Portal Code</span>
           <span class="val" id="dv-portal-code" style="font-family:monospace;font-size:13px;font-weight:700;color:var(--navy);"></span>
@@ -3746,7 +3751,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       contractSignatureName: r.contract_signature_name,
       contractSignatureIp: r.contract_signature_ip,
       skipTheLine: r.skip_the_line || false,
-      referralSource: r.referral_source || '',
+      referralSource: r.referral_source || '',   // self-reported "how did you hear"
+      source: r.source || '',                     // automatic channel from the ?src= form URL
       smsConsent: r.sms_consent,
       // Per-doc upload metadata { license: { uploaded_at, filename, size_kb }, insurance: {...} }
       documentsUploaded: r.documents_uploaded || null,
@@ -3906,6 +3912,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   let requests = JSON.parse(localStorage.getItem('am_requests') || '[]');
   let currentFilter = 'all';
   let currentSort = 'date';
+  let currentSourceFilter = 'all';   // lead-source (channel) dropdown filter
   let activeRequestId = null;
 
   let lastSaveTime = 0;
@@ -5184,6 +5191,58 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
   let currentActionFilter = null;
 
+  // ── Lead source (acquisition channel) ──────────────────────────────────
+  // r.source is captured automatically from the form URL (?src=tiktok /
+  // ?src=instagram / ?src=meta / …) — distinct from referralSource, the
+  // self-reported "how did you hear". Known channels get a brand color + icon;
+  // anything else renders as a neutral capitalized pill, so new source slugs
+  // work with zero code changes.
+  const SOURCE_META = {
+    tiktok:    { label: 'TikTok',    icon: '🎵', bg: '#010101' },
+    instagram: { label: 'Instagram', icon: '📸', bg: '#c13584' },
+    meta:      { label: 'Meta',      icon: '📘', bg: '#1877f2' },
+    facebook:  { label: 'Facebook',  icon: '👍', bg: '#1877f2' },
+    google:    { label: 'Google',    icon: '🔍', bg: '#4285f4' },
+    youtube:   { label: 'YouTube',   icon: '▶️', bg: '#ff0000' },
+    email:     { label: 'Email',     icon: '✉️', bg: '#0f2557' },
+    referral:  { label: 'Referral',  icon: '🤝', bg: '#15803d' }
+  };
+  function sourceLabel(s) {
+    s = (s || '').trim().toLowerCase();
+    if (!s) return '';
+    return (SOURCE_META[s] && SOURCE_META[s].label) || (s.charAt(0).toUpperCase() + s.slice(1));
+  }
+  function sourceBadge(r) {
+    const s = (r.source || '').trim().toLowerCase();
+    if (!s) return '';
+    const m = SOURCE_META[s];
+    const bg = m ? m.bg : '#64748b';
+    const icon = m ? m.icon + ' ' : '';
+    return `<span class="source-badge" title="Lead source: ${sourceLabel(s)}" style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;background:${bg};color:#fff;font-size:10px;font-weight:700;letter-spacing:0.02em;vertical-align:middle;white-space:nowrap;">${icon}${escapeHtml(sourceLabel(s))}</span>`;
+  }
+  function filterBySource(v) { currentSourceFilter = v || 'all'; renderTable(); }
+  // Rebuild the source dropdown from whatever sources actually exist, with
+  // per-source counts. Hidden entirely until at least one lead has a source.
+  function populateSourceFilter() {
+    const sel = document.getElementById('dash-source-filter');
+    if (!sel) return;
+    const counts = {};
+    let noneCount = 0;
+    requests.forEach(r => {
+      const s = (r.source || '').trim().toLowerCase();
+      if (s) counts[s] = (counts[s] || 0) + 1; else noneCount++;
+    });
+    const keys = Object.keys(counts).sort();
+    if (!keys.length) { sel.style.display = 'none'; return; }
+    sel.style.display = '';
+    let html = '<option value="all">All sources</option>';
+    keys.forEach(s => { html += `<option value="${s}">${escapeHtml(sourceLabel(s))} (${counts[s]})</option>`; });
+    if (noneCount) html += `<option value="__none">No source (${noneCount})</option>`;
+    sel.innerHTML = html;
+    sel.value = currentSourceFilter;
+    if (sel.value !== currentSourceFilter) { currentSourceFilter = 'all'; sel.value = 'all'; } // selected source no longer present
+  }
+
   function renderTable() {
     // Apply action-queue filter first if set, otherwise fall back to sidebar status filter.
     let filtered;
@@ -5231,6 +5290,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       });
     }
 
+    // Lead-source (channel) filter — rebuild the dropdown from live data, then
+    // narrow to the chosen source. '__none' = leads with no source (direct).
+    populateSourceFilter();
+    if (currentSourceFilter === '__none') {
+      filtered = filtered.filter(r => !(r.source || '').trim());
+    } else if (currentSourceFilter && currentSourceFilter !== 'all') {
+      filtered = filtered.filter(r => (r.source || '').trim().toLowerCase() === currentSourceFilter);
+    }
+
     if (currentSort === 'budget')     filtered.sort((a,b) => b.budgetMax - a.budgetMax);
     else if (currentSort === 'date-asc') filtered.sort((a,b) => new Date(a.submitted) - new Date(b.submitted));
     else filtered.sort((a,b) => new Date(b.submitted) - new Date(a.submitted)); // date-desc default
@@ -5259,7 +5327,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const dayPill = depositDayPill(r);
       const sla = slaDot(r);
       return `<tr draggable="true" data-id="${r.id}" onclick="rowClick(event,${r.id})">
-        <td><strong>${r.firstName} ${r.lastName}</strong>${callBadge(r)}${dispositionBadge(r)}${followUpChip(r)}${replyBadge(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
+        <td><strong>${r.firstName} ${r.lastName}</strong>${callBadge(r)}${dispositionBadge(r)}${followUpChip(r)}${replyBadge(r)}${sourceBadge(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
         <td data-label="Vehicle">${vehicle}</td>
         <td data-label="Budget">${budget}${paymentBadge(r)}</td>
         <td data-label="Years">${years}</td>
@@ -5348,6 +5416,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     set('dv-email', r.email);
     set('dv-phone', r.phone);
     set('dv-address', [r.address, r.city, r.state, r.zip].filter(Boolean).join(', ') || '—');
+    set('dv-source', sourceLabel(r.source) || '—');
+    set('dv-referral', r.referralSource || '—');
     set('dv-portal-code', r.portalCode || '—');
 
     // Vehicle

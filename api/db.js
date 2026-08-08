@@ -405,7 +405,8 @@ module.exports = async function handler(req, res) {
           deposit_date: body.depositDate || '',
           client_recs: body.clientRecs || null,
           rejection_reason: body.rejectionReason || '',
-          referral_source: body.referralSource || null,
+          referral_source: body.referralSource || null,   // self-reported "how did you hear"
+          source: body.source || null,                    // automatic channel from the ?src= form URL
           skip_the_line: !!body.skipTheLine,
           // Explicit SMS opt-in. Stored as boolean (not coerced) so a
           // missing value stays null = legacy implicit-consent row.
