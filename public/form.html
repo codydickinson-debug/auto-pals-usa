@@ -2465,6 +2465,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button class="sidebar-subitem" onclick="filterRequests('fu3', this)"><span class="sub-dot" style="background:#0369a1"></span>Follow-up 3 <span class="badge" id="badge-fu3">0</span></button>
           <button class="sidebar-subitem" onclick="filterRequests('fu4', this)"><span class="sub-dot" style="background:#075985"></span>Follow-up 4 <span class="badge" id="badge-fu4">0</span></button>
         </div>
+        <button class="sidebar-item" onclick="filterRequests('no_sms', this)" title="Leads who opted out of texts — the auto follow-up drip skips them, so work these by phone/email">
+          🔕 Opted Out of SMS <span class="badge" id="badge-no_sms">0</span>
+        </button>
         <button class="sidebar-item" onclick="filterRequests('pending_deposit', this)">
           Pending Deposit <span class="badge" id="badge-pending_deposit">0</span>
         </button>
@@ -5007,6 +5010,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     return !!r.noShowAt && !r.callCompletedAt && r.status !== 'sold' && r.status !== 'rejected';
   }
 
+  // Leads who explicitly declined SMS (sms_consent === false). The automated
+  // follow-up drip skips them (TCPA), so they never auto-advance the funnel —
+  // they surface in their own tab to be worked by phone/email. Active only
+  // (hide sold/rejected/dormant, same as the All view).
+  function isOptedOutSms(r) {
+    return r.smsConsent === false && r.status !== 'sold' && r.status !== 'rejected' && !isDormantRequest(r);
+  }
+
   function updateBadges() {
     // 'review' status still exists in the codebase (set via detail panel) and rolls
     // into the New + In Review action-queue card — we count it but no longer
@@ -5037,6 +5048,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     counts.fu4 = requests.filter(r => effectiveFollowUp(r) === 4).length;
     counts.followups = counts.fu1 + counts.fu2 + counts.fu3 + counts.fu4;
     counts.pending_deposit = requests.filter(isPendingDeposit).length;
+    // Opted out of SMS (sms_consent === false) — the drip can't chase these, so
+    // they surface here to be worked by hand. Active leads only.
+    counts.no_sms = requests.filter(isOptedOutSms).length;
     Object.entries(counts).forEach(([k,v]) => {
       const el = document.getElementById('badge-' + k);
       if (el) el.textContent = v;
@@ -5051,7 +5065,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.querySelectorAll('.action-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.sidebar-item, .sidebar-subitem').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
-    const titles = { all: 'All Requests', new: 'New Requests', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Follow-ups', fu1: 'Follow-up 1', fu2: 'Follow-up 2', fu3: 'Follow-up 3', fu4: 'Follow-up 4', pending_deposit: 'Pending Deposit — good call, no deposit yet', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
+    const titles = { all: 'All Requests', new: 'New Requests', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Follow-ups', fu1: 'Follow-up 1', fu2: 'Follow-up 2', fu3: 'Follow-up 3', fu4: 'Follow-up 4', pending_deposit: 'Pending Deposit — good call, no deposit yet', no_sms: 'Opted Out of SMS — no auto follow-up; work by phone/email', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
     document.getElementById('table-title').textContent = titles[f] || 'Requests';
     renderTable();
   }
@@ -5219,6 +5233,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const icon = m ? m.icon + ' ' : '';
     return `<span class="source-badge" title="Lead source: ${sourceLabel(s)}" style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;background:${bg};color:#fff;font-size:10px;font-weight:700;letter-spacing:0.02em;vertical-align:middle;white-space:nowrap;">${icon}${escapeHtml(sourceLabel(s))}</span>`;
   }
+  // "No SMS" flag — shown on any lead who opted out of texts, so staff know at a
+  // glance to reach them by phone/email (the drip won't).
+  function smsBadge(r) {
+    if (r.smsConsent !== false) return '';
+    return `<span class="sms-out-badge" title="Opted out of SMS — the text follow-up drip skips this lead; reach them by phone or email" style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:99px;background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;letter-spacing:0.02em;vertical-align:middle;white-space:nowrap;">🔕 No SMS</span>`;
+  }
   function filterBySource(v) { currentSourceFilter = v || 'all'; renderTable(); }
   // Source filter buttons in the All Requests toolbar:
   //   All · 🎵 TikTok · 📸 Instagram · 📘 Meta · Everything else
@@ -5272,6 +5292,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       filtered = requests.filter(r => callDisposition(r) === 'bad');
     } else if (currentFilter === 'pending_deposit') {
       filtered = requests.filter(isPendingDeposit);
+    } else if (currentFilter === 'no_sms') {
+      filtered = requests.filter(isOptedOutSms);
     } else if (currentFilter === 'followups') {
       filtered = requests.filter(r => effectiveFollowUp(r) > 0);
     } else if (currentFilter === 'fu1' || currentFilter === 'fu2' || currentFilter === 'fu3' || currentFilter === 'fu4') {
@@ -5338,7 +5360,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const dayPill = depositDayPill(r);
       const sla = slaDot(r);
       return `<tr draggable="true" data-id="${r.id}" onclick="rowClick(event,${r.id})">
-        <td><strong>${r.firstName} ${r.lastName}</strong>${callBadge(r)}${dispositionBadge(r)}${followUpChip(r)}${replyBadge(r)}${sourceBadge(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
+        <td><strong>${r.firstName} ${r.lastName}</strong>${callBadge(r)}${dispositionBadge(r)}${followUpChip(r)}${replyBadge(r)}${sourceBadge(r)}${smsBadge(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
         <td data-label="Vehicle">${vehicle}</td>
         <td data-label="Budget">${budget}${paymentBadge(r)}</td>
         <td data-label="Years">${years}</td>
