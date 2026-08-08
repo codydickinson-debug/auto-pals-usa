@@ -1352,6 +1352,62 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .call-pill.upcoming { background: #e0f2fe; color: #075985; }
   .call-pill.today    { background: #fef3c7; color: #92400e; }
   .call-pill.done     { background: #f1f5f9; color: #475569; }
+
+  /* ── Lead pipeline: call disposition + follow-up ─────────────────── */
+  .disp-badge {
+    display: inline-block; margin-left: 6px; padding: 2px 8px;
+    border-radius: 99px; font-size: 11px; font-weight: 700;
+    font-family: system-ui, sans-serif; vertical-align: middle; white-space: nowrap;
+  }
+  .fu-chip {
+    display: inline-block; margin-left: 6px; padding: 2px 7px;
+    border-radius: 99px; font-size: 11px; font-weight: 700;
+    font-family: system-ui, sans-serif; vertical-align: middle;
+    background: #e0f2fe; color: #075985; border: 1px solid #bae6fd;
+  }
+  .fu-chip-stuck { background: #fee2e2; color: #b91c1c; border-color: #fecaca; }
+  /* Detail-panel follow-up stage buttons */
+  .fu-stage-btn {
+    padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-muted); cursor: pointer;
+    font-family: system-ui, sans-serif; font-size: 12px; font-weight: 700;
+  }
+  .fu-stage-btn:hover { border-color: #0ea5e9; color: #075985; }
+  .fu-stage-btn.active { background: #0ea5e9; color: #fff; border-color: #0ea5e9; }
+
+  /* ── Pipeline view ──────────────────────────────────────────────── */
+  .pl-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 22px; margin-bottom: 20px;
+    box-shadow: var(--shadow-card);
+  }
+  .pl-card-title { font-size: 15px; font-weight: 800; color: var(--navy); font-family: 'DM Sans', system-ui, sans-serif; }
+  .pl-card-sub { font-size: 12px; color: var(--text-muted); font-family: system-ui, sans-serif; margin: 3px 0 16px; }
+  .pl-two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 760px) { .pl-two { grid-template-columns: 1fr; } }
+  .pl-fun-row { display: grid; grid-template-columns: 128px 1fr 140px; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .pl-fun-label { font-size: 13px; font-weight: 700; color: var(--text); font-family: system-ui, sans-serif; }
+  .pl-fun-barwrap { background: #f1f5f9; border-radius: 6px; overflow: hidden; height: 26px; }
+  .pl-fun-bar {
+    height: 100%; border-radius: 6px; min-width: 22px;
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 0 8px; color: #fff; font-size: 12px; font-weight: 800;
+    font-family: system-ui, sans-serif; transition: width 0.3s var(--ease-out);
+  }
+  .pl-fun-conv { font-size: 12px; font-weight: 700; color: var(--text); font-family: system-ui, sans-serif; text-align: right; }
+  .pl-dim { color: var(--text-muted); font-weight: 400; }
+  .pl-empty { color: var(--text-muted); font-size: 13px; font-family: system-ui, sans-serif; padding: 8px 0; }
+  .pl-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 860px) { .pl-board { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .pl-board { grid-template-columns: 1fr; } }
+  .pl-col { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+  .pl-col-head { font-size: 12px; font-weight: 800; color: var(--navy); text-transform: uppercase; letter-spacing: 0.05em; font-family: system-ui, sans-serif; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+  .pl-col-count { background: var(--navy); color: #fff; border-radius: 99px; padding: 1px 8px; font-size: 11px; }
+  .pl-col-body { display: flex; flex-direction: column; gap: 8px; }
+  .pl-lead { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; cursor: pointer; transition: border-color 0.12s, box-shadow 0.12s; }
+  .pl-lead:hover { border-color: var(--accent-bright); box-shadow: var(--shadow-card); }
+  .pl-lead-name { font-size: 13px; font-weight: 700; color: var(--navy); font-family: system-ui, sans-serif; }
+  .pl-lead-meta { font-size: 11px; color: var(--text-muted); font-family: system-ui, sans-serif; margin-top: 2px; }
   /* AI Assessment */
 
   .tl-badge {
@@ -1933,7 +1989,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v170 · 2026-07-24</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v171 · 2026-08-07</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -1962,6 +2018,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <button class="nav-tab" id="nav-client-form" onclick="showView('client')">Client Form</button>
     <div id="staff-tabs" style="display:none;">
       <button class="nav-tab" onclick="showView('dashboard')" id="nav-requests">Requests</button>
+      <button class="nav-tab" onclick="showView('pipeline')" id="nav-pipeline">Pipeline</button>
       <button class="nav-tab" onclick="showView('repairs')" id="nav-repairs">Repairs <span id="nav-badge-repair" class="nav-tab-badge">0</span></button>
       <button class="nav-tab" onclick="showView('sales')" id="nav-sales">Sold Cars <span id="nav-badge-sold" class="nav-tab-badge">0</span></button>
       <button class="nav-tab" onclick="showView('messages')" id="nav-messages">Messages <span id="nav-badge-messages" class="nav-tab-badge">0</span></button>
@@ -2680,6 +2737,39 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   </div>
 </div>
 
+<!-- ════════════ PIPELINE / FUNNEL VIEW ════════════ -->
+<div id="view-pipeline" class="view">
+  <div style="max-width:1160px;margin:0 auto;padding:28px 32px 80px;">
+    <div style="font-size:22px;font-weight:800;color:var(--navy);font-family:'DM Sans',system-ui,sans-serif;">Pipeline</div>
+    <div style="font-size:13px;color:var(--text-muted);margin:4px 0 24px;font-family:system-ui,sans-serif;">Where every lead is and where they drop off — computed live from current requests.</div>
+
+    <div class="pl-card">
+      <div class="pl-card-title">Lead funnel</div>
+      <div class="pl-card-sub">Each stage counts leads that reached at least that far. % is conversion from the previous stage.</div>
+      <div id="pl-funnel"></div>
+    </div>
+
+    <div class="pl-two">
+      <div class="pl-card">
+        <div class="pl-card-title">Call outcomes</div>
+        <div class="pl-card-sub">Disposition of leads whose call was graded.</div>
+        <div id="pl-outcomes"></div>
+      </div>
+      <div class="pl-card">
+        <div class="pl-card-title">Follow-up stages</div>
+        <div class="pl-card-sub">Leads currently sitting at each follow-up.</div>
+        <div id="pl-fu-funnel"></div>
+      </div>
+    </div>
+
+    <div class="pl-card">
+      <div class="pl-card-title">Follow-up board</div>
+      <div class="pl-card-sub">Who's in each follow-up right now. Click a card to open the lead.</div>
+      <div id="pl-board" class="pl-board"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════ NEW 3-COLUMN REQUEST DETAIL VIEW ════════════ -->
 <div id="view-detail" class="view">
   <div class="detail-3col">
@@ -2791,24 +2881,40 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <button onclick="markRequestSoldFromAwaiting(activeRequestId)" style="width:100%;padding:10px 14px;background:#fff;color:#1e3a8a;border:none;border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Mark Sold ✓</button>
       </div>
 
-      <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Call Status</div>
+      <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Call Outcome</div>
+        <!-- Not yet graded: pick how the call went. Good/Bad stamp the call as
+             completed; No-show reuses the rebooking flow. -->
         <div id="dv-call-pending" style="display:flex;flex-direction:column;gap:8px;">
-          <span style="font-family:system-ui,sans-serif;font-size:13px;color:var(--text-muted);">Call not yet completed</span>
+          <span id="dv-call-pending-note" style="font-family:system-ui,sans-serif;font-size:13px;color:var(--text-muted);">How did the call go?</span>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button onclick="markCallCompleteFromDetail()" style="padding:8px 14px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Mark Call Complete</button>
-            <button onclick="markNoShowFromDetail()" style="padding:8px 14px;background:#fff;color:#92400e;border:1px solid #fcd34d;border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Didn't Answer</button>
+            <button onclick="setCallOutcome(activeRequestId,'good')" style="padding:8px 14px;background:#047857;color:#fff;border:none;border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Good call</button>
+            <button onclick="setCallOutcome(activeRequestId,'bad')" style="padding:8px 14px;background:#b91c1c;color:#fff;border:none;border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">Bad call</button>
+            <button onclick="setCallOutcome(activeRequestId,'noshow')" style="padding:8px 14px;background:#fff;color:#92400e;border:1px solid #fcd34d;border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">No-show</button>
           </div>
         </div>
-        <div id="dv-call-done" style="display:none;padding:10px 12px;background:#dbeafe;border:1px solid #93c5fd;border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;font-weight:700;color:var(--navy);">
-          ✓ Call completed <span id="dv-call-date" style="font-weight:400;color:var(--text-muted);margin-left:4px;"></span>
+        <!-- Graded good/bad -->
+        <div id="dv-call-done" style="display:none;padding:10px 12px;border-radius:6px;">
+          <div><span id="dv-call-outcome-badge"></span> <span id="dv-call-date" style="font-weight:400;color:var(--text-muted);margin-left:4px;font-size:12px;"></span></div>
+          <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+            <button onclick="setCallOutcome(activeRequestId,'good')" style="padding:5px 10px;background:none;color:#047857;border:1px solid #a7f3d0;border-radius:6px;font-family:system-ui,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Good</button>
+            <button onclick="setCallOutcome(activeRequestId,'bad')" style="padding:5px 10px;background:none;color:#b91c1c;border:1px solid #fecaca;border-radius:6px;font-family:system-ui,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Bad</button>
+            <button onclick="setCallOutcome(activeRequestId,'noshow')" style="padding:5px 10px;background:none;color:#92400e;border:1px solid #fcd34d;border-radius:6px;font-family:system-ui,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">No-show</button>
+            <button onclick="clearCallOutcome(activeRequestId)" style="padding:5px 10px;background:none;color:var(--text-muted);border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Clear</button>
+          </div>
         </div>
+        <!-- No-show -->
         <div id="dv-call-noshow" style="display:none;padding:10px 12px;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;font-weight:700;color:#92400e;">
           ⚠ No-show <span id="dv-noshow-date" style="font-weight:400;color:#a16207;margin-left:2px;"></span> — rebooking follow-up running.
           <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
-            <button onclick="markCallCompleteFromDetail()" style="padding:6px 12px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-family:system-ui,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">They rebooked / Call done</button>
+            <button onclick="setCallOutcome(activeRequestId,'good')" style="padding:6px 12px;background:#047857;color:#fff;border:none;border-radius:6px;font-family:system-ui,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">They rebooked — Good call</button>
             <button onclick="undoNoShowFromDetail()" style="padding:6px 12px;background:none;color:#92400e;border:1px solid #fcd34d;border-radius:6px;font-family:system-ui,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Undo</button>
           </div>
         </div>
+      </div>
+
+      <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Follow-up Funnel</div>
+        <div id="dv-fu-chips" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+        <div id="dv-fu-meta" style="font-size:12px;color:var(--text-muted);font-family:system-ui,sans-serif;margin-top:6px;"></div>
       </div>
 
       <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Deposit ($850)</div>
@@ -3566,6 +3672,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       clientRecs: r.client_recs, rejectionReason: r.rejection_reason,
       callCompletedAt: r.call_completed_at,
       noShowAt: r.no_show_at,
+      callOutcome: r.call_outcome || null,
+      followUpStage: Number(r.follow_up_stage) || 0,
+      followUpUpdatedAt: r.follow_up_updated_at || null,
       bookingConfirmedAt: r.booking_confirmed_at,
       // When the request was last flipped to status='dormant'. Used by the
       // Messages tab to hide stale dormant threads until either side sends
@@ -4298,6 +4407,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.getElementById('view-' + v).classList.add('active');
     event.target.closest('.nav-tab') ? event.target.closest('.nav-tab').classList.add('active') : event.target.classList.add('active');
     if (v === 'dashboard') showDashboard();
+    if (v === 'pipeline') renderPipeline();
     if (v === 'repairs') { renderRepairCards(); document.getElementById('panel-repair').style.display = 'block'; }
     if (v === 'sales')   { updateWeekLabel(); renderSoldTable(); document.getElementById('panel-sold').style.display = 'block'; }
     if (v === 'messages') { renderConvoList(); }
@@ -5067,7 +5177,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const dayPill = depositDayPill(r);
       const sla = slaDot(r);
       return `<tr draggable="true" data-id="${r.id}" onclick="rowClick(event,${r.id})">
-        <td><strong>${r.firstName} ${r.lastName}</strong>${callBadge(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
+        <td><strong>${r.firstName} ${r.lastName}</strong>${callBadge(r)}${dispositionBadge(r)}${followUpChip(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
         <td data-label="Vehicle">${vehicle}</td>
         <td data-label="Budget">${budget}${paymentBadge(r)}</td>
         <td data-label="Years">${years}</td>
@@ -5291,24 +5401,41 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       }
     }
 
-    // Call status — completed wins over no-show (they showed to a rebooked call).
+    // Call outcome — a graded good/bad wins; else no-show; else pending.
+    // (A graded call means we reached them, so it supersedes any stale no-show.)
     const _nsDiv = document.getElementById('dv-call-noshow');
-    if (r.callCompletedAt) {
-      document.getElementById('dv-call-pending').style.display = 'none';
-      document.getElementById('dv-call-done').style.display = 'block';
+    const _pendDiv = document.getElementById('dv-call-pending');
+    const _doneDiv = document.getElementById('dv-call-done');
+    const _disp = callDisposition(r);
+    if (_disp === 'good' || _disp === 'bad') {
+      _pendDiv.style.display = 'none';
+      _doneDiv.style.display = 'block';
       if (_nsDiv) _nsDiv.style.display = 'none';
-      document.getElementById('dv-call-date').textContent = '· ' + new Date(r.callCompletedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' }) + ' EST';
-    } else if (r.noShowAt) {
-      document.getElementById('dv-call-pending').style.display = 'none';
-      document.getElementById('dv-call-done').style.display = 'none';
+      const m = CALL_OUTCOME_META[_disp];
+      const badge = document.getElementById('dv-call-outcome-badge');
+      if (badge) badge.innerHTML = `<span class="disp-badge" style="background:${m.bg};color:${m.color};border:1px solid ${m.border};">${m.label}</span>`;
+      const dateEl = document.getElementById('dv-call-date');
+      if (dateEl) dateEl.textContent = r.callCompletedAt ? '· ' + new Date(r.callCompletedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' }) + ' EST' : '';
+    } else if (_disp === 'noshow') {
+      _pendDiv.style.display = 'none';
+      _doneDiv.style.display = 'none';
       if (_nsDiv) _nsDiv.style.display = 'block';
       const _nsDate = document.getElementById('dv-noshow-date');
       if (_nsDate) _nsDate.textContent = '· ' + new Date(r.noShowAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' }) + ' EST';
     } else {
-      document.getElementById('dv-call-pending').style.display = 'flex';
-      document.getElementById('dv-call-done').style.display = 'none';
+      _pendDiv.style.display = 'flex';
+      _doneDiv.style.display = 'none';
       if (_nsDiv) _nsDiv.style.display = 'none';
+      // If the call was completed (legacy / via other path) but not yet graded,
+      // prompt to grade it rather than showing the generic question.
+      const note = document.getElementById('dv-call-pending-note');
+      if (note) note.textContent = r.callCompletedAt
+        ? 'Call completed ' + new Date(r.callCompletedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' }) + ' — grade it:'
+        : 'How did the call go?';
     }
+
+    // Follow-up funnel chips (None / FU1..FU4). Current stage highlighted.
+    renderFollowUpChips(r);
 
     // Deposit
     if (r.depositReceived || r.depositPaid) {
@@ -5423,6 +5550,220 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       markDepositReceived();
     }
     setTimeout(() => populateDetailView(r), 300);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  LEAD PIPELINE — call outcome + manual follow-up funnel
+  //  (added for the Pipedrive transition: track dispositions and where
+  //  leads drop off between follow-ups.)
+  // ═══════════════════════════════════════════════════════════════
+
+  // Unified call disposition. 'good' | 'bad' are stored in call_outcome;
+  // 'noshow' reuses the existing no_show_at flag + rebooking drip. A completed
+  // call (good/bad) wins over a stale no-show (they showed to a rebooked call).
+  const CALL_OUTCOME_META = {
+    good:   { label: 'Good call', short: 'Good', color: '#047857', bg: '#ecfdf5', border: '#a7f3d0' },
+    bad:    { label: 'Bad call',  short: 'Bad',  color: '#b91c1c', bg: '#fef2f2', border: '#fecaca' },
+    noshow: { label: 'No-show',   short: 'No-show', color: '#92400e', bg: '#fef3c7', border: '#fcd34d' }
+  };
+  function callDisposition(r) {
+    if (!r) return 'none';
+    if (r.callOutcome === 'good' || r.callOutcome === 'bad') return r.callOutcome;
+    if (r.noShowAt && !r.callCompletedAt) return 'noshow';
+    return 'none';
+  }
+  function dispositionBadge(r) {
+    const d = callDisposition(r);
+    if (d === 'none') return '';
+    const m = CALL_OUTCOME_META[d];
+    return `<span class="disp-badge" style="background:${m.bg};color:${m.color};border:1px solid ${m.border};">${m.label}</span>`;
+  }
+
+  // Set a called lead's outcome. good/bad => the call happened, so we stamp
+  // callCompletedAt (idempotent), clear any stale no-show, and ensure the lead
+  // is at least 'called'. noshow => reuse the no-show flow (instant "we missed
+  // you" + day-1/day-3 rebooking drip fire server-side off the no_show_at flip).
+  function setCallOutcome(id, outcome) {
+    const r = requests.find(x => x.id === id);
+    if (!r) return;
+    if (outcome === 'noshow') {
+      if (!confirm('Mark this call as a no-show?\n\nSends an instant "sorry we missed you — grab a new time" text + email, then day-1 and day-3 rebooking nudges. Stops automatically if they rebook and show, or pay a deposit.')) return;
+      r.noShowAt = new Date().toISOString();
+      r.callOutcome = null; // no-show isn't a good/bad grade
+      save();
+      dbPut('requests', { id: r.id, noShowAt: r.noShowAt, callOutcome: null });
+      renderDashboard();
+      if (activeRequestId === id) populateDetailView(r);
+      _refreshPipelineIfOpen();
+      return;
+    }
+    // good | bad
+    r.callOutcome = outcome;
+    const patch = { id: r.id, callOutcome: outcome };
+    if (!r.callCompletedAt) { r.callCompletedAt = new Date().toISOString(); patch.callCompletedAt = r.callCompletedAt; }
+    if (r.noShowAt) { r.noShowAt = null; patch.noShowAt = null; }
+    if (['new', 'review', 'qualified'].includes(r.status)) { r.status = 'called'; patch.status = 'called'; }
+    save();
+    dbPut('requests', patch);
+    renderDashboard();
+    if (activeRequestId === id) populateDetailView(r);
+    _refreshPipelineIfOpen();
+  }
+  function clearCallOutcome(id) {
+    const r = requests.find(x => x.id === id);
+    if (!r) return;
+    r.callOutcome = null;
+    save();
+    dbPut('requests', { id: r.id, callOutcome: null });
+    renderDashboard();
+    if (activeRequestId === id) populateDetailView(r);
+    _refreshPipelineIfOpen();
+  }
+
+  // Manual follow-up funnel: 0 = not in follow-up, 1..4 = follow-up #1..#4.
+  // Staff-advanced so we can measure drop-off between stages. Independent of
+  // the automated SMS drip (client_sms_reminders_sent).
+  function setFollowUpStage(id, stage) {
+    const r = requests.find(x => x.id === id);
+    if (!r) return;
+    stage = Math.max(0, Math.min(4, Number(stage) || 0));
+    if ((Number(r.followUpStage) || 0) === stage) return;
+    r.followUpStage = stage;
+    r.followUpUpdatedAt = new Date().toISOString();
+    save();
+    dbPut('requests', { id: r.id, followUpStage: stage, followUpUpdatedAt: r.followUpUpdatedAt });
+    renderDashboard();
+    if (activeRequestId === id) populateDetailView(r);
+    _refreshPipelineIfOpen();
+  }
+  function advanceFollowUp(id, delta) {
+    const r = requests.find(x => x.id === id);
+    if (!r) return;
+    setFollowUpStage(id, (Number(r.followUpStage) || 0) + delta);
+  }
+  function followUpChip(r) {
+    const s = Number(r && r.followUpStage) || 0;
+    if (!s) return '';
+    const days = followUpDays(r);
+    const stuck = days != null && days >= 5;
+    return `<span class="fu-chip${stuck ? ' fu-chip-stuck' : ''}" title="Follow-up #${s}${days != null ? ' · ' + days + 'd in stage' : ''}">FU${s}</span>`;
+  }
+  // Whole days since follow_up_stage last changed (for "stuck" highlighting).
+  function followUpDays(r) {
+    if (!r || !r.followUpUpdatedAt) return null;
+    const t = new Date(r.followUpUpdatedAt).getTime();
+    if (!t) return null;
+    return Math.floor((Date.now() - t) / 86400000);
+  }
+  function _refreshPipelineIfOpen() {
+    const v = document.getElementById('view-pipeline');
+    if (v && v.classList.contains('active') && typeof renderPipeline === 'function') renderPipeline();
+  }
+
+  // Renders the None/FU1..FU4 stage buttons in the detail panel.
+  function renderFollowUpChips(r) {
+    const wrap = document.getElementById('dv-fu-chips');
+    const meta = document.getElementById('dv-fu-meta');
+    if (!wrap) return;
+    const cur = Number(r.followUpStage) || 0;
+    const chips = [
+      { n: 0, label: 'None' }, { n: 1, label: 'FU1' }, { n: 2, label: 'FU2' },
+      { n: 3, label: 'FU3' }, { n: 4, label: 'FU4' }
+    ];
+    wrap.innerHTML = chips.map(c =>
+      `<button class="fu-stage-btn${c.n === cur ? ' active' : ''}" onclick="setFollowUpStage(activeRequestId,${c.n})">${c.label}</button>`
+    ).join('');
+    if (meta) {
+      if (!cur) {
+        meta.textContent = 'Not in the follow-up funnel yet.';
+      } else {
+        const days = followUpDays(r);
+        meta.textContent = `In Follow-up #${cur}` + (days != null ? ` · ${days} day${days === 1 ? '' : 's'} in this stage` : '');
+      }
+    }
+  }
+
+  // Renders the whole Pipeline view: lead funnel, call outcomes, follow-up
+  // distribution, and the follow-up board. Recomputed from `requests` each call.
+  function renderPipeline() {
+    // Rejected leads never enter the funnel (auto-rejected < $5k); exclude them.
+    const all = requests.filter(r => r.status !== 'rejected');
+    const isBooked  = r => !!(r.bookingConfirmedAt || r.callCompletedAt || r.noShowAt || r.depositPaid || r.depositReceived || r.status === 'sold');
+    const isCalled  = r => !!r.callCompletedAt;
+    const isGood    = r => r.callOutcome === 'good';
+    const isDeposit = r => !!(r.depositPaid || r.depositReceived);
+    const isSold    = r => r.status === 'sold';
+
+    const stages = [
+      { label: 'Leads',          n: all.length,                   color: '#64748b' },
+      { label: 'Booked call',    n: all.filter(isBooked).length,  color: '#6d28d9' },
+      { label: 'Completed call', n: all.filter(isCalled).length,  color: '#2563eb' },
+      { label: 'Good call',      n: all.filter(isGood).length,    color: '#047857' },
+      { label: 'Deposit paid',   n: all.filter(isDeposit).length, color: '#b45309' },
+      { label: 'Sold',           n: all.filter(isSold).length,    color: '#0f2557' }
+    ];
+    const funMax = Math.max(1, stages[0].n);
+    const funEl = document.getElementById('pl-funnel');
+    if (funEl) {
+      funEl.innerHTML = stages.map((s, i) => {
+        const prev = i === 0 ? null : stages[i - 1].n;
+        const conv = prev ? Math.round((s.n / prev) * 100) : null;
+        const drop = prev != null ? prev - s.n : null;
+        const w = Math.round((s.n / funMax) * 100);
+        return `<div class="pl-fun-row">
+          <div class="pl-fun-label">${s.label}</div>
+          <div class="pl-fun-barwrap"><div class="pl-fun-bar" style="width:${Math.max(w, 6)}%;background:${s.color};">${s.n}</div></div>
+          <div class="pl-fun-conv">${conv != null ? conv + '% <span class="pl-dim">from prev' + (drop > 0 ? ' · −' + drop : '') + '</span>' : '&nbsp;'}</div>
+        </div>`;
+      }).join('');
+    }
+
+    // Call outcomes
+    const good = all.filter(r => r.callOutcome === 'good').length;
+    const bad  = all.filter(r => r.callOutcome === 'bad').length;
+    const nosh = all.filter(r => callDisposition(r) === 'noshow').length;
+    const oTot = good + bad + nosh;
+    const oEl = document.getElementById('pl-outcomes');
+    if (oEl) {
+      const orow = (label, n, color) => {
+        const pct = oTot ? Math.round((n / oTot) * 100) : 0;
+        return `<div class="pl-fun-row"><div class="pl-fun-label">${label}</div><div class="pl-fun-barwrap"><div class="pl-fun-bar" style="width:${Math.max(pct, 4)}%;background:${color};">${n}</div></div><div class="pl-fun-conv">${pct}%</div></div>`;
+      };
+      oEl.innerHTML = oTot
+        ? orow('Good call', good, '#047857') + orow('Bad call', bad, '#b91c1c') + orow('No-show', nosh, '#f59e0b')
+        : '<div class="pl-empty">No calls graded yet.</div>';
+    }
+
+    // Follow-up stage distribution (current position)
+    const fu = [1, 2, 3, 4].map(n => all.filter(r => (Number(r.followUpStage) || 0) === n).length);
+    const fuMax = Math.max(1, ...fu);
+    const fuEl = document.getElementById('pl-fu-funnel');
+    if (fuEl) {
+      fuEl.innerHTML = fu.map((n, i) =>
+        `<div class="pl-fun-row"><div class="pl-fun-label">Follow-up ${i + 1}</div><div class="pl-fun-barwrap"><div class="pl-fun-bar" style="width:${Math.max(Math.round((n / fuMax) * 100), 4)}%;background:#0ea5e9;">${n}</div></div><div class="pl-fun-conv">&nbsp;</div></div>`
+      ).join('');
+    }
+
+    // Follow-up board — one column per stage with lead cards.
+    const boardEl = document.getElementById('pl-board');
+    if (boardEl) {
+      boardEl.innerHTML = [1, 2, 3, 4].map(n => {
+        const leads = all.filter(r => (Number(r.followUpStage) || 0) === n)
+          .sort((a, b) => new Date(a.followUpUpdatedAt || 0) - new Date(b.followUpUpdatedAt || 0));
+        const cards = leads.length ? leads.map(r => {
+          const days = followUpDays(r);
+          const disp = callDisposition(r);
+          const dm = disp !== 'none' ? CALL_OUTCOME_META[disp] : null;
+          const veh = [r.make, r.model].filter(v => v && v !== '—').join(' ') || 'Open search';
+          return `<div class="pl-lead" onclick="openDetailView(${r.id})">
+            <div class="pl-lead-name">${escapeHtml(r.firstName + ' ' + r.lastName)}</div>
+            <div class="pl-lead-meta">${escapeHtml(veh)}${days != null ? ' · ' + days + 'd' : ''}</div>
+            ${dm ? `<span class="disp-badge" style="background:${dm.bg};color:${dm.color};border:1px solid ${dm.border};">${dm.short}</span>` : ''}
+          </div>`;
+        }).join('') : '<div class="pl-empty">—</div>';
+        return `<div class="pl-col"><div class="pl-col-head">Follow-up ${n} <span class="pl-col-count">${leads.length}</span></div><div class="pl-col-body">${cards}</div></div>`;
+      }).join('');
+    }
   }
 
   function updateStatusFromDetail(newStatus) {
@@ -5562,6 +5903,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <button class="ctx-item" onclick="ctxSetStatus('searching')"><span class="ctx-dot" style="background:var(--accent-bright)"></span>Actively Searching</button>
     <button class="ctx-item" onclick="ctxSetStatus('dormant')"><span class="ctx-dot" style="background:#6b7280"></span>Dormant</button>
     <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
+    <div class="ctx-label">Call outcome</div>
+    <button class="ctx-item" onclick="ctxSetOutcome('good')"><span class="ctx-dot" style="background:#047857"></span>Good call</button>
+    <button class="ctx-item" onclick="ctxSetOutcome('bad')"><span class="ctx-dot" style="background:#b91c1c"></span>Bad call</button>
+    <button class="ctx-item" onclick="ctxSetOutcome('noshow')"><span class="ctx-dot" style="background:#f59e0b"></span>No-show</button>
+    <div class="ctx-label">Follow-up</div>
+    <button class="ctx-item" onclick="ctxAdvanceFollowUp(1)"><span class="ctx-dot" style="background:#0ea5e9"></span>Advance follow-up →</button>
+    <button class="ctx-item" onclick="ctxAdvanceFollowUp(-1)"><span class="ctx-dot" style="background:#94a3b8"></span>Back a stage ←</button>
+    <button class="ctx-item" onclick="ctxSetFollowUp(0)"><span class="ctx-dot" style="background:#e2e8f0"></span>Clear follow-up</button>
+    <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
     <button class="ctx-item" onclick="ctxMoveToPsi()" style="color:#4338ca;font-weight:600;"><span class="ctx-dot" style="background:#4338ca"></span>Send to PSI Period</button>
     <button class="ctx-item" onclick="ctxMoveToRepair()" style="color:var(--amber);font-weight:600;"><span class="ctx-dot" style="background:var(--amber)"></span>Send to Repair</button>
     <button class="ctx-item" onclick="ctxSendToOpenSearch()" style="color:#5b21b6;font-weight:600;"><span class="ctx-dot" style="background:#5b21b6"></span>Open Search</button>
@@ -5607,6 +5957,20 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       }
     }
     ctxMenu.classList.remove('open');
+  }
+
+  // Context-menu quick actions for the lead pipeline.
+  function ctxSetOutcome(outcome) {
+    ctxMenu.classList.remove('open');
+    if (ctxTargetId != null) setCallOutcome(ctxTargetId, outcome);
+  }
+  function ctxAdvanceFollowUp(delta) {
+    ctxMenu.classList.remove('open');
+    if (ctxTargetId != null) advanceFollowUp(ctxTargetId, delta);
+  }
+  function ctxSetFollowUp(stage) {
+    ctxMenu.classList.remove('open');
+    if (ctxTargetId != null) setFollowUpStage(ctxTargetId, stage);
   }
 
   async function deleteRequest(id) {
