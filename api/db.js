@@ -947,15 +947,18 @@ module.exports = async function handler(req, res) {
     // ── REPAIRS ───────────────────────────────────────────────────
     if (table === 'repair_cars') {
       if (req.method === 'GET') {
-        // Portal use case: client wants just THEIR own reconditioning quote.
-        // Passing ?request_id=… narrows the response to repair cars tied to
-        // that originating request. Without it (staff use case), the dashboard
-        // gets the full list as before.
+        // Staff (valid token) get the full list for the dashboard. Public
+        // callers (the portal) MUST scope to a specific request_id and get only
+        // that request's repair rows — never the whole table. Without this an
+        // anonymous GET dumped every client's name, VIN, notes and quote (the
+        // same class of leak already closed on `requests`).
+        if (isStaff) {
+          const data = await query('repair_cars', 'GET', null, '?order=id.desc');
+          return res.json(data || []);
+        }
         const reqId = req.query.request_id;
-        const params = reqId
-          ? `?request_id=eq.${encodeURIComponent(reqId)}&order=id.desc`
-          : '?order=id.desc';
-        const data = await query('repair_cars', 'GET', null, params);
+        if (!reqId) return res.json([]);
+        const data = await query('repair_cars', 'GET', null, `?request_id=eq.${encodeURIComponent(reqId)}&order=id.desc`);
         return res.json(data || []);
       }
       if (req.method === 'POST') {
@@ -1202,9 +1205,17 @@ module.exports = async function handler(req, res) {
     // ── BOOKINGS ──────────────────────────────────────────────────
     if (table === 'bookings') {
       if (req.method === 'GET') {
-        // Get bookings for a specific date to check cap
+        // The public calendar + voice agent only need slot availability (which
+        // times are taken), never the booker's contact PII. Project to
+        // date,time for non-staff callers; staff get full rows for the
+        // dashboard. Encode the date so it can't break out of the PostgREST
+        // filter grammar. (Previously an anonymous GET returned the last 100
+        // bookers' names, emails and phones.)
         const date = req.query.date;
-        const params = date ? `?date=eq.${date}&order=ts.asc` : '?order=ts.desc&limit=100';
+        const sel = isStaff ? '' : '&select=date,time';
+        const params = date
+          ? `?date=eq.${encodeURIComponent(date)}&order=ts.asc${sel}`
+          : `?order=ts.desc&limit=100${sel}`;
         const data = await query('bookings', 'GET', null, params);
         return res.json(data || []);
       }
@@ -1217,7 +1228,7 @@ module.exports = async function handler(req, res) {
         // Cap raised 5 → 10 on 2026-07-02 (owner request). Must match
         // MAX_PER_DAY in public/booking.html.
         const MAX_BOOKINGS_PER_DAY = 10;
-        const existing = await query('bookings', 'GET', null, `?date=eq.${body.date}`);
+        const existing = await query('bookings', 'GET', null, `?date=eq.${encodeURIComponent(body.date)}`);
         if (existing && existing.length >= MAX_BOOKINGS_PER_DAY) {
           return res.status(409).json({ error: 'day_full', count: existing.length });
         }

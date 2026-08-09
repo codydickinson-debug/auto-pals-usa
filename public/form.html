@@ -2028,7 +2028,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v176 · 2026-08-07</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v177 · 2026-08-07</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -5431,8 +5431,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         const dragReq = requests.find(r=>r.id===dragId);
         const targetReq = requests.find(r=>r.id===targetId);
         if (dragReq && targetReq && dragReq.status !== targetReq.status) {
+          const prevStatus = dragReq.status;
           dragReq.status = targetReq.status;
-          save(); renderDashboard();
+          // Persist to Supabase — without this the change was localStorage-only
+          // and the next poll (loadFromDB) reverted it from the stale DB row.
+          stampDormantTransition(dragReq, dragReq.status, prevStatus);
+          save();
+          syncRequest(dragReq, ['status', 'dormantAt']);
+          renderDashboard();
         }
       });
     });
@@ -5907,8 +5913,16 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // auto-derived stage and any manual override staff set — so staff can push a
   // lead further, but they never have to touch it for it to move.
   function dripStage(r) {
-    const sent = Array.isArray(r && r.smsRemindersSent) ? r.smsRemindersSent : [];
-    const seq = r && r.callCompletedAt
+    if (!r) return 0;
+    // A lead that converted (deposit paid / sold) has left the nurture funnel;
+    // and a bad call is worked only via the manual funnel, never the auto drip.
+    // Without these guards a lingering post0 label kept deposited or regraded-
+    // bad leads counted in FU1 on the board and sidebar. (pipelineStage already
+    // handles deposit/bad correctly; this keeps the funnel counts honest too.)
+    if (r.depositPaid || r.depositReceived || r.status === 'sold') return 0;
+    if (r.callOutcome === 'bad') return 0;
+    const sent = Array.isArray(r.smsRemindersSent) ? r.smsRemindersSent : [];
+    const seq = r.callCompletedAt
       ? ['post0', 'post1', 'post2', 'post3']   // after the call
       : ['pre1', 'pre2', 'pre3', 'pre4'];      // before the call (chasing a booking)
     let n = 0;
