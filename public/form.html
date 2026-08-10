@@ -2028,7 +2028,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v178 · 2026-08-07</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v179 · 2026-08-09</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2485,6 +2485,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         </button>
         <button class="sidebar-item" id="sidebar-opensearch" onclick="showOpenSearchPanel(this)">
           Open Searches <span class="badge" id="badge-opensearch">0</span>
+        </button>
+      </div>
+      <!-- Archive: off-pipeline leads kept for the record. Still in the DB and
+           the dashboard, just parked out of the active-pipeline flow above. -->
+      <div class="sidebar-section">
+        <div class="sidebar-label">Archive</div>
+        <button class="sidebar-item" onclick="filterRequests('dormant', this)" title="14+ days with no deposit (or manually parked). Still nudged; kept for the record.">
+          Dormant <span class="badge" id="badge-dormant">0</span>
+        </button>
+        <button class="sidebar-item" onclick="filterRequests('rejected', this)" title="Auto-declined — budget under our $5,000 sourcing minimum. Kept as a quiet record.">
+          Rejected <span class="badge" id="badge-rejected">0</span>
         </button>
       </div>
     </div>
@@ -5053,9 +5064,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // into the New + In Review action-queue card — we count it but no longer
     // surface a sidebar tab for it. 'searching' is the new sidebar tab.
     // 'dormant' is a derived view, counted separately.
-    // Rejected leads are auto-declined (budget under $5k) and kept only as a
-    // quiet record + courtesy email — they're hidden from the whole dashboard,
-    // so 'All' excludes them just like 'sold'.
+    // Rejected leads are auto-declined (budget under $5k) and kept as a quiet
+    // record + courtesy email. 'All' still excludes them (and dormant) to keep
+    // the active pipeline clean, but both now have their own Archive tab, so
+    // their badge counts feed those tabs.
     const counts = { all: requests.filter(r=>r.status!=='sold' && r.status!=='rejected' && !isDormantRequest(r)).length, new: 0, review: 0, qualified: 0, called: 0, searching: 0, psi: 0, in_repair: 0, awaiting_paperwork: 0, rejected: 0 };
     requests.forEach(r => {
       if (counts[r.status] === undefined) return;
@@ -5339,9 +5351,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     } else if (currentFilter === 'fu1' || currentFilter === 'fu2' || currentFilter === 'fu3' || currentFilter === 'fu4') {
       const n = Number(currentFilter.slice(2));
       filtered = requests.filter(r => effectiveFollowUp(r) === n);
+    } else if (currentFilter === 'dormant') {
+      // Dormant is a DERIVED view (14d+ no deposit) OR a manual status flip —
+      // isDormantRequest covers both. A plain status==='dormant' filter would
+      // miss the derived ones (which keep their new/qualified/called status).
+      filtered = requests.filter(isDormantRequest);
+    } else if (currentFilter === 'rejected') {
+      filtered = requests.filter(r => r.status === 'rejected');
     } else {
-      // Dormant leads (14d+ no deposit) are moved off the dashboard into the
-      // Dormant Google Sheet, so 'All' hides them like it hides sold/rejected.
+      // 'All' keeps the active pipeline clean — it hides sold, rejected, and
+      // dormant. Those leads aren't gone: rejected + dormant each have their
+      // own Archive tab, and sold lives in the Sold Cars view.
       filtered = currentFilter === 'all' ? requests.filter(r => r.status !== 'sold' && r.status !== 'rejected' && !isDormantRequest(r)) : requests.filter(r => r.status === currentFilter);
       // Mirror the badge logic — hide awaiting_paperwork rows that already
       // have a matching sale, so the list and the sidebar count agree.
