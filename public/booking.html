@@ -287,11 +287,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .cal-day {
     aspect-ratio: 1;
     display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 500;
+    font-size: 13px; font-weight: 500; font-family: inherit;
     border-radius: 8px; cursor: pointer;
     color: var(--text); transition: background-color 120ms var(--ease-out), border-color 120ms var(--ease-out), color 120ms var(--ease-out), transform 120ms var(--ease-out);
     border: 1px solid transparent;
+    /* button resets so day cells (now <button>) keep their look while being
+       keyboard/screen-reader operable */
+    background: none; width: 100%; padding: 0; -webkit-appearance: none; appearance: none;
   }
+  .cal-day:disabled { cursor: default; }
   @media (hover: hover) and (pointer: fine) {
     .cal-day:hover:not(.disabled):not(.empty) { background: var(--navy-light); border-color: var(--border); }
   }
@@ -320,11 +324,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
   }
   .time-slot {
-    padding: 10px 8px; text-align: center;
+    padding: 10px 8px; text-align: center; width: 100%;
     border: 1px solid var(--border); border-radius: var(--radius);
-    font-size: 13px; font-weight: 500; color: var(--text);
+    font-size: 13px; font-weight: 500; font-family: inherit; color: var(--text);
     cursor: pointer; transition: background-color 120ms var(--ease-out), border-color 120ms var(--ease-out), color 120ms var(--ease-out), transform 120ms var(--ease-out); background: var(--cream);
+    -webkit-appearance: none; appearance: none;
   }
+  .time-slot:disabled { cursor: not-allowed; }
   @media (hover: hover) and (pointer: fine) {
     .time-slot:hover { border-color: var(--navy); background: var(--navy-light); color: var(--navy); }
   }
@@ -991,20 +997,23 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
       const isFull = (DAY_COUNTS[dateStr] || 0) >= MAX_PER_DAY;
 
-      const el = document.createElement('div');
+      const unavailable = isBeforeEarliest || isClosedDay || isFull;
+      const el = document.createElement('button');
+      el.type = 'button';
       el.textContent = d;
       el.className = 'cal-day' +
-        (isBeforeEarliest || isClosedDay || isFull ? ' disabled' : ' has-slots') +
+        (unavailable ? ' disabled' : ' has-slots') +
         (isSelected ? ' selected' : '') +
         (isToday && !isSelected ? ' today' : '');
 
-      if (isFull) el.title = 'Fully booked — choose another day';
-      else if (isToday) el.title = "Same-day calls aren't available — please pick tomorrow or later.";
-      else if (isClosedDay) el.title = "Closed Sundays — please pick another day.";
-
-      if (!isBeforeEarliest && !isClosedDay && !isFull) {
-        el.onclick = () => selectDate(dateStr, date);
-      }
+      // Accessible name (button text is just the day number) + disabled state so
+      // keyboard/screen-reader users can navigate and can't pick a closed day.
+      const dayLabel = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      if (isFull) { el.title = 'Fully booked — choose another day'; el.disabled = true; el.setAttribute('aria-label', dayLabel + ' — fully booked'); }
+      else if (isToday) { el.title = "Same-day calls aren't available — please pick tomorrow or later."; el.disabled = true; el.setAttribute('aria-label', dayLabel + ' — same-day not available'); }
+      else if (isClosedDay) { el.title = "Closed Sundays — please pick another day."; el.disabled = true; el.setAttribute('aria-label', dayLabel + ' — closed'); }
+      else if (isBeforeEarliest) { el.disabled = true; el.setAttribute('aria-label', dayLabel + ' — unavailable'); }
+      else { el.setAttribute('aria-label', dayLabel + ' — available'); el.onclick = () => selectDate(dateStr, date); }
       grid.appendChild(el);
     }
   }
@@ -1030,7 +1039,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const booked = BOOKED[selectedDate] || [];
     container.innerHTML = SLOTS.map(slot => {
       const isBooked = booked.includes(slot);
-      return `<div class="time-slot${isBooked ? ' unavailable' : ''}" data-slot="${slot}" onclick="${isBooked ? '' : `selectTime('${slot}')`}">${slot} EST</div>`;
+      // <button> so slots are keyboard/screen-reader operable; disabled when taken.
+      return `<button type="button" class="time-slot${isBooked ? ' unavailable' : ''}" data-slot="${slot}"${isBooked ? ' disabled aria-label="' + slot + ' Eastern — already booked"' : ' aria-label="' + slot + ' Eastern — available" onclick="selectTime(\'' + slot + '\')"'}>${slot} EST</button>`;
     }).join('');
   }
 
