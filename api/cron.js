@@ -231,12 +231,18 @@ module.exports = async function handler(req, res) {
                   bookingUrl: BOOKING_URL
                 });
                 // Consent skips don't count as attempts — only real sends.
-                if (!(result && result.skipped)) summary.smsAttempted++;
-                if (result && result.ok) {
+                // A demo-mode send (SalesMsg creds/token missing) returns
+                // {ok:true, demo:true} but NO text actually left the building.
+                // Treat it like a skip: don't count it, don't stamp the funnel
+                // stage, don't retire the lead — so the drip retries next run
+                // and the outage surfaces instead of silently "completing" the
+                // funnel with nothing sent.
+                if (!(result && (result.skipped || result.demo))) summary.smsAttempted++;
+                if (result && result.ok && !result.demo) {
                   smsSent.push(label);
                   await sb('requests', 'PATCH', { client_sms_reminders_sent: smsSent }, `?id=eq.${r.id}`);
                   summary.smsRemindersSent++;
-                } else if (result && !result.skipped) {
+                } else if (result && !result.skipped && !result.demo) {
                   summary.smsFailed++;
                   await retireIfUndeliverable(r, result, smsSent);
                 }
@@ -273,12 +279,18 @@ module.exports = async function handler(req, res) {
                   phone:      r.phone,
                   smsConsent: r.sms_consent
                 });
-                if (!(result && result.skipped)) summary.smsAttempted++;
-                if (result && result.ok) {
+                // A demo-mode send (SalesMsg creds/token missing) returns
+                // {ok:true, demo:true} but NO text actually left the building.
+                // Treat it like a skip: don't count it, don't stamp the funnel
+                // stage, don't retire the lead — so the drip retries next run
+                // and the outage surfaces instead of silently "completing" the
+                // funnel with nothing sent.
+                if (!(result && (result.skipped || result.demo))) summary.smsAttempted++;
+                if (result && result.ok && !result.demo) {
                   smsSent.push(label);
                   await sb('requests', 'PATCH', { client_sms_reminders_sent: smsSent }, `?id=eq.${r.id}`);
                   summary.smsRemindersSent++;
-                } else if (result && !result.skipped) {
+                } else if (result && !result.skipped && !result.demo) {
                   summary.smsFailed++;
                   await retireIfUndeliverable(r, result, smsSent);
                 }
@@ -337,12 +349,14 @@ module.exports = async function handler(req, res) {
                     smsConsent: r.sms_consent,
                     bookingUrl: BOOKING_URL
                   });
-                  if (!(result && result.skipped)) summary.smsAttempted++;
-                  if (result && result.ok) {
+                  // Demo-mode send = nothing actually sent; treat like a skip
+                  // (see the pre-call leg above) so the funnel doesn't advance.
+                  if (!(result && (result.skipped || result.demo))) summary.smsAttempted++;
+                  if (result && result.ok && !result.demo) {
                     smsSent.push(label);
                     await sb('requests', 'PATCH', { client_sms_reminders_sent: smsSent }, `?id=eq.${r.id}`);
                     summary.smsRemindersSent++;
-                  } else if (result && !result.skipped) {
+                  } else if (result && !result.skipped && !result.demo) {
                     summary.smsFailed++;
                     await retireIfUndeliverable(r, result, smsSent);
                   }
