@@ -2030,7 +2030,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v183 · 2026-08-10</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v184 · 2026-08-10</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -5558,7 +5558,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // 3) Emails — authoritative log with the exact send time (client-facing only).
     const prettifyTpl = (t) => EMAIL_TEMPLATE_NAMES[t] ||
       String(t || 'Email').replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()).trim();
-    const logs = await dbGet('email_log', '&request_id=' + encodeURIComponent(r.id));
+    // Match emails by the client's address (request_id is null on most logged
+    // emails), falling back to request_id if we somehow have no email.
+    const emailKey = r.email ? '&email=' + encodeURIComponent(r.email) : '&request_id=' + encodeURIComponent(r.id);
+    const logs = await dbGet('email_log', emailKey);
     (Array.isArray(logs) ? logs : []).forEach(e => {
       if (e.is_staff) return; // client-facing emails only, not staff notifications
       events.push({ ts: e.ts, icon: '📧', kind: 'Email — ' + prettifyTpl(e.template),

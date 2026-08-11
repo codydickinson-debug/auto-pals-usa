@@ -967,10 +967,20 @@ module.exports = async function handler(req, res) {
     if (table === 'email_log') {
       if (req.method === 'GET') {
         if (!isStaff) return res.json([]);
+        const email = String(req.query.email || '').trim();
         const reqId = String(req.query.request_id || '').trim();
-        const params = reqId
-          ? `?request_id=eq.${encodeURIComponent(reqId)}&order=ts.desc&limit=200`
-          : `?order=ts.desc&limit=500`;
+        let params;
+        if (email) {
+          // Match by recipient address. Most transactional emails are logged
+          // with a NULL request_id (the senders don't pass requestId), so the
+          // recipient email is the reliable per-client join. recipients holds
+          // the client's address (comma-joined if ever multiple), hence ilike.
+          params = `?recipients=ilike.*${encodeURIComponent(email)}*&order=ts.desc&limit=200`;
+        } else if (reqId) {
+          params = `?request_id=eq.${encodeURIComponent(reqId)}&order=ts.desc&limit=200`;
+        } else {
+          params = `?order=ts.desc&limit=500`;
+        }
         const data = await query('email_log', 'GET', null, params);
         return res.json(data || []);
       }
