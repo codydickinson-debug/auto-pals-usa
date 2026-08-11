@@ -2460,15 +2460,25 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button class="sidebar-subitem" onclick="filterRequests('called_bad', this)"><span class="sub-dot" style="background:#b91c1c"></span>Bad call <span class="badge" id="badge-called_bad">0</span></button>
           <button class="sidebar-subitem" onclick="filterRequests('called_noshow', this)"><span class="sub-dot" style="background:#f59e0b"></span>No-show <span class="badge" id="badge-called_noshow">0</span></button>
         </div>
-        <button class="sidebar-item" onclick="filterRequests('followups', this)">
-          Follow-ups <span class="badge" id="badge-followups">0</span>
+        <button class="sidebar-item" onclick="filterRequests('followups', this)" title="Follow-ups for leads who HAVE had a call (post-call nurture)">
+          Post-Call Follow-ups <span class="badge" id="badge-followups">0</span>
         </button>
-        <!-- Follow-up funnel pipeline -->
+        <!-- Post-call follow-up funnel (leads who had a call) -->
         <div class="sidebar-sub" id="followups-sub">
           <button class="sidebar-subitem" onclick="filterRequests('fu1', this)"><span class="sub-dot" style="background:#0ea5e9"></span>Follow-up 1 <span class="badge" id="badge-fu1">0</span></button>
           <button class="sidebar-subitem" onclick="filterRequests('fu2', this)"><span class="sub-dot" style="background:#0284c7"></span>Follow-up 2 <span class="badge" id="badge-fu2">0</span></button>
           <button class="sidebar-subitem" onclick="filterRequests('fu3', this)"><span class="sub-dot" style="background:#0369a1"></span>Follow-up 3 <span class="badge" id="badge-fu3">0</span></button>
           <button class="sidebar-subitem" onclick="filterRequests('fu4', this)"><span class="sub-dot" style="background:#075985"></span>Follow-up 4 <span class="badge" id="badge-fu4">0</span></button>
+        </div>
+        <button class="sidebar-item" onclick="filterRequests('precall_followups', this)" title="Follow-ups for leads who have NOT had a call yet — chasing them to book / respond">
+          Pre-Call Follow-ups <span class="badge" id="badge-precall_followups">0</span>
+        </button>
+        <!-- Pre-call follow-up funnel (leads with no call yet) -->
+        <div class="sidebar-sub" id="precall-followups-sub">
+          <button class="sidebar-subitem" onclick="filterRequests('pfu1', this)"><span class="sub-dot" style="background:#f59e0b"></span>Follow-up 1 <span class="badge" id="badge-pfu1">0</span></button>
+          <button class="sidebar-subitem" onclick="filterRequests('pfu2', this)"><span class="sub-dot" style="background:#d97706"></span>Follow-up 2 <span class="badge" id="badge-pfu2">0</span></button>
+          <button class="sidebar-subitem" onclick="filterRequests('pfu3', this)"><span class="sub-dot" style="background:#b45309"></span>Follow-up 3 <span class="badge" id="badge-pfu3">0</span></button>
+          <button class="sidebar-subitem" onclick="filterRequests('pfu4', this)"><span class="sub-dot" style="background:#92400e"></span>Follow-up 4 <span class="badge" id="badge-pfu4">0</span></button>
         </div>
         <button class="sidebar-item" onclick="filterRequests('no_sms', this)" title="Leads who opted out of texts — the auto follow-up drip skips them, so work these by phone/email">
           🔕 Opted Out of SMS <span class="badge" id="badge-no_sms">0</span>
@@ -2832,16 +2842,22 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <div id="pl-outcomes"></div>
       </div>
       <div class="pl-card">
-        <div class="pl-card-title">Follow-up stages</div>
-        <div class="pl-card-sub">Leads currently sitting at each follow-up.</div>
+        <div class="pl-card-title">Post-call follow-up stages</div>
+        <div class="pl-card-sub">Leads who had a call, currently sitting at each follow-up.</div>
         <div id="pl-fu-funnel"></div>
       </div>
     </div>
 
     <div class="pl-card">
-      <div class="pl-card-title">Follow-up board</div>
-      <div class="pl-card-sub">Who's in each follow-up right now. Click a card to open the lead.</div>
+      <div class="pl-card-title">Post-Call Follow-up board</div>
+      <div class="pl-card-sub">Leads who <strong>had a call</strong> — who's in each follow-up right now. Click a card to open the lead.</div>
       <div id="pl-board" class="pl-board"></div>
+    </div>
+
+    <div class="pl-card">
+      <div class="pl-card-title">Pre-Call Follow-up board</div>
+      <div class="pl-card-sub">Leads with <strong>no call yet</strong>, being chased to book / respond. Click a card to open the lead.</div>
+      <div id="pl-board-precall" class="pl-board"></div>
     </div>
   </div>
 </div>
@@ -5122,11 +5138,18 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     counts.called_bad = requests.filter(r => callDisposition(r) === 'bad').length;
     counts.called_noshow = counts.noshow;
     // Follow-up funnel sub-tabs (effective = auto drip + manual).
-    counts.fu1 = requests.filter(r => effectiveFollowUp(r) === 1).length;
-    counts.fu2 = requests.filter(r => effectiveFollowUp(r) === 2).length;
-    counts.fu3 = requests.filter(r => effectiveFollowUp(r) === 3).length;
-    counts.fu4 = requests.filter(r => effectiveFollowUp(r) === 4).length;
+    // Follow-up funnels split by call status: post-call (had a call) vs
+    // pre-call (no call yet). Effective stage = auto SMS drip + manual override.
+    counts.fu1 = requests.filter(r => r.callCompletedAt && effectiveFollowUp(r) === 1).length;
+    counts.fu2 = requests.filter(r => r.callCompletedAt && effectiveFollowUp(r) === 2).length;
+    counts.fu3 = requests.filter(r => r.callCompletedAt && effectiveFollowUp(r) === 3).length;
+    counts.fu4 = requests.filter(r => r.callCompletedAt && effectiveFollowUp(r) === 4).length;
     counts.followups = counts.fu1 + counts.fu2 + counts.fu3 + counts.fu4;
+    counts.pfu1 = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) === 1).length;
+    counts.pfu2 = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) === 2).length;
+    counts.pfu3 = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) === 3).length;
+    counts.pfu4 = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) === 4).length;
+    counts.precall_followups = counts.pfu1 + counts.pfu2 + counts.pfu3 + counts.pfu4;
     counts.pending_deposit = requests.filter(isPendingDeposit).length;
     // Opted out of SMS (sms_consent === false) — the drip can't chase these, so
     // they surface here to be worked by hand. Active leads only.
@@ -5146,7 +5169,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.querySelectorAll('.action-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.sidebar-item, .sidebar-subitem').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
-    const titles = { all: 'All Requests', new: 'New Requests — this week', active: 'Active — new leads older than a week (still being worked)', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Follow-ups', fu1: 'Follow-up 1', fu2: 'Follow-up 2', fu3: 'Follow-up 3', fu4: 'Follow-up 4', pending_deposit: 'Pending Deposit — good call, no deposit yet', no_sms: 'Opted Out of SMS — no auto follow-up; work by phone/email', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
+    const titles = { all: 'All Requests', new: 'New Requests — this week', active: 'Active — new leads older than a week (still being worked)', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Post-Call Follow-ups (had a call)', fu1: 'Post-Call · Follow-up 1', fu2: 'Post-Call · Follow-up 2', fu3: 'Post-Call · Follow-up 3', fu4: 'Post-Call · Follow-up 4', precall_followups: 'Pre-Call Follow-ups (no call yet)', pfu1: 'Pre-Call · Follow-up 1', pfu2: 'Pre-Call · Follow-up 2', pfu3: 'Pre-Call · Follow-up 3', pfu4: 'Pre-Call · Follow-up 4', pending_deposit: 'Pending Deposit — good call, no deposit yet', no_sms: 'Opted Out of SMS — no auto follow-up; work by phone/email', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
     document.getElementById('table-title').textContent = titles[f] || 'Requests';
     renderTable();
   }
@@ -5385,10 +5408,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     } else if (currentFilter === 'no_sms') {
       filtered = requests.filter(isOptedOutSms);
     } else if (currentFilter === 'followups') {
-      filtered = requests.filter(r => effectiveFollowUp(r) > 0);
+      filtered = requests.filter(r => r.callCompletedAt && effectiveFollowUp(r) > 0);
     } else if (currentFilter === 'fu1' || currentFilter === 'fu2' || currentFilter === 'fu3' || currentFilter === 'fu4') {
       const n = Number(currentFilter.slice(2));
-      filtered = requests.filter(r => effectiveFollowUp(r) === n);
+      filtered = requests.filter(r => r.callCompletedAt && effectiveFollowUp(r) === n);
+    } else if (currentFilter === 'precall_followups') {
+      filtered = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) > 0);
+    } else if (currentFilter === 'pfu1' || currentFilter === 'pfu2' || currentFilter === 'pfu3' || currentFilter === 'pfu4') {
+      const n = Number(currentFilter.slice(3));
+      filtered = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) === n);
     } else if (currentFilter === 'new') {
       // New = this week's fresh 'new' leads only (aged-out ones move to Active).
       filtered = requests.filter(isNewRecent);
@@ -6268,14 +6296,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         : '<div class="pl-empty">No calls graded yet.</div>';
     }
 
-    // Follow-up stage distribution (effective = auto drip + manual override)
-    const fu = [1, 2, 3, 4].map(n => all.filter(r => effectiveFollowUp(r) === n).length);
+    // Follow-up funnels split by call status. Post-call = leads who HAD a call;
+    // pre-call = leads with no call yet (chasing a booking / response).
+    const _hadCall = r => !!r.callCompletedAt;
+    // Post-call follow-up stage distribution (effective = auto drip + manual).
+    const fu = [1, 2, 3, 4].map(n => all.filter(r => _hadCall(r) && effectiveFollowUp(r) === n).length);
     const fuMax = Math.max(1, ...fu);
     const fuEl = document.getElementById('pl-fu-funnel');
     if (fuEl) {
-      // Engagement: of leads currently in follow-up, how many have replied vs
-      // gone cold (no reply). This is the SMS reply-tracking signal.
-      const inFu = all.filter(r => effectiveFollowUp(r) > 0);
+      const inFu = all.filter(r => _hadCall(r) && effectiveFollowUp(r) > 0);
       const replied = inFu.filter(hasReplied).length;
       const cold = inFu.filter(isCold).length;
       const engagement = inFu.length
@@ -6286,28 +6315,32 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       ).join('') + engagement;
     }
 
-    // Follow-up board — one column per stage with lead cards.
-    const boardEl = document.getElementById('pl-board');
-    if (boardEl) {
-      boardEl.innerHTML = [1, 2, 3, 4].map(n => {
-        const leads = all.filter(r => effectiveFollowUp(r) === n)
+    // Shared lead-card renderer for both follow-up boards.
+    const _fuCard = (r) => {
+      const days = followUpDays(r);
+      const disp = callDisposition(r);
+      const dm = disp !== 'none' ? CALL_OUTCOME_META[disp] : null;
+      const veh = [r.make, r.model].filter(v => v && v !== '—').join(' ') || 'Open search';
+      const auto = followUpIsAuto(r) ? '<span class="pl-auto" title="Advanced automatically by the SMS drip">auto</span>' : '';
+      const rep = hasReplied(r) ? '<span class="reply-badge replied" style="margin-left:0;">💬</span>' : (isCold(r) ? '<span class="reply-badge cold" style="margin-left:0;">🔇</span>' : '');
+      return `<div class="pl-lead${isCold(r) ? ' pl-lead-cold' : ''}" onclick="openDetailView(${r.id})">
+        <div class="pl-lead-name">${escapeHtml(r.firstName + ' ' + r.lastName)}${auto}</div>
+        <div class="pl-lead-meta">${escapeHtml(veh)}${days != null ? ' · ' + days + 'd' : ''}</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${dm ? `<span class="disp-badge" style="margin-left:0;background:${dm.bg};color:${dm.color};border:1px solid ${dm.border};">${dm.short}</span>` : ''}${rep}</div>
+      </div>`;
+    };
+    // One column per follow-up stage; `pred` scopes to post- vs pre-call.
+    const _renderFuBoard = (el, pred) => {
+      if (!el) return;
+      el.innerHTML = [1, 2, 3, 4].map(n => {
+        const leads = all.filter(r => pred(r) && effectiveFollowUp(r) === n)
           .sort((a, b) => new Date(a.followUpUpdatedAt || 0) - new Date(b.followUpUpdatedAt || 0));
-        const cards = leads.length ? leads.map(r => {
-          const days = followUpDays(r);
-          const disp = callDisposition(r);
-          const dm = disp !== 'none' ? CALL_OUTCOME_META[disp] : null;
-          const veh = [r.make, r.model].filter(v => v && v !== '—').join(' ') || 'Open search';
-          const auto = followUpIsAuto(r) ? '<span class="pl-auto" title="Advanced automatically by the SMS drip">auto</span>' : '';
-          const rep = hasReplied(r) ? '<span class="reply-badge replied" style="margin-left:0;">💬</span>' : (isCold(r) ? '<span class="reply-badge cold" style="margin-left:0;">🔇</span>' : '');
-          return `<div class="pl-lead${isCold(r) ? ' pl-lead-cold' : ''}" onclick="openDetailView(${r.id})">
-            <div class="pl-lead-name">${escapeHtml(r.firstName + ' ' + r.lastName)}${auto}</div>
-            <div class="pl-lead-meta">${escapeHtml(veh)}${days != null ? ' · ' + days + 'd' : ''}</div>
-            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${dm ? `<span class="disp-badge" style="margin-left:0;background:${dm.bg};color:${dm.color};border:1px solid ${dm.border};">${dm.short}</span>` : ''}${rep}</div>
-          </div>`;
-        }).join('') : '<div class="pl-empty">—</div>';
+        const cards = leads.length ? leads.map(_fuCard).join('') : '<div class="pl-empty">—</div>';
         return `<div class="pl-col"><div class="pl-col-head">Follow-up ${n} <span class="pl-col-count">${leads.length}</span></div><div class="pl-col-body">${cards}</div></div>`;
       }).join('');
-    }
+    };
+    _renderFuBoard(document.getElementById('pl-board'), _hadCall);
+    _renderFuBoard(document.getElementById('pl-board-precall'), r => !_hadCall(r));
   }
 
   function updateStatusFromDetail(newStatus) {
