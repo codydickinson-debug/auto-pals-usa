@@ -2030,7 +2030,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v184 · 2026-08-10</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v185 · 2026-08-10</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2944,6 +2944,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         </div>
       </div>
 
+      <!-- COMMUNICATIONS LOG — every email/text sent to this client, with the
+           message that went out and when. Populated by renderCommsTimeline(). -->
+      <div class="detail-3col-card">
+        <h3>📨 Communications</h3>
+        <div id="dv-comms" style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);">Loading…</div>
+      </div>
+
     </div>
 
     <!-- RIGHT: Sticky payment + actions -->
@@ -3009,10 +3016,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <div id="dv-deposit-confirmed" style="display:none;padding:10px 12px;background:var(--green-light);border:1px solid #a7f3d0;border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;font-weight:700;color:var(--green);">
           ✓ Received <span id="dv-deposit-date" style="font-weight:400;color:var(--text-muted);margin-left:4px;"></span>
         </div>
-      </div>
-
-      <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Communications — texts &amp; emails</div>
-        <div id="dv-comms" style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);">Loading…</div>
       </div>
 
       <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Update Status</div>
@@ -5526,6 +5529,29 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     clientRecs: 'Vehicle recommendations', noShow1: 'No-show email #1', noShow2: 'No-show email #2'
   };
 
+  // The actual copy each automated drip text sends, so the timeline shows WHAT
+  // went out (not just which step). This is a DISPLAY MIRROR — keep it in sync
+  // with the TEMPLATES in api/_sms.js. Booking/portal URLs are shown as short
+  // placeholders for readability. Rendered with the client's name + vehicle.
+  function smsBodyForLabel(label, r) {
+    const n = (r && r.firstName) ? r.firstName : 'there';
+    const v = (r && r.make && r.model && String(r.model).trim() !== '—') ? (r.make + ' ' + r.model).trim() : ((r && r.make) ? r.make : 'car');
+    const T = {
+      pre1: `Hi ${n}, quick follow-up on your ${v} request. Here's how we do it: source at auction wholesale prices, run every candidate past our in-house mechanic, and pull an AutoCheck report — so you get a solid car below what retail dealers charge. A 30-min intro call is all it takes to walk through your budget and start hunting. Book here: [booking link]`,
+      pre2: `Hi ${n}, auctions run every week and inventory moves fast. Every week without a clear target on your ${v} is another cycle of missed wholesale pricing. Give us 30 minutes to lock in your criteria and we'll start hunting the next auction: [booking link]`,
+      pre3: `Hi ${n}, one thing worth knowing about how we work — before we bid on any car, we send you the full details, AutoCheck report, and our mechanic's inspection. You approve every candidate before we buy it, so you always know exactly what you're getting. If any concern's holding you back, tell us on the intro call and we'll walk you through it: [booking link]`,
+      pre4: `Hi ${n}, we'll leave it here. Bottom line: 25% average savings, mechanic-inspected, AutoCheck verified, and you approve every car before we bid. If any of that still appeals for the ${v}, book the intro call anytime: [booking link] Otherwise no worries — we appreciate you considering us.`,
+      post0: `Hi ${n}, great talking with you. Quick recap of what we'd do: source the ${v} you're after through our Auction resources at wholesale prices, run it past our in-house mechanic and pull an AutoCheck before we ever bid, so you get the right car for well under retail price. Our clients save around 25% on average. Whenever you're ready, just send over the year/make/model and your budget and we'll start hunting. No pressure at all.`,
+      post1: `Hi ${n}, circling back. Auctions run every week, so inventory is always turning over. The sooner we know exactly what you want and your budget, the sooner we can lock onto the right one when it crosses the block. Happy to answer any questions in the meantime.`,
+      post2: `Hi ${n}, checking back in. We know trusting a new dealer with a car purchase is a big step, and that's fair. We're a licensed Florida dealer (Automotivation Enterprises LLC), so feel free to look us up and cross-reference with state dealer records anytime. We also don't collect vehicle funds until we've found a specific car, sent you the details, AutoCheck, and our mechanic's inspection, and you've approved it. If something's holding you back, tell us and we'll walk you through it.`,
+      post3: `Hi ${n}, we'll leave it here so we're not crowding you. If the timing isn't right, no worries at all. If you'd still like us to find you the right car at the right price, just reply anytime and we'll pick back up. Either way, we appreciate you considering us.`,
+      noshow0: `Hi ${n}, this is Auto Pals USA — we had your intro call scheduled but couldn't reach you. No worries, it happens! We'd still love to help you find the right ${v} at wholesale auction pricing. Grab a new time that works for you here: [booking link]`,
+      noshow1: `Hi ${n}, still happy to walk you through how we source the ${v} you're after — it's a quick 30-minute call and there's no obligation. Pick a new time whenever it's convenient: [booking link]`,
+      noshow2: `Hi ${n}, last note from us — if you'd still like us to hunt down the right ${v} below retail, just grab a time and we'll take it from there: [booking link] Otherwise no worries at all, and thanks for considering us.`
+    };
+    return T[label] || '';
+  }
+
   // Read-only communications log for the client profile: every email we sent
   // (from email_log, with the exact send time), the two-way portal message
   // thread, and which automated texts have fired. Purely informational — it
@@ -5552,8 +5578,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const name = SMS_LABEL_NAMES[label];
       if (!name) return; // skip 'undeliverable' + any unknown sentinel
       // Exact time if the drip recorded it (post-migration sends); older texts
-      // have no stored time and fall back to "time not recorded".
-      events.push({ ts: smsTimes[label] || null, icon: '📱', kind: 'Text — ' + name, detail: '', ok: true });
+      // have no stored time and fall back to "time not recorded". detail = the
+      // actual message copy that went out.
+      events.push({ ts: smsTimes[label] || null, icon: '📱', kind: 'Text — ' + name, detail: smsBodyForLabel(label, r), ok: true });
     });
     // 3) Emails — authoritative log with the exact send time (client-facing only).
     const prettifyTpl = (t) => EMAIL_TEMPLATE_NAMES[t] ||
@@ -5578,7 +5605,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       : 'time not recorded';
     box.innerHTML = events.map(ev => {
       const failTag = ev.ok ? '' : ' <span style="color:var(--red);font-weight:700;">· failed</span>';
-      const detail = ev.detail ? `<div style="color:var(--text-muted);font-size:11px;margin-top:1px;">${escapeHtml(ev.detail)}</div>` : '';
+      // The actual message copy that went out, as a quoted block.
+      const detail = ev.detail ? `<div style="color:var(--text);font-size:11px;margin-top:3px;line-height:1.5;background:var(--cream,#faf7f0);border-left:2px solid var(--border);border-radius:4px;padding:6px 8px;white-space:pre-wrap;">${escapeHtml(ev.detail)}</div>` : '';
       return `<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">`
         + `<div style="flex-shrink:0;">${ev.icon}</div>`
         + `<div style="flex:1;min-width:0;">`
