@@ -1242,10 +1242,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <h2 id="success-headline">Got it — now book your call.</h2>
           <p id="success-subhead" class="success-subhead">A 30-min discovery call is the fastest way to lock in your search. Pick a time that works below.</p>
 
-          <!-- Primary CTA — book the call -->
+          <!-- Primary CTA — book the call (rewritten to "Pay deposit" for skip-the-line) -->
           <a id="primary-cta" class="success-cta" href="booking.html"
              onclick="try{track('success_primary_cta_click',{cta:(document.getElementById('primary-cta')||{}).textContent||''});}catch(e){}">
             📅 Book your 30-min call →
+          </a>
+
+          <!-- Skip-the-line fallback: shown only for skip-the-line clients who'd
+               rather talk to a rep before paying. Diverts to the call booking. -->
+          <a id="skipline-call-alt" href="booking.html" style="display:none;margin-top:12px;font-family:'DM Sans',system-ui,sans-serif;font-size:14px;font-weight:600;color:var(--navy,#0f2557);text-decoration:underline;text-underline-offset:3px;cursor:pointer;"
+             onclick="try{track('skipline_book_call_click');}catch(e){}">
+            Prefer to talk to a rep first? Set up a call →
           </a>
 
           <!-- What you'll cover on the call -->
@@ -1335,6 +1342,23 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   /* ── db base ─────────────────────────── */
   const DB_BASE = '/api/db';
   const isLocal = window.location.protocol === 'file:';
+
+  /* ── Stripe deposit Payment Link ───────────────────────────────
+     Paste your Stripe Payment Link URL for the $850 deposit here (create it in
+     the Stripe Dashboard → Payment Links). Skip-the-line clients are sent
+     straight to it after submitting, with their lead id + email attached so the
+     payment ties back to them (the webhook auto-marks the deposit received).
+     Leave blank and skip-the-line falls back to the portal (Zelle) — nothing
+     breaks until the link is set. */
+  const STRIPE_DEPOSIT_LINK = '';
+  function depositPayUrl(req) {
+    if (!STRIPE_DEPOSIT_LINK) return 'portal.html';
+    const sep = STRIPE_DEPOSIT_LINK.includes('?') ? '&' : '?';
+    const params = new URLSearchParams();
+    if (req && req.id)    params.set('client_reference_id', String(req.id));
+    if (req && req.email) params.set('prefilled_email', req.email);
+    return STRIPE_DEPOSIT_LINK + sep + params.toString();
+  }
 
   /* ── session flag ─────────────────────────── */
   let sessionExpiredHandled = false;
@@ -1865,10 +1889,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const secondary = document.getElementById('secondary-cta');
       if (secondary) secondary.style.display = 'none';
     } else if (isSkipLine) {
-      headline.textContent = `Got it, ${req.firstName} — head to your portal.`;
-      subhead.textContent  = `You opted in to Skip the Line, so we go straight to sourcing. Pay your $850 deposit and we start hunting auctions the same day.`;
-      primaryCta.textContent = '💳 Pay $850 deposit & start sourcing →';
-      primaryCta.setAttribute('href', 'portal.html');
+      headline.textContent = `Got it, ${req.firstName} — let's start sourcing.`;
+      subhead.textContent  = `You opted in to Skip the Line, so we skip the call and go straight to the search. Pay your $850 deposit by card and we start hunting auctions the same day.`;
+      primaryCta.textContent = '💳 Pay $850 deposit by card →';
+      primaryCta.setAttribute('href', depositPayUrl(req));
+      // Reveal the "talk to a rep first" fallback → call booking.
+      const callAlt = document.getElementById('skipline-call-alt');
+      if (callAlt) callAlt.style.display = 'inline-block';
       learnBox.style.display    = 'none';
       availHint.style.display   = 'none';
       skipCtaWrap.style.display = 'none';
