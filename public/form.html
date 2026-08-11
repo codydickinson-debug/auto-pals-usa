@@ -2030,7 +2030,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v181 · 2026-08-10</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v182 · 2026-08-10</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2442,8 +2442,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <button class="sidebar-item active" onclick="filterRequests('all', this)">
           All Requests <span class="badge" id="badge-all">0</span>
         </button>
-        <button class="sidebar-item" onclick="filterRequests('new', this)">
+        <button class="sidebar-item" onclick="filterRequests('new', this)" title="Fresh leads from the last 7 days">
           New <span class="badge" id="badge-new">0</span>
+        </button>
+        <button class="sidebar-item" onclick="filterRequests('active', this)" title="New leads older than a week but not yet dormant — still being worked">
+          Active <span class="badge" id="badge-active">0</span>
         </button>
         <button class="sidebar-item" onclick="filterRequests('qualified', this)">
           Qualified <span class="badge" id="badge-qualified">0</span>
@@ -3006,6 +3009,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <div id="dv-deposit-confirmed" style="display:none;padding:10px 12px;background:var(--green-light);border:1px solid #a7f3d0;border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;font-weight:700;color:var(--green);">
           ✓ Received <span id="dv-deposit-date" style="font-weight:400;color:var(--text-muted);margin-left:4px;"></span>
         </div>
+      </div>
+
+      <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Communications — texts &amp; emails</div>
+        <div id="dv-comms" style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);">Loading…</div>
       </div>
 
       <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Update Status</div>
@@ -5061,6 +5068,25 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     return r.smsConsent === false && r.status !== 'sold' && r.status !== 'rejected' && !isDormantRequest(r);
   }
 
+  // ── "New" vs "Active" split ───────────────────────────────────────
+  // A brand-new lead (status 'new') stays in the New tab only for its first
+  // week; after that it rolls into the Active tab — still being worked, sitting
+  // between New and Dormant — until it either progresses to another status or
+  // crosses the 14-day dormant line. Keeps New focused on this week's leads.
+  // Both exclude dormant.
+  const NEW_TAB_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+  function leadAgeMs(r) {
+    if (!r || !r.submitted) return 0;
+    const t = new Date(r.submitted).getTime();
+    return Number.isFinite(t) ? (Date.now() - t) : 0;
+  }
+  function isNewRecent(r) {
+    return r.status === 'new' && !isDormantRequest(r) && leadAgeMs(r) <= NEW_TAB_MAX_AGE_MS;
+  }
+  function isActiveAging(r) {
+    return r.status === 'new' && !isDormantRequest(r) && leadAgeMs(r) > NEW_TAB_MAX_AGE_MS;
+  }
+
   function updateBadges() {
     // 'review' status still exists in the codebase (set via detail panel) and rolls
     // into the New + In Review action-queue card — we count it but no longer
@@ -5080,6 +5106,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       counts[r.status]++;
     });
     counts.dormant = requests.filter(isDormantRequest).length;
+    // New = this week's fresh 'new' leads; Active = 'new' leads older than a
+    // week but not yet dormant. (Overrides the raw status count above.)
+    counts.new = requests.filter(isNewRecent).length;
+    counts.active = requests.filter(isActiveAging).length;
     counts.noshow = requests.filter(isNoShowRequest).length;
     // Post-call disposition sub-tabs under Called.
     counts.called_good = requests.filter(r => callDisposition(r) === 'good').length;
@@ -5110,7 +5140,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.querySelectorAll('.action-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.sidebar-item, .sidebar-subitem').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
-    const titles = { all: 'All Requests', new: 'New Requests', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Follow-ups', fu1: 'Follow-up 1', fu2: 'Follow-up 2', fu3: 'Follow-up 3', fu4: 'Follow-up 4', pending_deposit: 'Pending Deposit — good call, no deposit yet', no_sms: 'Opted Out of SMS — no auto follow-up; work by phone/email', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
+    const titles = { all: 'All Requests', new: 'New Requests — this week', active: 'Active — new leads older than a week (still being worked)', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Follow-ups', fu1: 'Follow-up 1', fu2: 'Follow-up 2', fu3: 'Follow-up 3', fu4: 'Follow-up 4', pending_deposit: 'Pending Deposit — good call, no deposit yet', no_sms: 'Opted Out of SMS — no auto follow-up; work by phone/email', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
     document.getElementById('table-title').textContent = titles[f] || 'Requests';
     renderTable();
   }
@@ -5353,6 +5383,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     } else if (currentFilter === 'fu1' || currentFilter === 'fu2' || currentFilter === 'fu3' || currentFilter === 'fu4') {
       const n = Number(currentFilter.slice(2));
       filtered = requests.filter(r => effectiveFollowUp(r) === n);
+    } else if (currentFilter === 'new') {
+      // New = this week's fresh 'new' leads only (aged-out ones move to Active).
+      filtered = requests.filter(isNewRecent);
+    } else if (currentFilter === 'active') {
+      // Active = 'new' leads older than a week, not yet dormant — still worked.
+      filtered = requests.filter(isActiveAging);
     } else if (currentFilter === 'dormant') {
       // Dormant is a DERIVED view (14d+ no deposit) OR a manual status flip —
       // isDormantRequest covers both. A plain status==='dormant' filter would
@@ -5469,6 +5505,81 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   function rowClick(e, id) { if (e.target.closest('button')) return; openDetailView(id); }
 
   // Open new 3-column request detail view (replaces slide-in detail-panel)
+  // Friendly names for the automated SMS drip labels stored in
+  // r.smsRemindersSent (the drip records WHICH texts fired, not when).
+  const SMS_LABEL_NAMES = {
+    pre1: 'Pre-call text #1 (booking nudge)', pre2: 'Pre-call text #2',
+    pre3: 'Pre-call text #3', pre4: 'Pre-call text #4',
+    post0: 'Post-call text (immediate)', post1: 'Post-call follow-up #1',
+    post2: 'Post-call follow-up #2', post3: 'Post-call follow-up #3',
+    noshow1: 'No-show follow-up #1', noshow2: 'No-show follow-up #2'
+  };
+  // Friendly names for email_log templates (client-facing ones).
+  const EMAIL_TEMPLATE_NAMES = {
+    confirmation: 'Request confirmation', rejected: 'Decline notice',
+    reconditioningQuote: 'Reconditioning quote', depositReceipt: 'Deposit receipt',
+    depositReminder1: 'Deposit reminder #1', depositReminder2: 'Deposit reminder #2',
+    depositReminder3: 'Deposit reminder #3', clientNewMessage: 'New-message alert',
+    clientRecs: 'Vehicle recommendations', noShow1: 'No-show email #1', noShow2: 'No-show email #2'
+  };
+
+  // Read-only communications log for the client profile: every email we sent
+  // (from email_log, with the exact send time), the two-way portal message
+  // thread, and which automated texts have fired. Purely informational — it
+  // does NOT touch the pipeline, the tabs, or the drip.
+  async function renderCommsTimeline(r) {
+    const box = document.getElementById('dv-comms');
+    if (!box || !r) return;
+    box.innerHTML = '<span style="color:var(--text-muted);">Loading…</span>';
+    const events = [];
+    // 1) Portal messages (two-way thread) — exact timestamps, from local cache.
+    try {
+      const msgs = JSON.parse(localStorage.getItem('am_msgs_' + r.id) || '[]');
+      (Array.isArray(msgs) ? msgs : []).forEach(m => {
+        if (!m || !(m.text || '').trim()) return;
+        const staff = m.from === 'team';
+        events.push({ ts: m.ts, icon: '💬', kind: staff ? 'Message → client' : 'Message ← from client',
+          detail: String(m.text).slice(0, 140), ok: true });
+      });
+    } catch (e) { /* ignore a corrupt local cache */ }
+    // 2) Automated SMS drip — WHICH texts fired. The drip stores labels, not
+    //    timestamps, so these show without an exact send time (for now).
+    (Array.isArray(r.smsRemindersSent) ? r.smsRemindersSent : []).forEach(label => {
+      const name = SMS_LABEL_NAMES[label];
+      if (!name) return; // skip 'undeliverable' + any unknown sentinel
+      events.push({ ts: null, icon: '📱', kind: 'Text — ' + name, detail: '', ok: true });
+    });
+    // 3) Emails — authoritative log with the exact send time (client-facing only).
+    const prettifyTpl = (t) => EMAIL_TEMPLATE_NAMES[t] ||
+      String(t || 'Email').replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()).trim();
+    const logs = await dbGet('email_log', '&request_id=' + encodeURIComponent(r.id));
+    (Array.isArray(logs) ? logs : []).forEach(e => {
+      if (e.is_staff) return; // client-facing emails only, not staff notifications
+      events.push({ ts: e.ts, icon: '📧', kind: 'Email — ' + prettifyTpl(e.template),
+        detail: e.subject || '', ok: e.ok !== false });
+    });
+    // Newest first; timestamp-less SMS entries sink to the bottom of the list.
+    events.sort((a, b) => (b.ts ? new Date(b.ts).getTime() : 0) - (a.ts ? new Date(a.ts).getTime() : 0));
+    if (!events.length) {
+      box.innerHTML = '<span style="color:var(--text-muted);">No messages or emails sent yet.</span>';
+      return;
+    }
+    const fmtWhen = (ts) => ts
+      ? new Date(ts).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET'
+      : 'time not recorded';
+    box.innerHTML = events.map(ev => {
+      const failTag = ev.ok ? '' : ' <span style="color:var(--red);font-weight:700;">· failed</span>';
+      const detail = ev.detail ? `<div style="color:var(--text-muted);font-size:11px;margin-top:1px;">${escapeHtml(ev.detail)}</div>` : '';
+      return `<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">`
+        + `<div style="flex-shrink:0;">${ev.icon}</div>`
+        + `<div style="flex:1;min-width:0;">`
+        + `<div style="font-weight:600;color:var(--text);">${escapeHtml(ev.kind)}${failTag}</div>`
+        + detail
+        + `<div style="color:var(--text-muted);font-size:11px;margin-top:1px;">${fmtWhen(ev.ts)}</div>`
+        + `</div></div>`;
+    }).join('');
+  }
+
   function openDetailView(id) {
     const r = requests.find(x => x.id === id);
     if (!r) return;
@@ -5477,6 +5588,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
     document.getElementById('view-detail').classList.add('active');
     populateDetailView(r);
+    renderCommsTimeline(r);
   }
 
   function closeDetailView() {

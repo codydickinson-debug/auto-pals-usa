@@ -944,6 +944,24 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // ── EMAIL LOG ─────────────────────────────────────────────────
+    // Staff-only, per-client email history for the profile Communications
+    // timeline. The isPublicOp gate above already 401s any non-staff caller
+    // (email_log is not a public op), and the table is RLS-locked to the
+    // service role — so this never exposes the log to the anon key.
+    if (table === 'email_log') {
+      if (req.method === 'GET') {
+        if (!isStaff) return res.json([]);
+        const reqId = String(req.query.request_id || '').trim();
+        const params = reqId
+          ? `?request_id=eq.${encodeURIComponent(reqId)}&order=ts.desc&limit=200`
+          : `?order=ts.desc&limit=500`;
+        const data = await query('email_log', 'GET', null, params);
+        return res.json(data || []);
+      }
+      return res.status(405).json({ error: 'method_not_allowed' });
+    }
+
     // ── REPAIRS ───────────────────────────────────────────────────
     if (table === 'repair_cars') {
       if (req.method === 'GET') {
