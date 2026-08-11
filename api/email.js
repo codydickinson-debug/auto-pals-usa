@@ -1130,16 +1130,25 @@ function logAttempt(row) {
            || process.env.SUPABASE_KEY
            || process.env.SUPABASE_ANON_KEY;
   if (!url || !key) return;
-  fetchWithTimeout(`${url}/rest/v1/email_log`, {
-    method: 'POST',
-    headers: {
-      'apikey': key,
-      'Authorization': `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=minimal'
-    },
-    body: JSON.stringify(row)
-  }, 5000).catch(err => {
+  const headers = {
+    'apikey': key,
+    'Authorization': `Bearer ${key}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=minimal'
+  };
+  const post = (payload) => fetchWithTimeout(`${url}/rest/v1/email_log`, {
+    method: 'POST', headers, body: JSON.stringify(payload)
+  }, 5000);
+  post(row).then(res => {
+    // If the insert was rejected AND this row carried a body, the `body` column
+    // may not exist yet (migration not applied). Retry WITHOUT body so the log
+    // row (template, subject, time) is still written — the email keeps showing
+    // in the timeline, just without its body until the migration lands.
+    if (res && !res.ok && row.body !== undefined) {
+      const { body, ...rest } = row;
+      return post(rest);
+    }
+  }).catch(err => {
     // Table might not exist yet (migration not applied) — that's fine.
     const msg = err && err.message;
     if (msg && !/relation .* does not exist|404/i.test(msg)) {
@@ -1224,6 +1233,7 @@ async function sendTemplate(type, data) {
     console.log('[EMAIL DEMO]', type, '→', recipients.join(','));
     logAttempt({
       template: type, recipients: recipients.join(','), subject,
+      body: plainText.slice(0, 8000),
       ok: true, is_staff: isStaff,
       request_id: payload.requestId || null
     });
@@ -1248,6 +1258,7 @@ async function sendTemplate(type, data) {
       console.log(`[EMAIL] ok ${type} → ${recipients.length} recipient(s) (attempt ${attempt})`);
       logAttempt({
         template: type, recipients: recipients.join(','), subject,
+        body: plainText.slice(0, 8000),
         ok: true, attempts: attempt, sg_status: result.status,
         is_staff: isStaff, request_id: payload.requestId || null
       });
@@ -1267,6 +1278,7 @@ async function sendTemplate(type, data) {
   console.error(`${tag} ${type} → ${recipients.join(',')} status=${lastStatus} err=${(lastErr||'').slice(0,200)}`);
   logAttempt({
     template: type, recipients: recipients.join(','), subject,
+    body: plainText.slice(0, 8000),
     ok: false, attempts: MAX_ATTEMPTS, sg_status: lastStatus,
     error: (lastErr || 'unknown').slice(0, 500),
     is_staff: isStaff, request_id: payload.requestId || null
