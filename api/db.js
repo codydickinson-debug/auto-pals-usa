@@ -890,6 +890,14 @@ module.exports = async function handler(req, res) {
                 query('requests', 'PATCH', { client_sms_reminders_sent: nextSmsSent }, `?id=eq.${priorRow.id}`)
                   .catch(err => console.warn('[DB] post0 stamp failed', err && err.message))
               );
+              // Best-effort exact send-time for the profile timeline. Separate
+              // PATCH so it's ignored (400) if the sms_sent_at column isn't there
+              // yet — never affects the text send or the label stamp above.
+              const priorSentAt = (priorRow.sms_sent_at && typeof priorRow.sms_sent_at === 'object') ? priorRow.sms_sent_at : {};
+              postCallFires.push(
+                query('requests', 'PATCH', { sms_sent_at: { ...priorSentAt, post0: new Date().toISOString() } }, `?id=eq.${priorRow.id}`)
+                  .catch(() => {})
+              );
             }
           }
           if (postCallFires.length) await Promise.allSettled(postCallFires);
@@ -930,6 +938,13 @@ module.exports = async function handler(req, res) {
               noShowFires.push(
                 query('requests', 'PATCH', { client_sms_reminders_sent: nextSmsSent }, `?id=eq.${priorRow.id}`)
                   .catch(err => console.warn('[DB] noshow0 stamp failed', err && err.message))
+              );
+              // Best-effort exact send-time (separate PATCH; ignored if the
+              // sms_sent_at column isn't there yet — never affects the send).
+              const priorSentAt = (priorRow.sms_sent_at && typeof priorRow.sms_sent_at === 'object') ? priorRow.sms_sent_at : {};
+              noShowFires.push(
+                query('requests', 'PATCH', { sms_sent_at: { ...priorSentAt, noshow0: new Date().toISOString() } }, `?id=eq.${priorRow.id}`)
+                  .catch(() => {})
               );
             }
           }

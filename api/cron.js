@@ -104,6 +104,26 @@ function hoursSince(iso) {
   return (Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60);
 }
 
+// Record WHEN a drip text went out, in the requests.sms_sent_at JSONB map
+// (label -> ISO time), for the profile Communications timeline. DELIBERATELY
+// decoupled from the label-array stamp: it runs AFTER that PATCH already
+// succeeded, in its own request, so if the sms_sent_at column doesn't exist yet
+// (migration 2026-08-10-sms-sent-at.sql not applied), this PATCH just 400s
+// server-side and is ignored — the drip keeps working, no dupes, no throw. The
+// row is fetched with all columns, so r.sms_sent_at already carries prior
+// labels' times and the merge below never clobbers them. Idempotent per label.
+async function stampSmsSentAt(r, label) {
+  try {
+    const map = (r && r.sms_sent_at && typeof r.sms_sent_at === 'object') ? r.sms_sent_at : {};
+    if (map[label]) return;                       // already timed
+    const next = { ...map, [label]: new Date().toISOString() };
+    if (r) r.sms_sent_at = next;                  // keep the in-memory row in sync for this run
+    await sb('requests', 'PATCH', { sms_sent_at: next }, `?id=eq.${r.id}`);
+  } catch (e) {
+    // Never let send-time bookkeeping affect the drip.
+  }
+}
+
 // Retire numbers Salesmsg can never deliver to. A junk/foreign phone fails
 // with the same 4xx on every run, so without this the drip re-attempts it
 // daily forever and each attempt lands another red "Failed" thread in the
@@ -242,6 +262,7 @@ module.exports = async function handler(req, res) {
                   smsSent.push(label);
                   await sb('requests', 'PATCH', { client_sms_reminders_sent: smsSent }, `?id=eq.${r.id}`);
                   summary.smsRemindersSent++;
+                  await stampSmsSentAt(r, label);   // best-effort exact send-time; never blocks the drip
                 } else if (result && !result.skipped && !result.demo) {
                   summary.smsFailed++;
                   await retireIfUndeliverable(r, result, smsSent);
@@ -290,6 +311,7 @@ module.exports = async function handler(req, res) {
                   smsSent.push(label);
                   await sb('requests', 'PATCH', { client_sms_reminders_sent: smsSent }, `?id=eq.${r.id}`);
                   summary.smsRemindersSent++;
+                  await stampSmsSentAt(r, label);   // best-effort exact send-time; never blocks the drip
                 } else if (result && !result.skipped && !result.demo) {
                   summary.smsFailed++;
                   await retireIfUndeliverable(r, result, smsSent);
@@ -356,6 +378,7 @@ module.exports = async function handler(req, res) {
                     smsSent.push(label);
                     await sb('requests', 'PATCH', { client_sms_reminders_sent: smsSent }, `?id=eq.${r.id}`);
                     summary.smsRemindersSent++;
+                    await stampSmsSentAt(r, label);   // best-effort exact send-time; never blocks the drip
                   } else if (result && !result.skipped && !result.demo) {
                     summary.smsFailed++;
                     await retireIfUndeliverable(r, result, smsSent);

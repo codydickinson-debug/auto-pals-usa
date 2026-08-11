@@ -2030,7 +2030,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v182 · 2026-08-10</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v183 · 2026-08-10</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3770,6 +3770,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       // the call, post0-3 after). Lets the dashboard auto-track follow-up
       // progress with no staff action — see dripStage()/effectiveFollowUp().
       smsRemindersSent: Array.isArray(r.client_sms_reminders_sent) ? r.client_sms_reminders_sent : [],
+      // Exact send-time per drip label (label -> ISO). Powers the Communications
+      // timeline; empty for texts sent before the sms_sent_at migration.
+      smsSentAt: (r.sms_sent_at && typeof r.sms_sent_at === 'object') ? r.sms_sent_at : {},
       lastReplyAt: r.last_reply_at || null,
       bookingConfirmedAt: r.booking_confirmed_at,
       // When the request was last flipped to status='dormant'. Used by the
@@ -5512,7 +5515,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     pre3: 'Pre-call text #3', pre4: 'Pre-call text #4',
     post0: 'Post-call text (immediate)', post1: 'Post-call follow-up #1',
     post2: 'Post-call follow-up #2', post3: 'Post-call follow-up #3',
-    noshow1: 'No-show follow-up #1', noshow2: 'No-show follow-up #2'
+    noshow0: 'No-show text (immediate)', noshow1: 'No-show follow-up #1', noshow2: 'No-show follow-up #2'
   };
   // Friendly names for email_log templates (client-facing ones).
   const EMAIL_TEMPLATE_NAMES = {
@@ -5544,10 +5547,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     } catch (e) { /* ignore a corrupt local cache */ }
     // 2) Automated SMS drip — WHICH texts fired. The drip stores labels, not
     //    timestamps, so these show without an exact send time (for now).
+    const smsTimes = (r.smsSentAt && typeof r.smsSentAt === 'object') ? r.smsSentAt : {};
     (Array.isArray(r.smsRemindersSent) ? r.smsRemindersSent : []).forEach(label => {
       const name = SMS_LABEL_NAMES[label];
       if (!name) return; // skip 'undeliverable' + any unknown sentinel
-      events.push({ ts: null, icon: '📱', kind: 'Text — ' + name, detail: '', ok: true });
+      // Exact time if the drip recorded it (post-migration sends); older texts
+      // have no stored time and fall back to "time not recorded".
+      events.push({ ts: smsTimes[label] || null, icon: '📱', kind: 'Text — ' + name, detail: '', ok: true });
     });
     // 3) Emails — authoritative log with the exact send time (client-facing only).
     const prettifyTpl = (t) => EMAIL_TEMPLATE_NAMES[t] ||
