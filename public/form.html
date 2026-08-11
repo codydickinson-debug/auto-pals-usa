@@ -2030,7 +2030,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v180 · 2026-08-09</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v181 · 2026-08-10</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -6846,9 +6846,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       return;
     }
     container.innerHTML = repairCars.map(car => {
-      const carCost = car.repairs.reduce((a, r) => a + (Number(r.cost) || 0), 0);
-      const carHours = car.repairs.reduce((a, r) => a + (Number(r.hours) || 0), 0);
-      const carCharge = car.repairs.reduce((a, r) => a + repairItemCharge(r), 0); // bundled (cost × tier + hours × rate)
+      // Totals reflect the LIVE scope of work: declined items (staff-excluded
+      // or client-denied) drop out, so the numbers change as items are approved
+      // or declined. Re-approving a declined item folds it right back in.
+      const inScope = car.repairs.filter(r => !isItemDeclined(r));
+      const carCost = inScope.reduce((a, r) => a + (Number(r.cost) || 0), 0);
+      const carHours = inScope.reduce((a, r) => a + (Number(r.hours) || 0), 0);
+      const carCharge = inScope.reduce((a, r) => a + repairItemCharge(r), 0); // bundled (cost × markup + hours × rate)
+      const declinedCount = car.repairs.length - inScope.length;
       const itemsDone = car.repairs.reduce((a, r) => a + (r.done ? 1 : 0), 0);
       const fmtUsd = (n) => n ? '$' + Number(n).toLocaleString(undefined, {maximumFractionDigits:2}) : '—';
       const rows = car.repairs.length ? car.repairs.map((r, idx) => {
@@ -6856,7 +6861,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         const cost = Number(r.cost) || 0;
         const charge = repairItemCharge(r);
         const profit = charge - cost;
-        const pct = Math.round((markupRate(cost) - 1) * 100);
+        const pct = effectiveMarkupPct(r);
         const profitCell = profit > 0
           ? `<span style="color:var(--green);font-weight:600;">+${fmtUsd(profit)}</span>`
           : profit < 0 ? `<span style="color:var(--red);font-weight:600;">${fmtUsd(profit)}</span>`
@@ -6874,16 +6879,21 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           + `<input type="checkbox" ${r.done ? 'checked' : ''} onchange="toggleRepairItemDone(${car.id}, ${idx}, this.checked)" style="width:16px;height:16px;cursor:pointer;accent-color:var(--green);" aria-label="Mark repair item complete">`
           + (r.done ? '<span>Done</span>' : '<span>Pending</span>')
           + `</label>`;
-        const rowStyle = r.done ? 'opacity:0.55;' : '';
-        const descStyle = r.done ? 'text-decoration:line-through;color:var(--text-muted);' : '';
-        // Client's approve/deny choice from the quote email, shown so the shop
-        // knows what to actually do. Declined items also carry excluded=true.
-        const decisionPill = r.clientDecision === 'approved'
-          ? `<span style="display:inline-block;margin-top:4px;padding:1px 8px;border-radius:99px;background:var(--green-light,#dcfce7);color:var(--green,#166534);font-size:9px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">✓ Client approved</span>`
-          : r.clientDecision === 'denied'
-          ? `<span style="display:inline-block;margin-top:4px;padding:1px 8px;border-radius:99px;background:#fee2e2;color:#991b1b;font-size:9px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">✕ Client declined</span>`
-          : '';
-        return `<tr style="${rowStyle}"><td style="${descStyle}">${r.desc}${decisionPill ? '<br>' + decisionPill : ''}</td><td>${fmtUsd(r.cost)}</td><td>${chargeCell}</td><td>${profitCell}</td><td>${r.hours ? r.hours + 'h' : '—'}</td><td>${doneCell}</td></tr>`;
+        const declined = isItemDeclined(r);
+        const rowStyle = (r.done || declined) ? 'opacity:0.5;' : '';
+        const descStyle = (r.done || declined) ? 'text-decoration:line-through;color:var(--text-muted);' : '';
+        // Staff-editable client decision. The client can set this from the quote
+        // email, but staff can override it here — e.g. a client who first declined
+        // the tires then wants them. Declined items drop out of the totals above
+        // and out of the client quote/receipt; re-approving folds them back in.
+        const decState = r.clientDecision === 'approved' ? 'approved' : (declined ? 'denied' : 'pending');
+        const decColors = { approved: 'background:var(--green-light,#dcfce7);color:var(--green,#166534);', denied: 'background:#fee2e2;color:#991b1b;', pending: 'background:var(--surface);color:var(--text-muted);' }[decState];
+        const decisionCtl = `<select onchange="setRepairItemDecision(${car.id}, ${idx}, this.value)" title="Client's decision on this item — staff can change it" style="margin-top:5px;font-family:system-ui,sans-serif;font-size:10px;font-weight:700;letter-spacing:0.03em;text-transform:uppercase;border:1px solid var(--border);border-radius:6px;padding:2px 6px;cursor:pointer;${decColors}">`
+          + `<option value="pending" ${decState === 'pending' ? 'selected' : ''}>• Pending</option>`
+          + `<option value="approved" ${decState === 'approved' ? 'selected' : ''}>✓ Approved</option>`
+          + `<option value="denied" ${decState === 'denied' ? 'selected' : ''}>✕ Declined</option>`
+          + `</select>`;
+        return `<tr style="${rowStyle}"><td style="${descStyle}">${r.desc}<br>${decisionCtl}</td><td>${fmtUsd(r.cost)}</td><td>${chargeCell}</td><td>${profitCell}</td><td>${r.hours ? r.hours + 'h' : '—'}</td><td>${doneCell}</td></tr>`;
       }).join('') : '<tr><td colspan="6" style="color:var(--text-muted);padding:8px 10px;">No repair items added yet.</td></tr>';
 
       const parts = car.parts || [];
@@ -6949,7 +6959,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
             <div class="repair-total-item"><div class="rtlbl" title="What the client pays">Client Charge</div><div class="rtval">${carCharge ? '$' + carCharge.toLocaleString() : '—'}</div></div>
             <div class="repair-total-item"><div class="rtlbl">Profit</div><div class="rtval" style="color:${(carCharge - carCost) > 0 ? 'var(--green)' : (carCharge - carCost) < 0 ? 'var(--red)' : 'var(--text-muted)'};">${(carCharge - carCost) ? (((carCharge - carCost) > 0 ? '+' : '') + '$' + (carCharge - carCost).toLocaleString()) : '—'}</div></div>
             <div class="repair-total-item"><div class="rtlbl">Total Time</div><div class="rtval">${carHours ? carHours + 'h' : '—'}</div></div>
-            <div class="repair-total-item"><div class="rtlbl">Items</div><div class="rtval">${car.repairs.length}</div></div>
+            <div class="repair-total-item"><div class="rtlbl">Items</div><div class="rtval">${declinedCount ? `${inScope.length}<span style="font-size:12px;color:var(--text-muted);font-weight:600;"> of ${car.repairs.length}</span>` : car.repairs.length}</div>${declinedCount ? `<div style="font-size:10px;color:#991b1b;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-top:2px;">${declinedCount} declined · not counted</div>` : ''}</div>
           </div>
           ${car.notes ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);font-style:italic;">${car.notes}</div>` : ''}
         </div>`;
@@ -7045,6 +7055,37 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (typeof dbPut === 'function') {
       dbPut('repair_cars', { id: car.id, repairs: car.repairs }).catch(err =>
         console.warn('[repair-item-done] sync failed', err && err.message));
+    }
+    renderRepairPanel();
+  }
+
+  // Staff override of a single line item's client decision, straight from the
+  // repair card (e.g. a client first declined the tires, then wants them). Keeps
+  // `excluded` in lockstep so a declined item drops out of BOTH the card totals
+  // and the client-facing quote/receipt/email — and approving it folds it right
+  // back in. Persists the whole repairs array like toggleRepairItemDone so the
+  // next loadFromDB doesn't clobber the change.
+  function setRepairItemDecision(carId, index, decision) {
+    const car = repairCars.find(c => c.id === carId);
+    if (!car || !car.repairs || !car.repairs[index]) return;
+    const item = car.repairs[index];
+    if (decision === 'approved') {
+      item.clientDecision = 'approved';
+      item.excluded = false;
+      item.clientDecidedAt = new Date().toISOString();
+    } else if (decision === 'denied') {
+      item.clientDecision = 'denied';
+      item.excluded = true;              // pull it out of the client quote + totals
+      item.clientDecidedAt = new Date().toISOString();
+    } else { // 'pending' — no decision yet
+      item.clientDecision = null;
+      item.excluded = false;
+      item.clientDecidedAt = null;
+    }
+    saveRepairData();
+    if (typeof dbPut === 'function') {
+      dbPut('repair_cars', { id: car.id, repairs: car.repairs }).catch(err =>
+        console.warn('[repair-item-decision] sync failed', err && err.message));
     }
     renderRepairPanel();
   }
@@ -7162,11 +7203,37 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const c = Number(cost) || 0;
     return c < 150 ? 1.30 : 1.35;
   }
-  // Per-item client charge for a repair (labor + parts cost combined).
+  // Effective markup MULTIPLIER for a repair item. Staff can override the
+  // tiered default per item via item.markupPct (set in the repair modal before
+  // the quote goes out). Blank/absent → fall back to the tiered rate, so every
+  // legacy item keeps its original math untouched.
+  function effectiveMarkupRate(item) {
+    const pct = item && item.markupPct;
+    if (pct != null && pct !== '' && Number.isFinite(Number(pct))) {
+      return 1 + (Number(pct) / 100);
+    }
+    return markupRate(Number(item && item.cost) || 0);
+  }
+  // Effective markup as a whole-number PERCENT (for display only).
+  function effectiveMarkupPct(item) {
+    return Math.round((effectiveMarkupRate(item) - 1) * 100);
+  }
+  // The service (non-labor) portion of a repair's client charge: marked-up cost.
+  function repairServiceCharge(item) {
+    const cost = Number(item && item.cost) || 0;
+    return cost * effectiveMarkupRate(item);
+  }
+  // Per-item client charge for a repair (marked-up cost + labor).
   function repairItemCharge(item) {
-    const cost  = Number(item && item.cost)  || 0;
     const hours = Number(item && item.hours) || 0;
-    return (cost * markupRate(cost)) + (hours * LABOR_RATE);
+    return repairServiceCharge(item) + (hours * LABOR_RATE);
+  }
+  // A line item is "out of scope" when the client declined it — either staff
+  // excluded it from the quote (excluded) or the client denied it (clientDecision
+  // === 'denied'). Out-of-scope items stay on the record for history but drop out
+  // of the card totals AND the client-facing quote/receipt/email.
+  function isItemDeclined(item) {
+    return !!(item && (item.excluded || item.clientDecision === 'denied'));
   }
   // Per-part client charge (just the marked-up wholesale).
   function partItemCharge(p) {
@@ -7189,7 +7256,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const fmt = n => '$' + (Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const repairs = (Array.isArray(car.repairs) ? car.repairs : []).filter(r => !r.excluded);
     const parts   = (Array.isArray(car.parts)   ? car.parts   : []).filter(p => !p.excluded);
-    const servicesTotal = repairs.reduce((a, r) => { const c = Number(r.cost) || 0; return a + c * markupRate(c); }, 0);
+    const servicesTotal = repairs.reduce((a, r) => a + repairServiceCharge(r), 0);
     const totalHours = repairs.reduce((a, r) => a + (Number(r.hours) || 0), 0);
     const laborTotal = totalHours * LABOR_RATE;
     const partsTotal = parts.reduce((a, p) => a + partItemCharge(p), 0);
@@ -7202,8 +7269,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       '',
       repairs.length ? 'Recommended services:' : null,
       ...repairs.flatMap(r => {
-        const c = Number(r.cost) || 0;
-        const line = `• ${r.desc} — ${fmt(c * markupRate(c))}`;
+        const line = `• ${r.desc} — ${fmt(repairServiceCharge(r))}`;
         return r.detail ? [line, `   ${r.detail}`] : [line];
       }),
       repairs.length ? '' : null,
@@ -7236,7 +7302,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (!out) return;
     const cost = parseFloat(document.getElementById('rm-cost-' + idx)?.value) || 0;
     const hrs  = parseFloat(document.getElementById('rm-hrs-'  + idx)?.value) || 0;
-    const charge = repairItemCharge({ cost, hours: hrs });
+    const mkRaw = document.getElementById('rm-markup-' + idx)?.value;
+    const markupPct = (mkRaw != null && mkRaw !== '') ? parseFloat(mkRaw) : null;
+    const charge = repairItemCharge({ cost, hours: hrs, markupPct });
     out.textContent = '$' + charge.toFixed(2);
   }
   function updatePartChargePreview(i) {
@@ -7268,6 +7336,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const wholesale = data && data.cost != null ? data.cost : '';
     const clientPrice = data && data.price != null ? data.price : (data && data.cost != null ? data.cost : '');
     const _detail = data && data.detail != null ? String(data.detail).replace(/"/g, '&quot;') : '';
+    // Editable markup %: blank = auto (tiered 30/35%). If the item already has an
+    // explicit override, prefill it; otherwise show the tiered default as a hint.
+    const _markupVal = (data && data.markupPct != null && data.markupPct !== '') ? data.markupPct : '';
+    const _markupHint = Math.round((markupRate(Number(data && data.cost) || 0) - 1) * 100);
+    const _chargeInit = repairItemCharge({ cost: Number(data && data.cost) || 0, hours: Number(data && data.hours) || 0, markupPct: (data && data.markupPct != null ? data.markupPct : null) });
     row.innerHTML = `
       <div class="rm-row-top">
         <input type="text" placeholder="Repair description (e.g. Brake job, oil change)" id="rm-desc-${idx}" value="${data ? data.desc : ""}" aria-label="Repair description">
@@ -7282,12 +7355,16 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <input type="number" placeholder="200" id="rm-cost-${idx}" value="${wholesale}" min="0" step="0.01" oninput="updateRepairChargePreview(${idx})" aria-label="Repair cost">
         </div>
         <div class="rm-field">
+          <span class="rm-field-label" title="Markup on your cost, charged to the client. Blank = auto (30% under $150, 35% at $150+).">Markup %</span>
+          <input type="number" placeholder="${_markupHint}" id="rm-markup-${idx}" value="${_markupVal}" min="0" step="1" oninput="updateRepairChargePreview(${idx})" aria-label="Markup percent — blank for auto">
+        </div>
+        <div class="rm-field">
           <span class="rm-field-label">Hours</span>
           <input type="number" placeholder="2" id="rm-hrs-${idx}" value="${data ? (data.hours || "") : ""}" min="0" step="0.25" oninput="updateRepairChargePreview(${idx})" aria-label="Repair hours">
         </div>
         <div class="rm-field">
-          <span class="rm-field-label rm-charge-lbl" title="Auto: (cost × tier markup) + (hours × $20)">Client Charge</span>
-          <div id="rm-charge-display-${idx}" class="rm-charge-display">$${repairItemCharge({cost: Number(data && data.cost) || 0, hours: Number(data && data.hours) || 0}).toFixed(2)}</div>
+          <span class="rm-field-label rm-charge-lbl" title="Auto: (cost × markup) + (hours × $20)">Client Charge</span>
+          <div id="rm-charge-display-${idx}" class="rm-charge-display">$${_chargeInit.toFixed(2)}</div>
         </div>
       </div>
       <label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--text-muted);cursor:pointer;">
@@ -7312,6 +7389,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       if (!desc) return;
       const _wholesale = parseFloat(document.getElementById('rm-cost-' + idNum).value) || 0;
       const _hrs = parseFloat(document.getElementById('rm-hrs-' + idNum).value) || 0;
+      const _mkRaw = document.getElementById('rm-markup-' + idNum)?.value;
+      const _markupPct = (_mkRaw != null && _mkRaw !== '') ? (parseFloat(_mkRaw) || 0) : null;  // null = auto (tiered)
       const _detailEl = document.getElementById('rm-detail-' + idNum);
       const _exclEl = document.getElementById('rm-excl-' + idNum);
       repairs.push({
@@ -7319,6 +7398,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         desc,
         detail: _detailEl ? _detailEl.value.trim() : '',   // client-facing "what this includes"
         cost: _wholesale,         // internal — what your shop pays
+        markupPct: _markupPct,    // staff markup override %; null = auto tiered (30/35%)
         hours: _hrs,              // billed at LABOR_RATE on the client receipt
         excluded: _exclEl ? !!_exclEl.checked : false,     // hidden from the client quote + total
         clientDecision: row.dataset.clientDecision || null,   // 'approved' | 'denied' | null (set from the email)
@@ -7390,10 +7470,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       // but never reach the customer.
       const activeRepairs = repairs.filter(r => !r.excluded);
       const activeParts = parts.filter(p => !p.excluded);
-      const repairServicesTotal = activeRepairs.reduce((a, r) => {
-        const c = Number(r.cost) || 0;
-        return a + (c * markupRate(c));
-      }, 0);
+      const repairServicesTotal = activeRepairs.reduce((a, r) => a + repairServiceCharge(r), 0);
       const totalHours = activeRepairs.reduce((a, r) => a + (Number(r.hours) || 0), 0);
       const laborTotal = totalHours * LABOR_RATE;
       const partsTotal = activeParts.reduce((a, p) => a + partItemCharge(p), 0);
@@ -7406,8 +7483,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         '',
         activeRepairs.length ? 'SERVICES:' : null,
         ...activeRepairs.flatMap(r => {
-          const c = Number(r.cost) || 0;
-          const line = `  • ${r.desc} — ${fmt(c * markupRate(c))}`;
+          const line = `  • ${r.desc} — ${fmt(repairServiceCharge(r))}`;
           return r.detail ? [line, `      ${r.detail}`] : [line];
         }),
         activeRepairs.length ? '' : null,
@@ -7460,7 +7536,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
             desc:   r.desc,
             detail: r.detail || '',
             clientDecision: r.clientDecision || null,
-            charge: (Number(r.cost) || 0) * markupRate(Number(r.cost) || 0)
+            charge: repairServiceCharge(r)
           })),
           laborHours: totalHours,
           laborRate:  LABOR_RATE,
