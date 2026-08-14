@@ -117,6 +117,18 @@ function refundGuarantee() {
 </td></tr></table>`;
 }
 
+// ── Repair charge helpers (mirror the dashboard's effectiveMarkupRate) ──
+// Used by the repairFinalReceipt staff record. Kept here so the client-path
+// (quote-response.js) and staff-path (dashboard) receipts are computed
+// identically from the raw repair items.
+const REPAIR_LABOR_RATE = 20;
+function repairMarkup(cost, markupPct) {
+  if (markupPct != null && markupPct !== '' && Number.isFinite(Number(markupPct))) return 1 + Number(markupPct) / 100;
+  return (Number(cost) || 0) < 150 ? 1.30 : 1.35;
+}
+function repairSvcCharge(r) { return (Number(r && r.cost) || 0) * repairMarkup(r && r.cost, r && r.markupPct); }
+function repairIsDeclined(r) { return !!(r && (r.excluded || r.clientDecision === 'denied')); }
+
 const TEMPLATES = {
   confirmation: (d) => ({
     subject: `We got your request, ${d.firstName} — let's find your car`,
@@ -390,6 +402,45 @@ ${servicesBlock}${laborBlock}${partsBlock}${totalRow}
 </td></tr></table>
 </td></tr>
 <tr><td style="padding:0 40px 12px;">${button(respondUrl, 'Review &amp; respond to your quote →')}${d.portalUrl ? buttonSecondary(d.portalUrl, 'Open portal') : ''}</td></tr>
+${footer(d)}`)
+    });
+  },
+
+  // STAFF record copy, sent once every repair item has been decided (approved
+  // or declined) — a permanent record of the final billed scope. Computes the
+  // total from the raw repairs; declined items are excluded and listed below.
+  repairFinalReceipt: (d) => {
+    const fmt = n => '$' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const repairs = Array.isArray(d.repairs) ? d.repairs : [];
+    const parts   = Array.isArray(d.parts)   ? d.parts   : [];
+    const inScope  = repairs.filter(r => !repairIsDeclined(r));
+    const declined = repairs.filter(r => repairIsDeclined(r));
+    const servicesTotal = inScope.reduce((a, r) => a + repairSvcCharge(r), 0);
+    const laborHours    = inScope.reduce((a, r) => a + (Number(r.hours) || 0), 0);
+    const laborCharge   = laborHours * REPAIR_LABOR_RATE;
+    const partsTotal    = parts.reduce((a, p) => a + (Number(p.cost) || 0) * repairMarkup(p.cost, p.markupPct), 0);
+    const total = servicesTotal + laborCharge + partsTotal;
+    const row = (label, val, sub) => `<tr><td style="padding:9px 0;border-bottom:1px solid ${BRAND.border};color:${BRAND.ink};font-size:14px;">${label}${sub ? `<div style="color:${BRAND.muted};font-size:12px;margin-top:2px;">${sub}</div>` : ''}</td><td style="padding:9px 0;border-bottom:1px solid ${BRAND.border};text-align:right;font-weight:600;font-size:14px;color:${BRAND.ink};">${val}</td></tr>`;
+    const svcRows = inScope.length ? inScope.map(r => row(r.desc || 'Service', fmt(repairSvcCharge(r)), r.detail || '')).join('') : row('<em>No services approved</em>', '—');
+    const declinedRows = declined.length
+      ? `<tr><td colspan="2" style="padding:16px 0 4px;font-family:-apple-system,'Segoe UI',sans-serif;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${BRAND.mutedSoft};">Declined (not billed)</td></tr>`
+        + declined.map(r => `<tr><td style="padding:7px 0;color:${BRAND.muted};font-size:13px;text-decoration:line-through;">${r.desc || 'Service'}</td><td style="padding:7px 0;text-align:right;color:${BRAND.muted};font-size:13px;text-decoration:line-through;">${fmt(repairSvcCharge(r))}</td></tr>`).join('')
+      : '';
+    return ({
+      subject: `Final receipt — ${d.client || 'client'} · ${d.vehicle || 'vehicle'} (all items decided)`,
+      html: shell(`${header()}
+<tr><td style="padding:26px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:22px;font-weight:700;color:${BRAND.ink};margin-bottom:6px;">Final reconditioning receipt</div>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.muted};line-height:1.65;margin:0 0 4px;">Every item on this repair has been decided. Record copy for the team — no client action needed.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:14px;color:${BRAND.ink};margin:0 0 18px;"><strong>${d.client || ''}</strong> — ${d.vehicle || ''}${d.vin ? ` · VIN ${d.vin}` : ''}</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="font-family:-apple-system,'Segoe UI',sans-serif;">
+${svcRows}
+${laborHours > 0 ? row(`Labor — ${laborHours} hr × ${fmt(REPAIR_LABOR_RATE)}/hr`, fmt(laborCharge)) : ''}
+${parts.length ? parts.map(p => row(p.name || p.desc || 'Part', fmt((Number(p.cost) || 0) * repairMarkup(p.cost, p.markupPct)))).join('') : ''}
+<tr><td style="padding:16px 0 0;font-weight:700;font-size:15px;color:${BRAND.ink};border-top:2px solid ${BRAND.border};">Approved total</td><td style="padding:16px 0 0;text-align:right;font-weight:700;font-size:18px;color:${BRAND.navy};border-top:2px solid ${BRAND.border};">${fmt(total)}</td></tr>
+${declinedRows}
+</table>
+</td></tr>
 ${footer(d)}`)
     });
   },
@@ -1090,6 +1141,7 @@ const STAFF_TEMPLATES = new Set([
   'staffContractSigned',
   'staffClientDocumentUploaded',
   'staffQuoteResponse',
+  'repairFinalReceipt',
   'systemAlert'
 ]);
 

@@ -29,6 +29,12 @@ const PORTAL_URL = process.env.PORTAL_URL || 'https://autopalsusa.com/portal.htm
 let email = null;
 try { email = require('./email.js'); } catch { /* mail optional */ }
 
+// Every repair item has a decision (approved / declined) — none left pending.
+function allQuoteItemsDecided(repairs) {
+  return Array.isArray(repairs) && repairs.length > 0 &&
+    repairs.every(r => r.clientDecision === 'approved' || r.clientDecision === 'denied' || r.excluded);
+}
+
 // ── pricing (mirrors form.html / portal.html; keep in sync) ────────────────
 // Tiered markup on wholesale cost, labor billed separately per the quote email.
 const LABOR_RATE = 20;
@@ -314,6 +320,7 @@ module.exports = async function handler(req, res) {
   const target = { ...services[idx] };
   const nowIso = new Date().toISOString();
   const isApprove = action === 'approve';
+  const wasAllDecided = allQuoteItemsDecided(services);   // state BEFORE this decision
 
   // Idempotent: re-clicking the same choice just re-renders, no write.
   const already = target.clientDecision === (isApprove ? 'approved' : 'denied');
@@ -345,6 +352,14 @@ module.exports = async function handler(req, res) {
     repair.repairs = services;
     // Fire-and-forget staff email (don't await the network on the client's page).
     notifyStaff(repair, target, isApprove ? 'approved' : 'denied');
+    // If the client's decision just completed the set, send the team a final
+    // receipt for the record — once, on the pending→all-decided transition.
+    if (!wasAllDecided && allQuoteItemsDecided(services) && email && typeof email.sendTemplate === 'function') {
+      email.sendTemplate('repairFinalReceipt', {
+        client: repair.client, vehicle: repair.vehicle, vin: repair.vin,
+        repairs: services, parts: repair.parts || [], requestId: repair.request_id
+      }).catch(() => {});
+    }
   } else {
     repair.repairs = services;
   }
