@@ -2030,7 +2030,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v186 · 2026-08-10</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v187 · 2026-08-10</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -7015,6 +7015,26 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     renderRepairPanel();
   }
 
+  // The request a repair card is attached to (by stored id, else client name).
+  function repairLinkedRequest(car) {
+    if (!car || !Array.isArray(requests)) return null;
+    let req = null;
+    if (car.requestId) req = requests.find(r => r.id === car.requestId);
+    if (!req && car.client) req = requests.find(r => ((r.firstName || '') + ' ' + (r.lastName || '')).trim().toLowerCase() === (car.client || '').toLowerCase());
+    return req || null;
+  }
+  // A repair is "done" when Done was clicked (car.doneAt) OR — the durable
+  // signal — its linked request has moved to Awaiting Paperwork / Sold.
+  // car.doneAt does NOT reliably persist to the DB (no column for it), so on a
+  // reload/poll a done card used to revert to "not done" and staff had to click
+  // Done again. Deriving from the request status (which DOES persist) makes the
+  // Done state stick — click it once and it stays.
+  function repairCarIsDone(car) {
+    if (car && car.doneAt) return true;
+    const req = repairLinkedRequest(car);
+    return !!(req && (req.status === 'awaiting_paperwork' || req.status === 'sold'));
+  }
+
   function renderRepairPanel() {
     document.getElementById('repair-count').textContent = repairCars.length;
     const allItems = repairCars.flatMap(c => c.repairs);
@@ -7101,7 +7121,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <td><button onclick="removePart(${car.id}, ${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;padding:2px 4px;">✕</button></td>
         </tr>`).join('') : '';
 
-      const isDone = !!car.doneAt;
+      const isDone = repairCarIsDone(car);
       const totalItems = car.repairs.length;
       const progressBadge = totalItems
         ? `<span style="display:inline-block;margin-left:6px;padding:2px 10px;border-radius:99px;background:${itemsDone === totalItems ? 'var(--green-light,#dcfce7)' : '#fef3c7'};color:${itemsDone === totalItems ? 'var(--green,#166534)' : '#92400e'};font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">${itemsDone}/${totalItems} items done</span>`

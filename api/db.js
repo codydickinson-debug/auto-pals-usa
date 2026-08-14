@@ -1025,6 +1025,11 @@ module.exports = async function handler(req, res) {
       }
       if (req.method === 'PUT') {
         const { id, ...updates } = body;
+        // `doneAt` is a client-only flag with no repair_cars column — the
+        // dashboard now derives "done" from the linked request's status. Drop
+        // it so a whole-car upsert (saveRepairData) doesn't 400 on a done car
+        // and silently lose the rest of the update (parts, notes, etc.).
+        delete updates.doneAt;
         // Normalize camelCase → snake_case for the few columns where the
         // dashboard JS speaks camelCase but Supabase columns are snake_case.
         if (updates.requestId !== undefined && updates.request_id === undefined) {
