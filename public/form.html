@@ -7102,9 +7102,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // Awaiting Paperwork (a request status) and OUT of this active list. Done
     // cars still appear in a compact "Done · Awaiting Paperwork" section below
     // so staff can Re-open or jump to the profile to finalize the sale. Header
-    // stats reflect OUTSTANDING work only (active cars).
-    const activeCars = repairCars.filter(c => !c.doneAt);
-    const doneCars   = repairCars.filter(c => c.doneAt);
+    // stats reflect OUTSTANDING work only (active cars). Uses the durable
+    // repairCarIsDone() (car.doneAt OR request in awaiting_paperwork/sold) so a
+    // done car stays OUT of the active list across reloads — car.doneAt alone
+    // doesn't persist to the DB (v187), so it would otherwise revert to active.
+    const activeCars = repairCars.filter(c => !repairCarIsDone(c));
+    const doneCars   = repairCars.filter(c => repairCarIsDone(c));
     document.getElementById('repair-count').textContent = activeCars.length;
     const allItems = activeCars.flatMap(c => c.repairs);
     document.getElementById('repair-items').textContent = allItems.length;
