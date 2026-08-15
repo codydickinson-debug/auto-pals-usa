@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Deposit Received — Auto Pals USA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#d3ac5f; --gold-deep:#c39a44;
+    --cream:#f5f0e8; --cream-dark:#ede5d4;
+    --navy:#0f2557; --navy-mid:#1a3470; --navy-light:#e8edf8;
+    --brg:#1a5c32; --brg-light:#e8f0e8;
+    --text:#1a1a2e; --text-muted:#5a6480; --border:#ddd5c0; --white:#fffdf7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'DM Sans',system-ui,sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #16306e 0%, transparent 60%),
+      var(--navy);
+    min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;
+    padding:32px 20px 56px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .brand{
+    display:flex;align-items:center;gap:9px;
+    color:var(--gold);letter-spacing:.14em;text-transform:uppercase;
+    font-size:12px;font-weight:600;margin-bottom:26px;opacity:.9;
+  }
+  .brand__dot{width:7px;height:7px;border-radius:50%;background:var(--gold)}
+  .card{
+    width:100%;max-width:680px;
+    background:var(--white);
+    border:1px solid var(--border);
+    border-radius:20px;
+    box-shadow:0 30px 70px -30px rgba(6,15,40,.7);
+    overflow:hidden;
+    opacity:0;transform:translateY(14px) scale(.99);
+    animation:rise .6s cubic-bezier(.23,1,.32,1) forwards;
+  }
+  @keyframes rise{to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.card{animation:none;opacity:1;transform:none}}
+
+  .card__head{
+    text-align:center;
+    padding:38px 30px 26px;
+    background:linear-gradient(180deg,#fffdf7 0%, #faf5ea 100%);
+    border-bottom:1px solid var(--border);
+  }
+  .check{
+    width:56px;height:56px;border-radius:50%;
+    margin:0 auto 16px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--brg-light);color:var(--brg);
+    font-size:28px;line-height:1;
+    box-shadow:0 0 0 6px rgba(26,92,50,.08);
+  }
+  .eyebrow{
+    color:var(--brg);font-weight:600;font-size:12.5px;
+    letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px;
+  }
+  h1{
+    font-family:'Playfair Display',serif;font-weight:700;
+    font-size:clamp(25px,4.6vw,33px);line-height:1.12;color:var(--navy);
+    text-wrap:balance;margin-bottom:10px;
+  }
+  .sub{font-size:15px;line-height:1.6;color:var(--text-muted);max-width:46ch;margin:0 auto}
+
+  /* Video */
+  .video-wrap{padding:22px 22px 4px}
+  .video-frame{
+    position:relative;width:100%;
+    aspect-ratio:16/9;
+    background:#0c1a3d;
+    border-radius:14px;overflow:hidden;
+    border:1px solid rgba(15,37,87,.12);
+    box-shadow:0 14px 34px -18px rgba(6,15,40,.55);
+  }
+  .video-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .video-note{
+    text-align:center;font-size:12.5px;color:var(--text-muted);
+    padding:10px 12px 0;
+  }
+
+  /* Next steps */
+  .next{padding:18px 26px 4px}
+  .next__title{
+    font-size:12.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--navy);margin-bottom:12px;
+  }
+  ul{list-style:none;display:flex;flex-direction:column;gap:11px}
+  li{display:flex;gap:11px;font-size:14.5px;line-height:1.5;color:var(--text)}
+  li .n{
+    flex:0 0 22px;height:22px;border-radius:50%;
+    background:var(--navy-light);color:var(--navy);
+    font-size:12px;font-weight:600;
+    display:flex;align-items:center;justify-content:center;margin-top:1px;
+  }
+
+  .actions{padding:24px 26px 30px;display:flex;flex-direction:column;gap:11px}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    text-decoration:none;font-weight:600;font-size:15px;
+    padding:14px 20px;border-radius:12px;cursor:pointer;border:1px solid transparent;
+    transition:transform .16s cubic-bezier(.23,1,.32,1), box-shadow .2s ease, background .2s ease;
+  }
+  .btn:active{transform:scale(.978)}
+  .btn--primary{
+    background:linear-gradient(180deg,var(--navy-mid),var(--navy));color:#fff;
+    box-shadow:0 10px 22px -12px rgba(15,37,87,.8);
+  }
+  .btn--primary:hover{box-shadow:0 14px 26px -12px rgba(15,37,87,.9)}
+  .btn--ghost{background:transparent;color:var(--navy);border-color:var(--border)}
+  .btn--ghost:hover{background:var(--cream)}
+  .foot{color:rgba(245,240,232,.6);font-size:12.5px;margin-top:22px;text-align:center}
+  .foot a{color:var(--gold);text-decoration:none}
+</style>
+</head>
+<body>
+  <div class="brand"><span class="brand__dot"></span> Auto Pals USA</div>
+
+  <main class="card" role="main">
+    <div class="card__head">
+      <div class="check" aria-hidden="true">✓</div>
+      <div class="eyebrow">Deposit received</div>
+      <h1>You’re in — the search starts today.</h1>
+      <p class="sub">Your $850 deposit is confirmed. Give this a quick watch — it walks you through exactly what happens next.</p>
+    </div>
+
+    <div class="video-wrap">
+      <div class="video-frame">
+        <iframe
+          src="https://drive.google.com/file/d/1oFf5a3akrvbi9NjkiFRtggDAEUtpahwU/preview"
+          allow="autoplay; encrypted-media"
+          allowfullscreen
+          title="Welcome to Auto Pals USA"></iframe>
+      </div>
+      <p class="video-note">▶ Tap play to watch your welcome video.</p>
+    </div>
+
+    <section class="next">
+      <div class="next__title">What happens next</div>
+      <ul>
+        <li><span class="n">1</span><span>We start hunting dealer auctions for your vehicle <strong>the same day</strong>.</span></li>
+        <li><span class="n">2</span><span>You’ll get matches with photos, mileage and out-the-door pricing as we find them.</span></li>
+        <li><span class="n">3</span><span>Track everything and message us anytime from your client portal.</span></li>
+      </ul>
+    </section>
+
+    <div class="actions">
+      <a class="btn btn--primary" href="portal.html">Go to your portal →</a>
+      <a class="btn btn--ghost" href="tel:+15612209577">Questions? Call us — (561) 220-9577</a>
+    </div>
+  </main>
+
+  <p class="foot">A receipt is on its way to your email. Need help? <a href="tel:+15612209577">(561) 220-9577</a></p>
+
+  <script>
+    // The Stripe webhook does the real work (marking the deposit paid); this page
+    // is purely the client's confirmation + welcome. We only read session_id to
+    // fire a lightweight analytics event (same shape as track() elsewhere on the
+    // site), never to gate the page.
+    try {
+      var sid = new URLSearchParams(location.search).get('session_id') || '';
+      if (window.fetch) {
+        fetch('/api/db?table=events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'deposit_paid_landing',
+            page: (location && location.pathname) || '/deposit-complete.html',
+            props: { session: sid ? sid.slice(-8) : '' },
+            requestId: null
+          }),
+          keepalive: true
+        }).catch(function(){});
+      }
+    } catch (e) {}
+  </script>
+</body>
+</html>

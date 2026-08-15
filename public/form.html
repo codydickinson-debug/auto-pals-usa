@@ -2737,6 +2737,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
                 <th>Miles</th>
                 <th>Purchase Price</th>
                 <th>Sale Price</th>
+                <th title="Total the client actually paid — separate from the vehicle sale price">Client Paid</th>
                 <th>Fees</th>
                 <th>Repairs</th>
                 <th title="Net margin on shipping (optional — can be added after the sale via Edit)">Shipping</th>
@@ -2747,7 +2748,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
               </tr>
             </thead>
             <tbody id="sold-tbody">
-              <tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">No sales logged yet. Click &ldquo;+ Log a Sale&rdquo; to add one.</td></tr>
+              <tr><td colspan="13" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">No sales logged yet. Click &ldquo;+ Log a Sale&rdquo; to add one.</td></tr>
             </tbody>
           </table>
         </div>
@@ -2982,6 +2983,30 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <button onclick="markRequestSoldFromAwaiting(activeRequestId)" style="width:100%;padding:10px 14px;background:#fff;color:#1e3a8a;border:none;border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Mark Sold ✓</button>
       </div>
 
+      <!-- Deal numbers editor — sale price, miles, client-paid. Shown while a
+           car is in repair or awaiting paperwork so staff can capture/edit the
+           deal early. Sale price + miles reuse the PSI fields; client-paid is
+           its own field. These prefill the Sale Modal and flow into Sold Cars. -->
+      <div id="dv-deal-section" style="display:none;margin-bottom:18px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:10px;">Deal Numbers</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div>
+            <label for="dv-deal-sale" style="display:block;font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);margin-bottom:3px;">Sale Price — the vehicle price ($)</label>
+            <input type="number" id="dv-deal-sale" placeholder="e.g. 27500" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;font-size:13px;">
+          </div>
+          <div>
+            <label for="dv-deal-miles" style="display:block;font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);margin-bottom:3px;">Miles at sale</label>
+            <input type="number" id="dv-deal-miles" placeholder="e.g. 34000" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;font-size:13px;">
+          </div>
+          <div>
+            <label for="dv-deal-client-paid" style="display:block;font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);margin-bottom:3px;">Client Paid — total the client actually paid ($)</label>
+            <input type="number" id="dv-deal-client-paid" placeholder="e.g. 29050" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;font-size:13px;">
+          </div>
+          <button onclick="saveDealNumbers()" id="dv-deal-save" style="width:100%;padding:9px 14px;background:var(--navy,#0f2557);color:#fff;border:none;border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Save deal numbers</button>
+          <div id="dv-deal-saved" style="display:none;font-family:system-ui,sans-serif;font-size:12px;color:var(--green);text-align:center;">✓ Saved — these carry into the sale &amp; Sold Cars.</div>
+        </div>
+      </div>
+
       <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Call Outcome</div>
         <!-- Not yet graded: pick how the call went. Good/Bad stamp the call as
              completed; No-show reuses the rebooking flow. -->
@@ -3179,8 +3204,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <input type="number" id="sm-purchase" placeholder="e.g. 22000" oninput="calcSaleProfit()">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label for="sm-sale" style="font-size:12px;">Sale Price &mdash; what the client paid ($) <span style="color:var(--text-muted);font-weight:400;">— auto-filled from PSI</span></label>
+        <label for="sm-sale" style="font-size:12px;">Sale Price &mdash; the vehicle price ($) <span style="color:var(--text-muted);font-weight:400;">— auto-filled from PSI</span></label>
         <input type="number" id="sm-sale" placeholder="e.g. 27500" oninput="calcSaleProfit()">
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label for="sm-client-paid" style="font-size:12px;">Client Paid &mdash; total the client actually paid ($) <span style="color:var(--text-muted);font-weight:400;">— optional</span></label>
+        <input type="number" id="sm-client-paid" placeholder="e.g. 29050">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">What the client actually handed over in total (vehicle + finder fee + repair markup + shipping, or however the deal settled). Recorded on the sale and shown in Sold Cars.</div>
       </div>
       <div class="form-group" style="margin-bottom:14px;">
         <label for="sm-repair" style="font-size:12px;">Repair Cost — your wholesale ($) <span style="color:var(--text-muted);font-weight:400;">— internal only, auto-filled from Repairs</span></label>
@@ -3813,7 +3843,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       psiPurchasePrice: (r.psi_purchase_price != null ? r.psi_purchase_price : ''),
       psiStartedAt: r.psi_started_at || null,
       psiMiles: (r.psi_miles != null ? r.psi_miles : ''),
-      psiSalePrice: (r.psi_sale_price != null ? r.psi_sale_price : '')
+      psiSalePrice: (r.psi_sale_price != null ? r.psi_sale_price : ''),
+      clientPaid: (r.client_paid != null ? r.client_paid : '')  // separate "what the client actually paid" (editable on the profile)
     };
   }
 
@@ -3874,7 +3905,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       sales = dbSales.map(s => ({
         ...s,
         repairProfit:   (s.repair_profit   != null ? Number(s.repair_profit)   : (s.repairProfit   != null ? Number(s.repairProfit)   : 0)),
-        shippingProfit: (s.shipping_profit != null ? Number(s.shipping_profit) : (s.shippingProfit != null ? Number(s.shippingProfit) : 0))
+        shippingProfit: (s.shipping_profit != null ? Number(s.shipping_profit) : (s.shippingProfit != null ? Number(s.shippingProfit) : 0)),
+        clientPaid:     (s.client_paid     != null ? Number(s.client_paid)     : (s.clientPaid     != null ? Number(s.clientPaid)     : null))
       }));
       localStorage.setItem('am_sales', JSON.stringify(sales));
     }
@@ -5140,10 +5172,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // Follow-up funnel sub-tabs (effective = auto drip + manual).
     // Follow-up funnels split by call status: post-call (had a call) vs
     // pre-call (no call yet). Effective stage = auto SMS drip + manual override.
-    counts.fu1 = requests.filter(r => r.callCompletedAt && effectiveFollowUp(r) === 1).length;
-    counts.fu2 = requests.filter(r => r.callCompletedAt && effectiveFollowUp(r) === 2).length;
-    counts.fu3 = requests.filter(r => r.callCompletedAt && effectiveFollowUp(r) === 3).length;
-    counts.fu4 = requests.filter(r => r.callCompletedAt && effectiveFollowUp(r) === 4).length;
+    counts.fu1 = requests.filter(r => calledWithinFollowUpWindow(r) && effectiveFollowUp(r) === 1).length;
+    counts.fu2 = requests.filter(r => calledWithinFollowUpWindow(r) && effectiveFollowUp(r) === 2).length;
+    counts.fu3 = requests.filter(r => calledWithinFollowUpWindow(r) && effectiveFollowUp(r) === 3).length;
+    counts.fu4 = requests.filter(r => calledWithinFollowUpWindow(r) && effectiveFollowUp(r) === 4).length;
     counts.followups = counts.fu1 + counts.fu2 + counts.fu3 + counts.fu4;
     counts.pfu1 = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) === 1).length;
     counts.pfu2 = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) === 2).length;
@@ -5408,10 +5440,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     } else if (currentFilter === 'no_sms') {
       filtered = requests.filter(isOptedOutSms);
     } else if (currentFilter === 'followups') {
-      filtered = requests.filter(r => r.callCompletedAt && effectiveFollowUp(r) > 0);
+      filtered = requests.filter(r => calledWithinFollowUpWindow(r) && effectiveFollowUp(r) > 0);
     } else if (currentFilter === 'fu1' || currentFilter === 'fu2' || currentFilter === 'fu3' || currentFilter === 'fu4') {
       const n = Number(currentFilter.slice(2));
-      filtered = requests.filter(r => r.callCompletedAt && effectiveFollowUp(r) === n);
+      filtered = requests.filter(r => calledWithinFollowUpWindow(r) && effectiveFollowUp(r) === n);
     } else if (currentFilter === 'precall_followups') {
       filtered = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) > 0);
     } else if (currentFilter === 'pfu1' || currentFilter === 'pfu2' || currentFilter === 'pfu3' || currentFilter === 'pfu4') {
@@ -5681,6 +5713,23 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // Awaiting Paperwork → Sold one-click finalize CTA.
     const awaitCta = document.getElementById('dv-awaiting-cta');
     if (awaitCta) awaitCta.style.display = r.status === 'awaiting_paperwork' ? 'block' : 'none';
+
+    // Deal-numbers editor — shown once a car is in repair or awaiting paperwork
+    // so staff can view/edit sale price, miles, and client-paid. Sale price +
+    // miles reuse the PSI fields; client-paid is its own field.
+    const dealSection = document.getElementById('dv-deal-section');
+    if (dealSection) {
+      const showDeal = r.status === 'in_repair' || r.status === 'awaiting_paperwork';
+      dealSection.style.display = showDeal ? 'block' : 'none';
+      if (showDeal) {
+        const setDeal = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v == null || v === '') ? '' : v; };
+        setDeal('dv-deal-sale', r.psiSalePrice);
+        setDeal('dv-deal-miles', r.psiMiles);
+        setDeal('dv-deal-client-paid', r.clientPaid);
+        const saved = document.getElementById('dv-deal-saved');
+        if (saved) saved.style.display = 'none';
+      }
+    }
 
     // Highlight the active status button. Most buttons encode their status in the
     // onclick (updateStatusFromDetail('x')); PSI uses moveToPsiFromDetail(), so
@@ -6135,6 +6184,16 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   function effectiveFollowUp(r) {
     return Math.max(Number(r && r.followUpStage) || 0, dripStage(r));
   }
+  // Post-call follow-ups only chase leads whose call happened within the last
+  // 7 days (owner request 2026-08-15). A lead called longer ago drops off the
+  // active post-call funnel — it does NOT fall back into pre-call (that branch
+  // keys off "no call at all"), it simply stops surfacing as a follow-up.
+  const FOLLOWUP_CALL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+  function calledWithinFollowUpWindow(r) {
+    if (!r || !r.callCompletedAt) return false;
+    const t = new Date(r.callCompletedAt).getTime();
+    return Number.isFinite(t) && (Date.now() - t) <= FOLLOWUP_CALL_WINDOW_MS;
+  }
   // True when the shown stage came from the drip, not a manual set.
   function followUpIsAuto(r) {
     return dripStage(r) > (Number(r && r.followUpStage) || 0);
@@ -6299,12 +6358,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // Follow-up funnels split by call status. Post-call = leads who HAD a call;
     // pre-call = leads with no call yet (chasing a booking / response).
     const _hadCall = r => !!r.callCompletedAt;
+    // Post-call follow-up membership = called within the last 7 days (older
+    // calls fall out of the funnel); pre-call = never called.
+    const _recentCall = r => calledWithinFollowUpWindow(r);
     // Post-call follow-up stage distribution (effective = auto drip + manual).
-    const fu = [1, 2, 3, 4].map(n => all.filter(r => _hadCall(r) && effectiveFollowUp(r) === n).length);
+    const fu = [1, 2, 3, 4].map(n => all.filter(r => _recentCall(r) && effectiveFollowUp(r) === n).length);
     const fuMax = Math.max(1, ...fu);
     const fuEl = document.getElementById('pl-fu-funnel');
     if (fuEl) {
-      const inFu = all.filter(r => _hadCall(r) && effectiveFollowUp(r) > 0);
+      const inFu = all.filter(r => _recentCall(r) && effectiveFollowUp(r) > 0);
       const replied = inFu.filter(hasReplied).length;
       const cold = inFu.filter(isCold).length;
       const engagement = inFu.length
@@ -6339,7 +6401,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         return `<div class="pl-col"><div class="pl-col-head">Follow-up ${n} <span class="pl-col-count">${leads.length}</span></div><div class="pl-col-body">${cards}</div></div>`;
       }).join('');
     };
-    _renderFuBoard(document.getElementById('pl-board'), _hadCall);
+    _renderFuBoard(document.getElementById('pl-board'), _recentCall);
     _renderFuBoard(document.getElementById('pl-board-precall'), r => !_hadCall(r));
   }
 
@@ -7036,10 +7098,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
 
   function renderRepairPanel() {
-    document.getElementById('repair-count').textContent = repairCars.length;
-    const allItems = repairCars.flatMap(c => c.repairs);
+    // A car marked Done leaves the active repairs workflow — it moves to
+    // Awaiting Paperwork (a request status) and OUT of this active list. Done
+    // cars still appear in a compact "Done · Awaiting Paperwork" section below
+    // so staff can Re-open or jump to the profile to finalize the sale. Header
+    // stats reflect OUTSTANDING work only (active cars).
+    const activeCars = repairCars.filter(c => !c.doneAt);
+    const doneCars   = repairCars.filter(c => c.doneAt);
+    document.getElementById('repair-count').textContent = activeCars.length;
+    const allItems = activeCars.flatMap(c => c.repairs);
     document.getElementById('repair-items').textContent = allItems.length;
-    // Header stat: total wholesale cost across all repairs
+    // Header stat: total wholesale cost across active repairs
     const itemCharge = (it) => Number.isFinite(Number(it.price)) && Number(it.price) > 0 ? Number(it.price) : Number(it.cost || 0);
     const totalCost = allItems.reduce((a, r) => a + (Number(r.cost) || 0), 0);
     const totalHours = allItems.reduce((a, r) => a + (Number(r.hours) || 0), 0);
@@ -7047,11 +7116,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.getElementById('repair-time').textContent = totalHours ? totalHours + 'h' : '—';
     syncNavBadges();
     const container = document.getElementById('repair-cards-container');
-    if (!repairCars.length) {
+    if (!activeCars.length && !doneCars.length) {
       container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:48px;font-family:system-ui,sans-serif;">No cars in repair. Use the 3-dot menu on a request or click &ldquo;+ Add Car to Repair&rdquo;.</div>';
       return;
     }
-    container.innerHTML = repairCars.map(car => {
+    const activeEmpty = !activeCars.length
+      ? '<div style="text-align:center;color:var(--text-muted);padding:32px 12px;font-family:system-ui,sans-serif;">No active repairs — everything below is done and awaiting paperwork.</div>'
+      : '';
+    container.innerHTML = activeEmpty + activeCars.map(car => {
       // Totals reflect the LIVE scope of work: declined items (staff-excluded
       // or client-denied) drop out, so the numbers change as items are approved
       // or declined. Re-approving a declined item folds it right back in.
@@ -7169,7 +7241,51 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           </div>
           ${car.notes ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);font-style:italic;">${car.notes}</div>` : ''}
         </div>`;
-    }).join('');
+    }).join('') + renderRepairDoneSection(doneCars);
+  }
+
+  // Compact list of finished repairs (car.doneAt set) — they've left the
+  // active repairs workflow for Awaiting Paperwork but stay reachable here to
+  // Re-open or open the client profile and finalize the sale.
+  function renderRepairDoneSection(doneCars) {
+    if (!doneCars || !doneCars.length) return '';
+    const fmtDone = (iso) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    };
+    const rows = doneCars.map(car => `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface);">
+        <div style="min-width:0;">
+          <div style="font-family:system-ui,sans-serif;font-weight:600;font-size:14px;color:var(--text);">${car.vehicle || '—'}</div>
+          <div style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);">${car.client || ''}${car.vin ? ` · <span style="font-family:monospace;letter-spacing:0.05em;">${car.vin}</span>` : ''}${car.doneAt ? ` · finished ${fmtDone(car.doneAt)}` : ''}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <button class="filter-btn" onclick="openDoneCarProfile(${car.id})" title="Open the client's profile to finish paperwork / mark sold">Open profile →</button>
+          <button class="filter-btn" onclick="undoRepairDone(${car.id})" title="Re-open this repair">Re-open</button>
+        </div>
+      </div>`).join('');
+    return `
+      <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:18px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <span style="font-family:system-ui,sans-serif;font-size:13px;font-weight:700;letter-spacing:0.02em;color:var(--text);">✓ Done · Awaiting Paperwork</span>
+          <span style="display:inline-block;padding:2px 10px;border-radius:99px;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:700;">${doneCars.length}</span>
+          <span style="font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);">— finished repairs waiting on paperwork. Finalize from the profile.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">${rows}</div>
+      </div>`;
+  }
+
+  // Jump from a done repair to its client's profile (to capture deal numbers /
+  // mark sold). Links by stored requestId, falling back to a client-name match.
+  function openDoneCarProfile(carId) {
+    const car = repairCars.find(c => c.id === carId);
+    if (!car) return;
+    let req = null;
+    if (car.requestId && Array.isArray(requests)) req = requests.find(r => r.id === car.requestId);
+    if (!req && Array.isArray(requests)) req = requests.find(r => ((r.firstName || '') + ' ' + (r.lastName || '')).trim().toLowerCase() === (car.client || '').toLowerCase());
+    if (req && typeof openDetailView === 'function') { openDetailView(req.id); return; }
+    alert('Could not find this client\'s profile to open.');
   }
 
   function renderPartsList() {
@@ -8518,9 +8634,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // (PUT) instead of inserting a new one (POST). Cleared by openSaleModal
   // for the new-sale path and by editSale for the edit path.
   let editingSaleId = null;
+  // When true, saving the Sale Modal flips the request straight to 'sold'
+  // (not just 'awaiting_paperwork'). Set only by openSaleModalFinalize(), used
+  // to fix cars that reached Awaiting Paperwork via "repair done" and so never
+  // got a sales row — without this, Mark Sold made them vanish from both lists.
+  let pendingFinalizeSold = false;
 
   function openSaleModal(prefillReq) {
     editingSaleId = null;
+    pendingFinalizeSold = false;
     // Restore the new-sale modal text (editSale swaps it for edit mode).
     const t1 = document.getElementById('sm-title');
     const t2 = document.getElementById('sm-subtitle');
@@ -8531,8 +8653,22 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     _openSaleModalCore(prefillReq);
   }
 
+  // Same modal, but saving finalizes straight to Sold (creates the missing
+  // sales row + flips status to 'sold'). Used by Mark Sold when no sale exists.
+  function openSaleModalFinalize(prefillReq) {
+    editingSaleId = null;
+    pendingFinalizeSold = true;
+    const t1 = document.getElementById('sm-title');
+    const t2 = document.getElementById('sm-subtitle');
+    const t3 = document.getElementById('sm-save-btn');
+    if (t1) t1.textContent = 'Finalize Sale → Sold';
+    if (t2) t2.innerHTML = 'Capture the final deal numbers to move this car into <strong>Sold Cars</strong>. Saving records the sale and marks the client Sold.';
+    if (t3) t3.textContent = 'Save → Mark Sold ✓';
+    _openSaleModalCore(prefillReq);
+  }
+
   function _openSaleModalCore(prefillReq) {
-    ['sm-client','sm-vehicle','sm-vin','sm-purchase','sm-sale','sm-repair','sm-repair-profit','sm-shipping-profit','sm-notes','sm-miles'].forEach(id => {
+    ['sm-client','sm-vehicle','sm-vin','sm-purchase','sm-sale','sm-client-paid','sm-repair','sm-repair-profit','sm-shipping-profit','sm-notes','sm-miles'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
@@ -8559,6 +8695,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       if (prefillReq.psiMiles != null && prefillReq.psiMiles !== '') document.getElementById('sm-miles').value = prefillReq.psiMiles;
       if (prefillReq.psiPurchasePrice != null && prefillReq.psiPurchasePrice !== '') document.getElementById('sm-purchase').value = prefillReq.psiPurchasePrice;
       if (prefillReq.psiSalePrice != null && prefillReq.psiSalePrice !== '') document.getElementById('sm-sale').value = prefillReq.psiSalePrice;
+      // Deal numbers captured on the profile carry over too (sale price/miles
+      // reuse the PSI fields above; client-paid is its own field).
+      if (prefillReq.clientPaid != null && prefillReq.clientPaid !== '') document.getElementById('sm-client-paid').value = prefillReq.clientPaid;
 
       // Auto-fill repair costs (labor + parts) from the matching repair record.
       // Previously only summed labor; parts were silently excluded so margin
@@ -8642,6 +8781,16 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       alert('This client isn\'t in Awaiting Paperwork yet. Capture the deal info first.');
       return;
     }
+    // A sales row MUST exist before we flip to Sold — the Sold Cars view renders
+    // from the sales table, so flipping without one makes the car vanish from
+    // both lists (the "Leo disappeared" bug). Cars that reached Awaiting
+    // Paperwork via "repair done" never got a sales row, so capture it now via
+    // the modal, which marks Sold on save. If a sale already exists, just flip.
+    const soldRow = (r.soldSaleId != null) ? sales.find(s => s.id === r.soldSaleId) : null;
+    if (!soldRow && !requestHasRecordedSale(r)) {
+      openSaleModalFinalize(r);
+      return;
+    }
     if (!confirm(`Mark ${r.firstName || ''} ${r.lastName || ''} as Sold? This is the final step.`)) return;
     r.status = 'sold';
     save();
@@ -8659,6 +8808,41 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const id = ctxTargetId;
     ctxMenu.classList.remove('open');
     if (id != null) markRequestSoldFromAwaiting(id);
+  }
+
+  // Save the profile's Deal Numbers (sale price / miles / client-paid) onto the
+  // active request. Sale price + miles reuse the PSI fields so they prefill the
+  // Sale Modal and flow into Sold Cars; client-paid is its own field.
+  async function saveDealNumbers() {
+    const r = requests.find(x => x.id === activeRequestId);
+    if (!r) return;
+    const num = (id) => {
+      const v = parseFloat((document.getElementById(id) || {}).value);
+      return isNaN(v) ? '' : v;
+    };
+    r.psiSalePrice = num('dv-deal-sale');
+    r.psiMiles     = num('dv-deal-miles');
+    r.clientPaid   = num('dv-deal-client-paid');
+    if (typeof save === 'function') save();
+    const btn = document.getElementById('dv-deal-save');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    // Narrow PATCH — only these three columns (empty → null to clear).
+    const ok = await dbPut('requests', {
+      id: r.id,
+      psiSalePrice: r.psiSalePrice === '' ? null : r.psiSalePrice,
+      psiMiles:     r.psiMiles === '' ? null : r.psiMiles,
+      clientPaid:   r.clientPaid === '' ? null : r.clientPaid
+    });
+    if (btn) { btn.disabled = false; btn.textContent = 'Save deal numbers'; }
+    const saved = document.getElementById('dv-deal-saved');
+    if (saved) {
+      saved.textContent = ok === false
+        ? '⚠ Saved on this device — server sync failed, try again.'
+        : '✓ Saved — these carry into the sale & Sold Cars.';
+      saved.style.color = ok === false ? 'var(--red)' : 'var(--green)';
+      saved.style.display = 'block';
+    }
+    if (typeof renderDashboard === 'function') renderDashboard();
   }
 
   function closeSaleModal(e) {
@@ -8695,6 +8879,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     setVal('sm-date',     s.date || '');
     setVal('sm-purchase', s.purchase ?? '');
     setVal('sm-sale',     s.sale ?? '');
+    setVal('sm-client-paid', s.clientPaid ?? '');
     setVal('sm-repair',   s.repair ?? '');
     setVal('sm-repair-profit', s.repairProfit ?? '');
     setVal('sm-shipping-profit', s.shippingProfit ?? '');
@@ -8707,6 +8892,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (typeof calcSaleProfit === 'function') calcSaleProfit();
     // No pendingSoldReqId — editing a sale never touches a request's status
     pendingSoldReqId = null;
+    pendingFinalizeSold = false;
     document.getElementById('sale-modal').classList.add('open');
   }
 
@@ -8778,6 +8964,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const repairProfit   = parseFloat(document.getElementById('sm-repair-profit')?.value)   || 0;
     const shippingProfit = parseFloat(document.getElementById('sm-shipping-profit')?.value) || 0;
     const finder         = parseFloat(document.getElementById('sm-finder').value)           || 0;
+    // Client Paid — the total the client actually paid (separate from Sale
+    // Price). Optional; null when blank so it doesn't skew any totals.
+    const clientPaidRaw  = parseFloat(document.getElementById('sm-client-paid')?.value);
+    const clientPaid     = isNaN(clientPaidRaw) ? null : clientPaidRaw;
     // Net profit = sale revenue + finder fee + repair markup + shipping margin
     //              − auction purchase − wholesale repair cost.
     // shippingProfit is optional; defaults to 0 when blank.
@@ -8787,7 +8977,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const newSale = {
       id: isEdit ? editingSaleId : Date.now(),
       client, vehicle, vin, miles, date,
-      purchase, sale, repair, repairProfit, shippingProfit, finder, profit,
+      purchase, sale, clientPaid, repair, repairProfit, shippingProfit, finder, profit,
       notes: document.getElementById('sm-notes').value.trim()
     };
 
@@ -8840,10 +9030,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // awaiting-paperwork row once tags, title, and physical handoff are
     // done. soldSaleId still gets stamped here so the eventual Mark Sold
     // already knows which sales row to keep linked.
+    const finalizingToSold = pendingFinalizeSold;
     if (pendingSoldReqId) {
       const r = requests.find(x => x.id === pendingSoldReqId);
       if (r) {
-        r.status = 'awaiting_paperwork';
+        // Finalize path flips straight to Sold; normal path lands in Awaiting
+        // Paperwork for the tags/title step before Mark Sold.
+        r.status = finalizingToSold ? 'sold' : 'awaiting_paperwork';
         r.soldSaleId = newSale.id;
         save();
         if (typeof syncRequest === 'function') syncRequest(r, ['status']);
@@ -8851,8 +9044,18 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       }
       pendingSoldReqId = null;
     }
+    pendingFinalizeSold = false;
 
     document.getElementById('sale-modal').classList.remove('open');
+
+    // Finalized straight to Sold — drop staff into Sold Cars so they see the
+    // new row land (instead of the Awaiting Paperwork list below).
+    if (finalizingToSold) {
+      if (typeof showView === 'function') showView('sales');
+      if (typeof renderSoldTable === 'function') renderSoldTable();
+      if (typeof syncNavBadges === 'function') syncNavBadges();
+      return;
+    }
 
     // Stay on the Requests view and filter to Awaiting Paperwork so the
     // staff sees the row they just landed and the Mark Sold button is one
@@ -9035,7 +9238,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
     const tbody = document.getElementById('sold-tbody');
     if (!displayed.length) {
-      tbody.innerHTML = `<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">${weekFilterOn ? 'No sales in this period.' : 'No sales logged yet. Click &ldquo;+ Log a Sale&rdquo; to add one.'}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="13" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">${weekFilterOn ? 'No sales in this period.' : 'No sales logged yet. Click &ldquo;+ Log a Sale&rdquo; to add one.'}</td></tr>`;
       return;
     }
     tbody.innerHTML = displayed.map(s => {
@@ -9052,6 +9255,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <td style="color:var(--text-muted)">${s.miles ? Number(s.miles).toLocaleString() + ' mi' : '—'}</td>
         <td>${fmtV(s.purchase)}</td>
         <td>${fmtV(s.sale)}</td>
+        <td>${(s.clientPaid != null && s.clientPaid !== '') ? fmtV(s.clientPaid) : '—'}</td>
         <td>${s.fees ? fmtV(s.fees) : '—'}</td>
         <td>${s.repair ? fmtV(s.repair) : '—'}</td>
         <td>${shippingCell}</td>

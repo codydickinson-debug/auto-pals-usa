@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Your $850 Deposit — Auto Pals USA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#d3ac5f; --gold-deep:#c39a44;
+    --cream:#f5f0e8; --cream-dark:#ede5d4;
+    --navy:#0f2557; --navy-mid:#1a3470; --navy-light:#e8edf8;
+    --brg:#1a5c32; --brg-light:#e8f0e8;
+    --text:#1a1a2e; --text-muted:#5a6480; --border:#ddd5c0; --white:#fffdf7;
+    --amber-bg:#fdf3e2; --amber-line:#e7cd97; --amber-ink:#78530f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'DM Sans',system-ui,sans-serif;color:var(--text);
+    background:radial-gradient(1200px 600px at 50% -10%, #16306e 0%, transparent 60%), var(--navy);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:34px 20px 56px;-webkit-font-smoothing:antialiased;
+  }
+  .brand{display:flex;align-items:center;gap:9px;color:var(--gold);letter-spacing:.14em;
+    text-transform:uppercase;font-size:12px;font-weight:600;margin-bottom:26px;opacity:.9}
+  .brand__dot{width:7px;height:7px;border-radius:50%;background:var(--gold)}
+  .card{
+    width:100%;max-width:560px;background:var(--white);border:1px solid var(--border);
+    border-radius:20px;box-shadow:0 30px 70px -30px rgba(6,15,40,.7);overflow:hidden;
+    opacity:0;transform:translateY(14px) scale(.99);animation:rise .55s cubic-bezier(.23,1,.32,1) forwards;
+  }
+  @keyframes rise{to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.card{animation:none;opacity:1;transform:none}}
+
+  .cancelled{
+    display:none;gap:9px;align-items:flex-start;
+    margin:0;padding:13px 18px;background:var(--amber-bg);
+    border-bottom:1px solid var(--amber-line);color:var(--amber-ink);
+    font-size:13.5px;line-height:1.5;
+  }
+  .cancelled.show{display:flex}
+  .cancelled b{font-weight:600}
+
+  .head{text-align:center;padding:34px 30px 8px}
+  .price-badge{
+    display:inline-flex;align-items:baseline;gap:6px;margin-bottom:14px;
+    background:var(--navy-light);color:var(--navy);border-radius:999px;
+    padding:7px 15px;font-weight:600;font-size:13px;letter-spacing:.02em;
+  }
+  .price-badge .amt{font-family:'Playfair Display',serif;font-size:17px}
+  h1{font-family:'Playfair Display',serif;font-weight:700;font-size:clamp(24px,4.6vw,31px);
+    line-height:1.14;color:var(--navy);text-wrap:balance;margin-bottom:10px}
+  .sub{font-size:15px;line-height:1.6;color:var(--text-muted);max-width:42ch;margin:0 auto}
+
+  .body{padding:22px 26px 8px}
+  .assure{
+    display:flex;flex-direction:column;gap:10px;margin:2px 0 4px;
+    background:var(--cream);border:1px solid var(--border);border-radius:13px;padding:15px 16px;
+  }
+  .assure div{display:flex;gap:9px;font-size:13.5px;line-height:1.45;color:var(--text)}
+  .assure .ic{color:var(--brg);flex:0 0 16px}
+
+  .actions{padding:20px 26px 8px;display:flex;flex-direction:column;gap:11px}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:9px;
+    text-decoration:none;font-weight:600;font-size:15.5px;padding:15px 20px;border-radius:12px;
+    cursor:pointer;border:1px solid transparent;width:100%;font-family:inherit;
+    transition:transform .16s cubic-bezier(.23,1,.32,1), box-shadow .2s ease, background .2s ease, opacity .2s ease;
+  }
+  .btn:active{transform:scale(.978)}
+  .btn:disabled{opacity:.6;cursor:default;transform:none}
+  .btn--primary{background:linear-gradient(180deg,var(--navy-mid),var(--navy));color:#fff;
+    box-shadow:0 10px 22px -12px rgba(15,37,87,.8)}
+  .btn--primary:hover:not(:disabled){box-shadow:0 14px 26px -12px rgba(15,37,87,.9)}
+  .btn--ghost{background:transparent;color:var(--navy);border-color:var(--border)}
+  .btn--ghost:hover{background:var(--cream)}
+  .rep-hint{text-align:center;font-size:13px;color:var(--text-muted);padding:2px 20px 0}
+
+  .err{display:none;margin:0 26px;padding:11px 14px;border-radius:10px;background:#fdecec;
+    color:#8a1f1f;border:1px solid #f0c9c9;font-size:13.5px;line-height:1.45}
+  .err.show{display:block}
+  .secure{display:flex;align-items:center;justify-content:center;gap:7px;
+    padding:16px 26px 28px;color:var(--text-muted);font-size:12.5px}
+  .spinner{width:16px;height:16px;border-radius:50%;border:2px solid rgba(255,255,255,.4);
+    border-top-color:#fff;animation:spin .7s linear infinite;display:none}
+  .btn.loading .spinner{display:inline-block}
+  .btn.loading .label{opacity:.85}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .foot{color:rgba(245,240,232,.6);font-size:12.5px;margin-top:22px;text-align:center}
+  .foot a{color:var(--gold);text-decoration:none}
+</style>
+</head>
+<body>
+  <div class="brand"><span class="brand__dot"></span> Auto Pals USA</div>
+
+  <main class="card" role="main">
+    <div class="cancelled" id="cancelled-note">
+      <span aria-hidden="true">↩</span>
+      <span>No worries — <b>your spot is still saved</b>. Pay whenever you’re ready below, or talk to a representative first.</span>
+    </div>
+
+    <div class="head">
+      <span class="price-badge">Deposit <span class="amt">$850</span></span>
+      <h1>Pay your deposit to start the search</h1>
+      <p class="sub">Pay securely by card and we begin sourcing dealer auctions for you the same day.</p>
+    </div>
+
+    <div class="body">
+      <div class="assure">
+        <div><span class="ic" aria-hidden="true">✓</span><span>Goes straight toward your vehicle — it’s not an extra fee.</span></div>
+        <div><span class="ic" aria-hidden="true">✓</span><span>We start hunting auctions the same day you pay.</span></div>
+        <div><span class="ic" aria-hidden="true">✓</span><span>Secure card payment, powered by Stripe.</span></div>
+      </div>
+    </div>
+
+    <div class="err" id="err"></div>
+
+    <div class="actions">
+      <button type="button" class="btn btn--primary" id="pay-btn" onclick="startCheckout()">
+        <span class="spinner" aria-hidden="true"></span>
+        <span class="label">💳 Pay $850 deposit by card →</span>
+      </button>
+      <a class="btn btn--ghost" href="tel:+15612209577" id="rep-btn"
+         onclick="try{navigator.sendBeacon&&navigator.sendBeacon('/api/db?table=events', new Blob([JSON.stringify({name:'deposit_speak_to_rep',page:'/deposit.html',props:null,requestId:null})],{type:'application/json'}));}catch(e){}">
+        📞 Speak to a representative
+      </a>
+    </div>
+    <p class="rep-hint">Not ready to pay this second? Tap “Speak to a representative” and our team will walk you through it — no payment needed to talk.</p>
+
+    <div class="secure">🔒 Payments are processed securely by Stripe. We never see your card details.</div>
+  </main>
+
+  <p class="foot">Questions? Call <a href="tel:+15612209577">(561) 220-9577</a></p>
+
+  <script>
+    var RID = new URLSearchParams(location.search).get('rid') || '';
+    if ((new URLSearchParams(location.search).get('cancelled') || '') === '1') {
+      document.getElementById('cancelled-note').classList.add('show');
+    }
+
+    function showErr(msg){
+      var e = document.getElementById('err');
+      e.textContent = msg;
+      e.classList.add('show');
+    }
+
+    async function startCheckout(){
+      var btn = document.getElementById('pay-btn');
+      document.getElementById('err').classList.remove('show');
+      if (!RID){
+        showErr('We couldn’t find your request. Please call us at (561) 220-9577 and we’ll take your deposit over the phone.');
+        return;
+      }
+      btn.disabled = true; btn.classList.add('loading');
+      try {
+        var r = await fetch('/api/create-checkout', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ requestId: RID })
+        });
+        var data = await r.json().catch(function(){ return {}; });
+        if (r.ok && data.url){
+          window.location.href = data.url;   // hand off to Stripe
+          return;
+        }
+        showErr((data && data.message) || 'We couldn’t start checkout right now. Please try again, or call (561) 220-9577.');
+      } catch(e){
+        showErr('Network hiccup — please try again, or call us at (561) 220-9577.');
+      }
+      btn.disabled = false; btn.classList.remove('loading');
+    }
+  </script>
+</body>
+</html>

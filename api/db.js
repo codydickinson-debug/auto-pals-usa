@@ -610,7 +610,8 @@ module.exports = async function handler(req, res) {
           psi_started_at:              b.psiStartedAt,
           psi_miles:                   b.psiMiles,
           psi_sale_price:              b.psiSalePrice,
-          psi_purchase_price:          b.psiPurchasePrice
+          psi_purchase_price:          b.psiPurchasePrice,
+          client_paid:                 b.clientPaid
         };
         // Remove undefined values
         Object.keys(mapped).forEach(k => { if (mapped[k] === undefined) delete mapped[k]; });
@@ -1069,6 +1070,7 @@ module.exports = async function handler(req, res) {
           date:            body.date || null,
           purchase:        body.purchase ?? null,
           sale:            body.sale ?? null,
+          client_paid:     body.client_paid ?? body.clientPaid ?? null,
           fees:            body.fees ?? null,
           repair:          body.repair ?? null,
           repair_profit:   body.repair_profit ?? body.repairProfit ?? null,
@@ -1094,6 +1096,7 @@ module.exports = async function handler(req, res) {
           date:            body.date ?? null,
           purchase:        body.purchase ?? null,
           sale:            body.sale ?? null,
+          client_paid:     body.client_paid ?? body.clientPaid ?? null,
           fees:            body.fees ?? null,
           repair:          body.repair ?? null,
           repair_profit:   body.repair_profit ?? body.repairProfit ?? null,
