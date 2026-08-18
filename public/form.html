@@ -2541,7 +2541,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       <div class="dash-search-row">
         <div class="dash-search-wrap">
           <svg class="dash-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          <input type="text" id="dash-search-input" placeholder="Search by name, vehicle, phone, email, or portal code..." oninput="renderTable()" autocomplete="off" aria-label="Search requests">
+          <input type="text" id="dash-search-input" placeholder="Search by name, vehicle, phone, email, or portal code..." oninput="onDashSearchInput()" autocomplete="off" aria-label="Search requests">
           <button id="dash-search-clear" onclick="clearDashSearch()" title="Clear" style="display:none;">×</button>
         </div>
       </div>
@@ -2763,7 +2763,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <!-- LEFT: conversation list -->
     <div class="convo-list-panel" style="display:flex;flex-direction:column;">
       <div class="convo-list-header">
-        <input id="msg-search" class="msg-search-input" type="text" placeholder="Search clients..." oninput="renderConvoList()" aria-label="Search clients">
+        <input id="msg-search" class="msg-search-input" type="text" placeholder="Search clients..." oninput="onMsgSearchInput()" aria-label="Search clients">
         <div class="msg-filter-row">
           <button class="msg-filter-btn active" id="mf-all"      onclick="setMsgFilter('all',this)">All</button>
           <button class="msg-filter-btn"        id="mf-unread"   onclick="setMsgFilter('unread',this)">Unread</button>
@@ -5052,6 +5052,32 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
 
   // ─── DASHBOARD ─────────────────────────────────────────────────
+  // Coalesce bursts of render requests into a single render. reviewPendingRequests()
+  // can kick off runAIReview() for dozens of leads at once, and each used to call
+  // renderDashboard() synchronously — 50 leads = 50+ full re-renders back-to-back,
+  // which froze the dashboard. scheduleRender() collapses any burst within ~60ms
+  // into one render. Use it for background/bulk updates; direct renderDashboard()
+  // stays for click feedback that must feel instant.
+  let _renderScheduled = false;
+  function scheduleRender() {
+    if (_renderScheduled) return;
+    _renderScheduled = true;
+    setTimeout(() => { _renderScheduled = false; try { renderDashboard(); } catch (_) {} }, 60);
+  }
+
+  // Debounce the search boxes so typing doesn't re-render the full list on every
+  // keystroke (the requests table is ~800 rows; a per-key render felt laggy).
+  let _dashSearchTimer = null;
+  function onDashSearchInput() {
+    if (_dashSearchTimer) clearTimeout(_dashSearchTimer);
+    _dashSearchTimer = setTimeout(() => { _dashSearchTimer = null; try { renderTable(); } catch (_) {} }, 140);
+  }
+  let _msgSearchTimer = null;
+  function onMsgSearchInput() {
+    if (_msgSearchTimer) clearTimeout(_msgSearchTimer);
+    _msgSearchTimer = setTimeout(() => { _msgSearchTimer = null; try { renderConvoList(); } catch (_) {} }, 140);
+  }
+
   function renderDashboard() {
     updateStats();
     updateBadges();
@@ -8031,7 +8057,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     req.aiReason = local.reason;
     req.aiPending = false;
     try { save(); } catch(_){}
-    try { renderDashboard(); } catch(_){}
+    // Persist the heuristic color to the DB right away. Without this, a failed or
+    // slow /api/ai call leaves ai_color null in Supabase, the next loadFromDB()
+    // overwrites the local color back to null, and reviewPendingRequests() re-runs
+    // this every 20s forever — the AI storm (50 leads × a render each) that made
+    // the dashboard "crazy laggy". The server upgrade below still overwrites it.
+    try { syncRequest(req, ['aiColor', 'aiReason']); } catch(_){}
+    try { scheduleRender(); } catch(_){}
     if (activeRequestId === req.id) {
       try { populateDetailView(req); } catch(_){}
     }
@@ -8080,7 +8112,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       req.aiSimilarSales = data.similar_sales || [];
       try { save(); } catch(_){}
       try { syncRequest(req, ['aiColor', 'aiReason']); } catch(_){}
-      try { renderDashboard(); } catch(_){}
+      try { scheduleRender(); } catch(_){}
       if (activeRequestId === req.id) {
         try { populateDetailView(req); } catch(_){}
       }
@@ -8092,10 +8124,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
 
   // Run AI review on any existing requests that haven't been assessed yet
+  // How many un-assessed leads to review per pass. A cap keeps a large backlog
+  // (e.g. 50 old colorless leads) from firing dozens of /api/ai calls + renders
+  // at once. Each reviewed lead now persists its color (see runAIReview), so the
+  // backlog drains a few per refresh instead of re-storming every 20s.
+  const AI_REVIEW_BATCH = 6;
   function reviewPendingRequests() {
     // Reset any stuck aiPending before reviewing
     requests.forEach(r => { if (r.aiPending) r.aiPending = false; });
-    requests.filter(r => !r.aiColor && r.status !== 'rejected').forEach(r => runAIReview(r));
+    requests.filter(r => !r.aiColor && r.status !== 'rejected')
+      .slice(0, AI_REVIEW_BATCH)
+      .forEach(r => runAIReview(r));
     // (Vehicle recommendations are no longer auto-backfilled — they fire on
     // status transition to "searching". See updateStatusFromDetail.)
   }
