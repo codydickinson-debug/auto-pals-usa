@@ -7122,6 +7122,21 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const req = repairLinkedRequest(car);
     return !!(req && (req.status === 'awaiting_paperwork' || req.status === 'sold'));
   }
+  // A repair is "closed" once the deal is actually sold — the car has left the
+  // reconditioning workflow for good and should disappear from the Repairs panel
+  // entirely (not the active list, not the Done · Awaiting Paperwork list).
+  // "Sold" = the linked request is status 'sold' OR a sale has been recorded for
+  // it (same effectively-sold test the Awaiting Paperwork tab/badge use, so a car
+  // that shows in Sold Cars can't also linger under Repairs saying "awaiting
+  // paperwork"). Falls back to a client-name match when the request isn't linked.
+  function repairCarIsClosed(car) {
+    const req = repairLinkedRequest(car);
+    if (req && req.status === 'sold') return true;
+    if (req && requestHasRecordedSale(req)) return true;
+    const key = String((car && car.client) || '').trim().toLowerCase();
+    if (key && Array.isArray(sales) && sales.some(s => s && s.client && String(s.client).trim().toLowerCase() === key)) return true;
+    return false;
+  }
 
   function renderRepairPanel() {
     // A car marked Done leaves the active repairs workflow — it moves to
@@ -7132,8 +7147,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // repairCarIsDone() (car.doneAt OR request in awaiting_paperwork/sold) so a
     // done car stays OUT of the active list across reloads — car.doneAt alone
     // doesn't persist to the DB (v187), so it would otherwise revert to active.
-    const activeCars = repairCars.filter(c => !repairCarIsDone(c));
-    const doneCars   = repairCars.filter(c => repairCarIsDone(c));
+    // Sold / recorded-sale cars leave the Repairs panel for good.
+    const openCars   = repairCars.filter(c => !repairCarIsClosed(c));
+    const activeCars = openCars.filter(c => !repairCarIsDone(c));
+    const doneCars   = openCars.filter(c => repairCarIsDone(c));
     document.getElementById('repair-count').textContent = activeCars.length;
     const allItems = activeCars.flatMap(c => c.repairs);
     document.getElementById('repair-items').textContent = allItems.length;
