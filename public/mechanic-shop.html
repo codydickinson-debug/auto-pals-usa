@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '979507655137437');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+<title>Mechanic Shop — Auto Pals USA</title>
+<meta name="description" content="The Auto Pals USA mechanic shop in Pompano Beach, Florida. Brakes, oil changes, tires, diagnostics and everyday maintenance — plus bigger repairs. Honest work, fair pricing.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://autopalsusa.com/mechanic-shop.html">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Auto Pals USA">
+<meta property="og:title" content="Mechanic Shop — Auto Pals USA">
+<meta property="og:description" content="Brakes, oil, tires, diagnostics and everyday maintenance — plus bigger repairs. Honest work, fair pricing.">
+<meta property="og:url" content="https://autopalsusa.com/mechanic-shop.html">
+<meta property="og:locale" content="en_US">
+<meta name="theme-color" content="#0f2557">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Shared design tokens, same as the rest of the site. -->
+<link rel="stylesheet" href="/css/tokens.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #f5f0e8;
+    --cream-dark: #ede5d4;
+    --navy: #0f2557;
+    --navy-mid: #1a3470;
+    --navy-light: #e8edf8;
+    --text: #1a1a2e;
+    --text-muted: #5a6480;
+    --border: #ddd5c0;
+    --white: #fffdf7;
+    --radius: 10px;
+    --border-subtle: rgba(15,37,87,0.08);
+    --shadow-card:
+      0 1px 1px rgba(15,37,87,0.04),
+      0 2px 4px rgba(15,37,87,0.04),
+      0 8px 24px rgba(15,37,87,0.06);
+    --shadow-card-hover:
+      0 1px 1px rgba(15,37,87,0.05),
+      0 4px 8px rgba(15,37,87,0.05),
+      0 14px 32px rgba(15,37,87,0.10);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --gold: #d3ac5f;
+    --gold-light: #f2e0af;
+    --gold-deep: #c39a44;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+  ::selection { background: var(--navy); color: var(--cream); }
+  :focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--navy); outline-offset: 3px; border-radius: 6px; }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: 'kern', 'liga', 'calt';
+  }
+  h1, h2, h3, h4, .section-title, .ms-hero-title { text-wrap: balance; }
+  p, .section-sub { text-wrap: pretty; }
+
+  a, button { touch-action: manipulation; -webkit-tap-highlight-color: rgba(15,37,87,0.12); }
+
+  .skip-link {
+    position: absolute; left: -9999px; top: 0; z-index: 1000;
+    background: var(--navy); color: var(--cream);
+    padding: 10px 18px; border-radius: 0 0 8px 0;
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; text-decoration: none;
+  }
+  .skip-link:focus { left: 0; }
+  section[id], main[id] { scroll-margin-top: 96px; }
+
+  /* ── NAV (identical to home.html) ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; flex-direction: column; align-items: stretch;
+    padding: 12px 48px 0; height: auto;
+    background: rgba(15,37,87,0.97);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 4px 24px rgba(15,37,87,0.3);
+    transition: box-shadow 250ms var(--ease-out), border-color 250ms var(--ease-out);
+  }
+  nav.scrolled { border-bottom-color: rgba(216,180,112,0.3); box-shadow: 0 8px 30px rgba(6,15,42,0.42); }
+  .nav-logo {
+    font-family: 'DM Sans', sans-serif; font-size: 22px; font-weight: 700;
+    color: var(--cream); letter-spacing: 0.3px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    text-decoration: none; padding-bottom: 12px;
+    border-bottom: 1px solid rgba(245,240,232,0.12);
+  }
+  .nav-logo-icon { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .nav-links { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 0; }
+  .nav-link {
+    font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.6);
+    text-decoration: none; padding: 7px 16px; border-radius: 8px;
+    transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out), transform 150ms var(--ease-out);
+  }
+  .nav-link.active { color: var(--gold-light); }
+  @media (hover: hover) and (pointer: fine) { .nav-link:hover { background: rgba(255,255,255,0.08); color: #fff; } }
+  .nav-link:active { transform: scale(0.97); }
+  .nav-cta {
+    background: var(--cream); color: var(--navy); font-weight: 600;
+    padding: 8px 20px; border-radius: 8px; text-decoration: none; font-size: 14px;
+    transition: background-color 150ms var(--ease-out), transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+    margin-left: 8px;
+  }
+  @media (hover: hover) and (pointer: fine) { .nav-cta:hover { background: var(--cream-dark); transform: translateY(-1px); } }
+  .nav-cta:active { transform: scale(0.97); }
+
+  /* ── shared section bits ── */
+  .section { max-width: 1100px; margin: 0 auto; }
+  .section-tag {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--gold-deep); margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 4vw, 42px); font-weight: 700; color: var(--navy);
+    line-height: 1.2; margin-bottom: 16px;
+  }
+  .section-sub {
+    font-size: 16px; color: var(--text-muted); line-height: 1.7;
+    max-width: 560px; font-weight: 300; margin-bottom: 56px;
+  }
+
+  .btn-primary {
+    background: var(--cream); color: var(--navy);
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600;
+    padding: 14px 28px; border-radius: var(--radius); text-decoration: none;
+    border: none; cursor: pointer;
+    transition: background-color 200ms var(--ease-out), transform 160ms var(--ease-out), box-shadow 220ms var(--ease-out);
+    display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: 0 6px 22px rgba(5,14,38,0.28), inset 0 1px 0 rgba(255,255,255,0.6);
+  }
+  .btn-primary .btn-arrow { transition: transform 220ms var(--ease-out); }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-primary:hover { background: var(--white); transform: translateY(-2px); box-shadow: 0 12px 34px rgba(5,14,38,0.36), inset 0 1px 0 rgba(255,255,255,0.7); }
+    .btn-primary:hover .btn-arrow { transform: translateX(4px); }
+  }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-ghost {
+    background: transparent; color: var(--cream); font-weight: 600; font-size: 15px;
+    padding: 14px 24px; border-radius: var(--radius); text-decoration: none;
+    border: 1px solid rgba(245,240,232,0.28);
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: background-color 180ms var(--ease-out), border-color 180ms var(--ease-out), transform 160ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) { .btn-ghost:hover { background: rgba(245,240,232,0.08); border-color: rgba(216,180,112,0.5); } }
+  .btn-ghost:active { transform: scale(0.97); }
+
+  /* ── HERO (navy band) ── */
+  .ms-hero {
+    background:
+      radial-gradient(ellipse 58% 44% at 78% 12%, rgba(216,180,112,0.16) 0%, transparent 60%),
+      radial-gradient(ellipse 80% 60% at 15% 30%, rgba(44,72,146,0.50) 0%, transparent 62%),
+      radial-gradient(135% 125% at 50% -12%, transparent 40%, rgba(3,9,30,0.85) 100%),
+      #0a1a42;
+    padding: 168px 48px 96px; position: relative; overflow: hidden;
+  }
+  .ms-hero-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; max-width: 760px; }
+  .ms-hero .section-tag { color: var(--gold); }
+  .ms-hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(36px, 5.4vw, 60px); font-weight: 700; color: var(--cream);
+    line-height: 1.08; margin-bottom: 20px; letter-spacing: -0.01em;
+  }
+  .ms-hero-title .accent {
+    background: linear-gradient(135deg,#f4e4b8,#dcb975 46%,#c39a44);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .ms-hero-sub {
+    font-size: 18px; color: rgba(245,240,232,0.72); line-height: 1.7;
+    max-width: 600px; font-weight: 300; margin-bottom: 36px;
+  }
+  .ms-hero-actions { display: flex; gap: 14px; flex-wrap: wrap; }
+
+  /* ── SERVICES (cream) ── */
+  .ms-services { background: var(--cream); padding: 100px 48px; }
+  .svc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .svc-card {
+    background: var(--white); border: 1px solid var(--border-subtle);
+    border-radius: 16px; padding: 30px 26px; box-shadow: var(--shadow-card);
+    position: relative; overflow: hidden;
+    transition: transform 250ms var(--ease-out), box-shadow 250ms var(--ease-out);
+  }
+  .svc-card::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--gold-light), var(--gold-deep));
+    transform: scaleX(0); transform-origin: left;
+    transition: transform 300ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .svc-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-card-hover); }
+    .svc-card:hover::after { transform: scaleX(1); }
+  }
+  .svc-icon {
+    width: 46px; height: 46px; border-radius: 12px;
+    background: rgba(195,154,68,0.10); border: 1px solid rgba(195,154,68,0.24);
+    color: var(--gold-deep);
+    display: flex; align-items: center; justify-content: center; margin-bottom: 18px;
+  }
+  .svc-icon svg { width: 22px; height: 22px; }
+  .svc-title { font-size: 17px; font-weight: 600; color: var(--navy); margin-bottom: 8px; }
+  .svc-desc { font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+
+  /* "Anything else" highlight card spanning the grid */
+  .svc-more {
+    grid-column: 1 / -1;
+    background: var(--navy);
+    border-radius: 16px; padding: 32px 34px;
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    flex-wrap: wrap; position: relative; overflow: hidden;
+  }
+  .svc-more::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(216,180,112,0.55), transparent);
+  }
+  .svc-more-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 600; color: var(--cream); margin-bottom: 6px; }
+  .svc-more-desc { font-size: 14px; color: rgba(245,240,232,0.66); line-height: 1.6; max-width: 620px; }
+
+  /* ── WHY OUR SHOP (navy band) ── */
+  .ms-why { background: var(--navy); padding: 100px 48px; position: relative; overflow: hidden; }
+  .ms-why::before {
+    content: ''; position: absolute; top: -200px; right: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(26,52,112,0.9) 0%, transparent 70%); pointer-events: none;
+  }
+  .ms-why-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
+  .ms-why .section-tag { color: var(--gold); }
+  .ms-why .section-title { color: var(--cream); }
+  .ms-why .section-sub { color: rgba(245,240,232,0.65); }
+  .ms-why-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-top: 8px; }
+  .ms-why-item {
+    display: flex; gap: 16px; align-items: flex-start;
+    background: rgba(245,240,232,0.04); border: 1px solid rgba(245,240,232,0.08);
+    border-radius: 14px; padding: 22px 22px;
+    transition: background-color 200ms var(--ease-out), transform 200ms var(--ease-out);
+  }
+  @media (hover: hover) and (pointer: fine) { .ms-why-item:hover { background: rgba(245,240,232,0.07); transform: translateY(-2px); } }
+  .ms-why-icon {
+    width: 44px; height: 44px; flex-shrink: 0; border-radius: 12px;
+    background: rgba(216,180,112,0.08); border: 1px solid rgba(216,180,112,0.2);
+    color: var(--gold); display: flex; align-items: center; justify-content: center;
+  }
+  .ms-why-icon svg { width: 20px; height: 20px; }
+  .ms-why-item-title { font-size: 15px; font-weight: 600; color: var(--cream); margin-bottom: 4px; }
+  .ms-why-item-desc { font-size: 13px; color: rgba(245,240,232,0.6); line-height: 1.6; }
+
+  /* ── CONTACT (cream) ── */
+  .ms-contact { background: var(--cream); padding: 100px 48px; }
+  .ms-contact-inner { max-width: 760px; margin: 0 auto; text-align: center; }
+  .contact-card {
+    background: var(--white); border: 1px solid var(--border-subtle);
+    border-top: 3px solid var(--gold); border-radius: 20px;
+    padding: 40px; box-shadow: var(--shadow-card); text-align: left;
+  }
+  .contact-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+  .contact-item { display: flex; gap: 14px; align-items: flex-start; }
+  .contact-ic {
+    width: 42px; height: 42px; flex-shrink: 0; border-radius: 11px;
+    background: rgba(15,37,87,0.05); border: 1px solid var(--border-subtle);
+    color: var(--navy); display: flex; align-items: center; justify-content: center;
+  }
+  .contact-ic svg { width: 19px; height: 19px; }
+  .contact-label { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold-deep); margin-bottom: 4px; }
+  .contact-val { font-size: 15px; color: var(--navy); font-weight: 500; line-height: 1.45; text-decoration: none; }
+  a.contact-val { transition: color 150ms var(--ease-out); }
+  @media (hover: hover) and (pointer: fine) { a.contact-val:hover { color: var(--gold-deep); } }
+  .contact-note { font-size: 12px; color: var(--text-muted); margin-top: 24px; text-align: center; font-style: italic; }
+
+  /* ── FOOTER (identical to home.html) ── */
+  footer {
+    background: var(--navy); padding: 48px; padding-right: 96px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px; border-top: 1px solid rgba(255,255,255,0.06); position: relative;
+  }
+  footer::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(245,240,232,0.12), transparent);
+  }
+  .footer-logo { font-family: 'DM Sans', sans-serif; font-size: 18px; font-weight: 700; color: var(--cream); }
+  .footer-copy { font-size: 13px; color: rgba(245,240,232,0.62); }
+  .footer-links { display: flex; gap: 24px; flex-wrap: wrap; }
+  .footer-link { font-size: 13px; color: rgba(245,240,232,0.45); text-decoration: none; transition: color 0.15s; }
+  .footer-link:hover { color: var(--gold-light); }
+
+  /* ── reveal ── */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out); }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ── mobile ── */
+  @media (max-width: 860px) {
+    nav { padding: 12px 20px 0; }
+    .nav-logo { font-size: 19px; }
+    .nav-logo-icon { width: 32px; height: 32px; }
+    .nav-links { flex-wrap: nowrap; overflow-x: auto; gap: 2px; padding: 8px 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .nav-links::-webkit-scrollbar { display: none; }
+    .nav-link { padding: 6px 10px; font-size: 12px; flex-shrink: 0; white-space: nowrap; }
+    .nav-cta { padding: 6px 12px; font-size: 12px; flex-shrink: 0; white-space: nowrap; }
+    .ms-hero { padding: 150px 24px 64px; }
+    .ms-services, .ms-why, .ms-contact { padding: 64px 24px; }
+    .svc-grid { grid-template-columns: 1fr; }
+    .ms-why-grid { grid-template-columns: 1fr; }
+    .contact-grid { grid-template-columns: 1fr; }
+    .svc-more { padding: 26px 24px; }
+    .contact-card { padding: 30px 24px; }
+    footer { padding: 48px 24px 32px; flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<a href="#services" class="skip-link">Skip to main content</a>
+
+<!-- NAV — mirrors home.html; Mechanic Shop is the current page -->
+<nav>
+  <a href="home.html" class="nav-logo">
+    <div class="nav-logo-icon">
+      <img src="/images/logo-dark.png" alt="Auto Pals USA" style="width:42px;height:42px;object-fit:contain;display:block;">
+    </div>
+    <div><div>Auto Pals USA</div></div>
+  </a>
+  <div class="nav-links">
+    <a href="home.html#how-it-works" class="nav-link">How It Works</a>
+    <a href="home.html#why-us" class="nav-link">Why Us</a>
+    <a href="home.html#team" class="nav-link">Meet the Team</a>
+    <a href="mechanic-shop.html" class="nav-link active">Mechanic Shop</a>
+    <a href="home.html#faq" class="nav-link">FAQ</a>
+    <a href="portal.html" class="nav-cta">Client Portal →</a>
+  </div>
+</nav>
+
+<main>
+
+<!-- HERO -->
+<section class="ms-hero">
+  <div class="ms-hero-inner">
+    <div class="section-tag reveal">Auto Pals USA · Service Bay</div>
+    <h1 class="ms-hero-title reveal">Our <span class="accent">mechanic shop</span></h1>
+    <p class="ms-hero-sub reveal">From an oil change to a full brake job, our shop keeps your car running right. We take on just about any repair — and specialize in the everyday work that keeps you safely on the road: brakes, oil, tires, diagnostics, and routine maintenance. Honest work, fair pricing, no dealership runaround.</p>
+    <div class="ms-hero-actions reveal">
+      <a href="#contact" class="btn-primary">Get in touch <span class="btn-arrow">→</span></a>
+      <a href="#services" class="btn-ghost">See what we do</a>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section class="ms-services" id="services">
+  <div class="section">
+    <div class="section-tag reveal">What We Do</div>
+    <h2 class="section-title reveal">Service, done right</h2>
+    <p class="section-sub reveal">We'll take on nearly any repair, but our bread and butter is the smaller, everyday jobs — the ones that keep your car safe and reliable without the dealership markup.</p>
+
+    <div class="svc-grid">
+      <div class="svc-card reveal">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></div>
+        <div class="svc-title">Brakes &amp; Rotors</div>
+        <div class="svc-desc">Pads, rotors, calipers, and fluid. Squeaking, grinding, or a soft pedal — we'll get you stopping confidently again.</div>
+      </div>
+      <div class="svc-card reveal">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s5 5.5 5 9a5 5 0 0 1-10 0c0-3.5 5-9 5-9z"/></svg></div>
+        <div class="svc-title">Oil &amp; Fluid Changes</div>
+        <div class="svc-desc">Full-service oil changes plus coolant, transmission, brake, and power-steering fluids — keeping everything topped off and clean.</div>
+      </div>
+      <div class="svc-card reveal">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/></svg></div>
+        <div class="svc-title">Tires, Rotation &amp; Alignment</div>
+        <div class="svc-desc">Mount, balance, rotate, and align. We'll help you get even tread wear and a straight, smooth ride.</div>
+      </div>
+      <div class="svc-card reveal">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M7 7V5h4v2M8 12h3M9.5 10.5v3M15 12h2"/></svg></div>
+        <div class="svc-title">Batteries &amp; Electrical</div>
+        <div class="svc-desc">Battery testing and replacement, alternators, starters, lights, and the small electrical gremlins that stop a car from starting.</div>
+      </div>
+      <div class="svc-card reveal">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 12l5-4"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><path d="M21 5.5 18.5 8"/></svg></div>
+        <div class="svc-title">Diagnostics &amp; Check-Engine</div>
+        <div class="svc-desc">Check-engine light on? We'll scan the codes, pinpoint the real problem, and tell you straight what it actually needs.</div>
+      </div>
+      <div class="svc-card reveal">
+        <div class="svc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg></div>
+        <div class="svc-title">Tune-Ups &amp; Maintenance</div>
+        <div class="svc-desc">Spark plugs, belts, hoses, filters, and scheduled service — the routine care that prevents the big, expensive repairs later.</div>
+      </div>
+    </div>
+
+    <div class="svc-grid" style="margin-top:24px;">
+      <div class="svc-more reveal">
+        <div>
+          <div class="svc-more-title">…and just about anything else</div>
+          <div class="svc-more-desc">Bigger jobs too — engines, transmissions, suspension, AC &amp; heating. Not sure if we handle it? Just ask. If it drives, chances are we can help.</div>
+        </div>
+        <a href="#contact" class="btn-primary">Ask us <span class="btn-arrow">→</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY OUR SHOP -->
+<section class="ms-why">
+  <div class="ms-why-inner">
+    <div class="section-tag reveal">Why Our Shop</div>
+    <h2 class="section-title reveal">Straightforward service you can trust</h2>
+    <p class="section-sub reveal">The same team that sources cars through dealer-only auctions runs the shop — so you get honest diagnostics and fair pricing, not upsells.</p>
+    <div class="ms-why-grid">
+      <div class="ms-why-item reveal">
+        <div class="ms-why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <div><div class="ms-why-item-title">Honest, up-front pricing</div><div class="ms-why-item-desc">You approve the work before we start. No surprise line items, no pressure to fix what isn't broken.</div></div>
+      </div>
+      <div class="ms-why-item reveal">
+        <div class="ms-why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.1-2.1z"/></svg></div>
+        <div><div class="ms-why-item-title">Quality parts &amp; real mechanics</div><div class="ms-why-item-desc">The same in-house mechanic who inspects our auction cars works on yours. Done once, done right.</div></div>
+      </div>
+      <div class="ms-why-item reveal">
+        <div class="ms-why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+        <div><div class="ms-why-item-title">Quick turnaround on small jobs</div><div class="ms-why-item-desc">Brakes, oil, tires, and diagnostics done fast — most everyday work is same-day.</div></div>
+      </div>
+      <div class="ms-why-item reveal">
+        <div class="ms-why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6"/></svg></div>
+        <div><div class="ms-why-item-title">Backed by a licensed FL dealer</div><div class="ms-why-item-desc">Automotivation Enterprises LLC, dba Auto Pals USA — a real, licensed Florida business you can look up.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="ms-contact" id="contact">
+  <div class="ms-contact-inner">
+    <div class="section-tag reveal" style="text-align:center;">Get In Touch</div>
+    <h2 class="section-title reveal">Contact the shop</h2>
+    <p class="section-sub reveal" style="margin:0 auto 40px;text-align:center;">Have a question or want to book a job? Reach out and we'll get you taken care of.</p>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         EDIT ME: drop in the shop's real contact details below. The phone
+         and email are placeholders — replace the text AND the tel:/mailto:
+         links. Hours and address can be tweaked or removed as needed.
+         ═══════════════════════════════════════════════════════════════ -->
+    <div class="contact-card reveal">
+      <div class="contact-grid">
+        <div class="contact-item">
+          <div class="contact-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5c0 8.5 6.5 15 15 15 .8 0 1.5-.6 1.6-1.4l.4-2.4c.1-.8-.4-1.6-1.2-1.8l-3-.7c-.7-.2-1.4.1-1.8.7l-.8 1.1a12 12 0 0 1-5-5l1.1-.8c.6-.4.9-1.1.7-1.8l-.7-3C10.4 3.4 9.6 2.9 8.8 3l-2.4.4C5.6 3.5 5 4.2 5 5z"/></svg></div>
+          <div>
+            <div class="contact-label">Phone</div>
+            <a href="tel:+10000000000" class="contact-val">(000) 000-0000</a>
+          </div>
+        </div>
+        <div class="contact-item">
+          <div class="contact-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></div>
+          <div>
+            <div class="contact-label">Email</div>
+            <a href="mailto:shop@autopalsusa.com" class="contact-val">shop@autopalsusa.com</a>
+          </div>
+        </div>
+        <div class="contact-item">
+          <div class="contact-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.5 7-11a7 7 0 0 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+          <div>
+            <div class="contact-label">Location</div>
+            <span class="contact-val">Pompano Beach, FL</span>
+          </div>
+        </div>
+        <div class="contact-item">
+          <div class="contact-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+          <div>
+            <div class="contact-label">Hours</div>
+            <span class="contact-val">Mon–Fri · 8am–5pm</span>
+          </div>
+        </div>
+      </div>
+      <div class="contact-note">Contact details are placeholders for now — final phone, email &amp; hours coming soon.</div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Auto Pals USA</div>
+  <div class="footer-links">
+    <a href="home.html#how-it-works" class="footer-link">How It Works</a>
+    <a href="home.html#why-us" class="footer-link">Why Us</a>
+    <a href="home.html#team" class="footer-link">Meet the Team</a>
+    <a href="mechanic-shop.html" class="footer-link">Mechanic Shop</a>
+    <a href="request.html" class="footer-link">Submit a Request</a>
+    <a href="/privacy.html" class="footer-link">Privacy</a>
+    <a href="/terms.html" class="footer-link">Terms</a>
+  </div>
+  <div class="footer-copy">© 2026 Automotivation Enterprises LLC, doing business as Auto Pals USA. All rights reserved.</div>
+</footer>
+
+<script>
+  // Scroll reveal — same behavior as home.html.
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 80);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // Nav elevation on scroll (rAF-throttled).
+  (function () {
+    const navEl = document.querySelector('nav');
+    if (!navEl) return;
+    let ticking = false;
+    function onNavScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { navEl.classList.toggle('scrolled', window.scrollY > 30); ticking = false; });
+    }
+    window.addEventListener('scroll', onNavScroll, { passive: true });
+    onNavScroll();
+  })();
+
+  // Discreet staff access — 5 quick clicks on the footer copyright, same as home.html.
+  (function () {
+    var el = document.querySelector('.footer-copy');
+    if (!el) return;
+    var clicks = 0, timer = null;
+    el.addEventListener('click', function () {
+      clicks++;
+      clearTimeout(timer);
+      timer = setTimeout(function () { clicks = 0; }, 2000);
+      if (clicks >= 5) { clicks = 0; window.location.href = '/form.html?staff=1'; }
+    });
+  })();
+</script>
+</body>
+</html>

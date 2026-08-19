@@ -17,6 +17,7 @@
     { "source": "/request",  "destination": "/request.html" },
     { "source": "/portal",   "destination": "/portal.html" },
     { "source": "/booking",  "destination": "/booking.html" },
+    { "source": "/mechanic-shop", "destination": "/mechanic-shop.html" },
     { "source": "/deposit",  "destination": "/deposit.html" },
     { "source": "/deposit-complete", "destination": "/deposit-complete.html" },
     { "source": "/privacy",  "destination": "/privacy.html" },
