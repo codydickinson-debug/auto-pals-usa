@@ -179,30 +179,53 @@ module.exports = async function handler(req, res) {
         // re-engagement SMS (consent-gated + quiet-hours via _sms.js), stamp
         // follow_up_sms_sent_at so it never repeats, then `continue` so nothing
         // else fires for them this run. Next run the drip resumes normally.
-        const followUpPending = !!(r.follow_up_at && !r.follow_up_sms_sent_at);
-        if (followUpPending) {
-          const dueMs = new Date(r.follow_up_at).getTime();
-          if (Number.isFinite(dueMs) && dueMs <= Date.now() && r.phone) {
-            const result = await sms.send('client_scheduled_followup', {
-              firstName:  r.first_name,
-              make:       r.make,
-              model:      r.model,
-              phone:      r.phone,
-              smsConsent: r.sms_consent,
-              bookingUrl: BOOKING_URL,
-              portalUrl:  PORTAL_URL
-            });
-            if (!(result && (result.skipped || result.demo))) summary.smsAttempted++;
-            if (result && result.ok && !result.demo) {
-              await sb('requests', 'PATCH', { follow_up_sms_sent_at: new Date().toISOString() }, `?id=eq.${r.id}`);
-              summary.smsRemindersSent++;
-            } else if (result && !result.skipped && !result.demo) {
-              summary.smsFailed++;
+        const followUpActive = !!(r.follow_up_at && !r.follow_up_sms_sent_at);
+        if (followUpActive) {
+          const startMs = new Date(r.follow_up_at).getTime();
+          if (Number.isFinite(startMs) && startMs <= Date.now() && r.phone) {
+            const smsSent = Array.isArray(r.client_sms_reminders_sent) ? r.client_sms_reminders_sent : [];
+            // 4 tailored messages, one per day: wait1 on the date, then wait2/3/4
+            // on the next three days. One send per run (daily cron = one/day).
+            for (let i = 0; i < 4 && !smsSent.includes('undeliverable'); i++) {
+              const label = `wait${i + 1}`;
+              const dueMs = startMs + i * 24 * 60 * 60 * 1000;
+              if (Date.now() >= dueMs && !smsSent.includes(label)) {
+                const result = await sms.send(`client_scheduled_followup_${i + 1}`, {
+                  firstName:  r.first_name,
+                  make:       r.make,
+                  model:      r.model,
+                  phone:      r.phone,
+                  smsConsent: r.sms_consent,
+                  bookingUrl: BOOKING_URL,
+                  portalUrl:  PORTAL_URL
+                });
+                if (!(result && (result.skipped || result.demo))) summary.smsAttempted++;
+                if (result && result.ok && !result.demo) {
+                  smsSent.push(label);
+                  await sb('requests', 'PATCH', { client_sms_reminders_sent: smsSent }, `?id=eq.${r.id}`);
+                  summary.smsRemindersSent++;
+                  await stampSmsSentAt(r, label);   // best-effort send-time for the comms timeline
+                  // Last message → mark the drip finished: unpauses the lead and
+                  // drops it out of the Future Follow-ups tab.
+                  if (label === 'wait4') {
+                    await sb('requests', 'PATCH', { follow_up_sms_sent_at: new Date().toISOString() }, `?id=eq.${r.id}`);
+                  }
+                } else if (result && !result.skipped && !result.demo) {
+                  summary.smsFailed++;
+                  await retireIfUndeliverable(r, result, smsSent);
+                  // Permanently dead number → release the lead too so it can't
+                  // stay paused forever.
+                  if (smsSent.includes('undeliverable')) {
+                    await sb('requests', 'PATCH', { follow_up_sms_sent_at: new Date().toISOString() }, `?id=eq.${r.id}`);
+                  }
+                }
+                // A quiet-hours / consent skip leaves the label unsent so it
+                // retries next run — same as the other drips.
+                break; // one future-follow-up SMS per request per run
+              }
             }
-            // A quiet-hours / consent skip leaves follow_up_sms_sent_at null so
-            // the reminder retries on the next run — same as the other drips.
           }
-          continue; // paused: no other drip fires while a follow-up is pending
+          continue; // paused: no other drip fires while the waitlist drip runs
         }
 
         // ── BOOKING REMINDERS ──

@@ -568,13 +568,27 @@ const TEMPLATES = {
     `Hi ${d.firstName || 'there'} — deposit received, thank you! Your Auto Pals USA contract is waiting for your signature in the portal. Once you sign, your ${SEARCH_WINDOW_ADJ} search officially begins: ${d.portalUrl || PORTAL_URL} ` +
     `Reply STOP to opt out.`,
 
-  // ─── FUTURE FOLLOW-UP (client asked us to circle back later) ─────
-  // Fires once from cron on/after the staff-set follow_up_at date, for leads
-  // parked in the Future Follow-ups tab ("not ready yet"). Warm re-engagement:
-  // they asked us to check back, so lead with that. Consent-gated + quiet-hours
-  // like the other drips (SOLICITATION_RE below).
-  client_scheduled_followup: (d) =>
-    `Hi ${d.firstName || 'there'}, this is Auto Pals USA — you asked us to check back around now about the ${vehicleRef(d)} you were after. Still want us to source one at wholesale auction pricing? Just reply and we'll pick right back up, or grab a time here: ${d.bookingUrl || BOOKING_URL} ` +
+  // ─── FUTURE FOLLOW-UP DRIP ("not ready yet" waitlist) ────────────
+  // 4 tailored messages, one per day starting on the staff-set follow_up_at,
+  // for leads parked in the Future Follow-ups tab. #1 is a direct "ready yet?"
+  // ask; #2-#4 stay patient / no-pressure so it doesn't feel pushy all the way
+  // down. Distinct from the pre/post-call drips (which lean on urgency — wrong
+  // note for someone who asked to wait). Consent + quiet-hours gated
+  // (SOLICITATION_RE below). Fired by cron as wait1..wait4.
+  client_scheduled_followup_1: (d) =>
+    `Hi ${d.firstName || 'there'}, it's Auto Pals USA — you asked us to check back around now about the ${vehicleRef(d)}, so I'll get right to it: are you ready to get started? If so, just reply and we'll start hunting the auctions for it this week — wholesale pricing, mechanic-inspected and AutoCheck-verified before we ever bid. Ready to roll? ` +
+    `Reply STOP to opt out.`,
+
+  client_scheduled_followup_2: (d) =>
+    `Hi ${d.firstName || 'there'}, no rush on your end — just leaving this here for when the time's right. The way we work: you tell us the ${vehicleRef(d)} and your budget, we hunt the weekly auctions, and we only bring you cars that pass our mechanic's inspection and AutoCheck. Most clients save around 25% vs retail. We're one text away whenever you want to start. ` +
+    `Reply STOP to opt out.`,
+
+  client_scheduled_followup_3: (d) =>
+    `Hi ${d.firstName || 'there'}, whenever you do move forward, we keep it low-risk: we're a licensed Florida dealer (Automotivation Enterprises LLC — feel free to look us up), and we don't collect any vehicle funds until we've found a specific ${vehicleRef(d)}, sent you the details, AutoCheck, and our mechanic's report, and you've approved it. You never commit to a car you haven't seen. Reply anytime. ` +
+    `Reply STOP to opt out.`,
+
+  client_scheduled_followup_4: (d) =>
+    `Hi ${d.firstName || 'there'}, we'll leave it here so we're not crowding you. Timing is everything with a car, and there's zero pressure from us. If and when you're ready to find the right ${vehicleRef(d)} at the right price, just reply to this text and we'll take it from there. Either way, we appreciate you considering Auto Pals USA. ` +
     `Reply STOP to opt out.`,
 
   // ─── PORTAL MESSAGE (client-facing) ─────────────────────────────
@@ -615,7 +629,7 @@ const QUIET_END_HOUR   = 20;  // exclusive — last allowed hour (stop at 20:00 
 
 // True only for the scheduled solicitation drips (pre-call / post-call /
 // no-show follow-ups). Kept as a pattern so new follow-up numbers are covered.
-const SOLICITATION_RE = /^client_(precall|postcall|noshow)_followup_|^client_scheduled_followup$/;
+const SOLICITATION_RE = /^client_(precall|postcall|noshow)_followup_|^client_scheduled_followup_/;
 
 function currentEtHour(date) {
   // Intl gives the wall-clock hour in ET regardless of the server's TZ or DST.

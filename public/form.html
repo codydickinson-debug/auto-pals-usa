@@ -2480,7 +2480,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button class="sidebar-subitem" onclick="filterRequests('pfu3', this)"><span class="sub-dot" style="background:#b45309"></span>Follow-up 3 <span class="badge" id="badge-pfu3">0</span></button>
           <button class="sidebar-subitem" onclick="filterRequests('pfu4', this)"><span class="sub-dot" style="background:#92400e"></span>Follow-up 4 <span class="badge" id="badge-pfu4">0</span></button>
         </div>
-        <button class="sidebar-item" onclick="filterRequests('future_followups', this)" title="Leads who aren't ready yet — parked with a date to circle back. Auto-texts the client when the date arrives; the normal drip is paused until then.">
+        <button class="sidebar-item" onclick="filterRequests('future_followups', this)" title="Leads who aren't ready yet — parked with a date to circle back. Runs a tailored 4-day follow-up drip starting on the date; the normal drip is paused until then.">
           📅 Future Follow-ups <span class="badge" id="badge-future_followups">0</span>
         </button>
         <button class="sidebar-item" onclick="filterRequests('no_sms', this)" title="Leads who opted out of texts — the auto follow-up drip skips them, so work these by phone/email">
@@ -5833,10 +5833,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           const label = d.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' });
           if (r.followUpSmsSentAt) {
             const sd = new Date(r.followUpSmsSentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            current.innerHTML = `✓ Reminder texted <strong>${sd}</strong> — this lead is back in the normal flow. Set a new date to park them again.`;
+            current.innerHTML = `✓ 4-day follow-up finished <strong>${sd}</strong> — this lead is back in the normal flow. Set a new date to park them again.`;
           } else {
             const due = d.getTime() <= Date.now();
-            current.innerHTML = `📅 Scheduled for <strong>${label}</strong>${due ? ' · <span style="color:#991b1b;font-weight:700;">due — client is texted on the next daily run</span>' : ''}.<br>Automatic follow-up drip is paused until then.`;
+            current.innerHTML = `📅 Scheduled for <strong>${label}</strong>${due ? ' · <span style="color:#991b1b;font-weight:700;">due — the tailored 4-day follow-up is going out now</span>' : ''}.<br>Runs a tailored 4-day follow-up starting then; the normal drip stays paused.`;
           }
           current.style.display = 'block';
         }
