@@ -171,6 +171,40 @@ module.exports = async function handler(req, res) {
 
     for (const r of requests) {
       try {
+        // ── FUTURE FOLLOW-UP (staff parked this lead as "not ready yet") ──
+        // While a scheduled follow-up is PENDING (follow_up_at set, reminder not
+        // yet fired) we PAUSE every other automatic drip for this lead — we
+        // deliberately deferred them, so no booking/pre-call/post-call/deposit
+        // texts go out. When the date arrives we send exactly one warm
+        // re-engagement SMS (consent-gated + quiet-hours via _sms.js), stamp
+        // follow_up_sms_sent_at so it never repeats, then `continue` so nothing
+        // else fires for them this run. Next run the drip resumes normally.
+        const followUpPending = !!(r.follow_up_at && !r.follow_up_sms_sent_at);
+        if (followUpPending) {
+          const dueMs = new Date(r.follow_up_at).getTime();
+          if (Number.isFinite(dueMs) && dueMs <= Date.now() && r.phone) {
+            const result = await sms.send('client_scheduled_followup', {
+              firstName:  r.first_name,
+              make:       r.make,
+              model:      r.model,
+              phone:      r.phone,
+              smsConsent: r.sms_consent,
+              bookingUrl: BOOKING_URL,
+              portalUrl:  PORTAL_URL
+            });
+            if (!(result && (result.skipped || result.demo))) summary.smsAttempted++;
+            if (result && result.ok && !result.demo) {
+              await sb('requests', 'PATCH', { follow_up_sms_sent_at: new Date().toISOString() }, `?id=eq.${r.id}`);
+              summary.smsRemindersSent++;
+            } else if (result && !result.skipped && !result.demo) {
+              summary.smsFailed++;
+            }
+            // A quiet-hours / consent skip leaves follow_up_sms_sent_at null so
+            // the reminder retries on the next run — same as the other drips.
+          }
+          continue; // paused: no other drip fires while a follow-up is pending
+        }
+
         // ── BOOKING REMINDERS ──
         // Skip if they've already booked a call (booking_confirmed_at set),
         // or if staff marked the call complete (call_completed_at), or if

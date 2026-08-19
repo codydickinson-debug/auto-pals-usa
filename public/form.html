@@ -2480,6 +2480,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button class="sidebar-subitem" onclick="filterRequests('pfu3', this)"><span class="sub-dot" style="background:#b45309"></span>Follow-up 3 <span class="badge" id="badge-pfu3">0</span></button>
           <button class="sidebar-subitem" onclick="filterRequests('pfu4', this)"><span class="sub-dot" style="background:#92400e"></span>Follow-up 4 <span class="badge" id="badge-pfu4">0</span></button>
         </div>
+        <button class="sidebar-item" onclick="filterRequests('future_followups', this)" title="Leads who aren't ready yet — parked with a date to circle back. Auto-texts the client when the date arrives; the normal drip is paused until then.">
+          📅 Future Follow-ups <span class="badge" id="badge-future_followups">0</span>
+        </button>
         <button class="sidebar-item" onclick="filterRequests('no_sms', this)" title="Leads who opted out of texts — the auto follow-up drip skips them, so work these by phone/email">
           🔕 Opted Out of SMS <span class="badge" id="badge-no_sms">0</span>
         </button>
@@ -3004,6 +3007,25 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           </div>
           <button onclick="saveDealNumbers()" id="dv-deal-save" style="width:100%;padding:9px 14px;background:var(--navy,#0f2557);color:#fff;border:none;border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Save deal numbers</button>
           <div id="dv-deal-saved" style="display:none;font-family:system-ui,sans-serif;font-size:12px;color:var(--green);text-align:center;">✓ Saved — these carry into the sale &amp; Sold Cars.</div>
+        </div>
+      </div>
+
+      <!-- Future Follow-up — park a "not ready yet" lead with a date to circle
+           back. Sets follow_up_at (Future Follow-ups tab + cron reminder) and
+           pauses the automatic drip until then; the client gets one warm text
+           on the date. -->
+      <div id="dv-followup-section" style="margin-bottom:18px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:10px;">📅 Future Follow-up</div>
+        <div id="dv-followup-current" style="display:none;font-family:system-ui,sans-serif;font-size:12px;color:var(--text);background:var(--bg,#fff);border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:10px;line-height:1.5;"></div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div>
+            <label for="dv-followup-date" style="display:block;font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);margin-bottom:3px;">Circle back on</label>
+            <input type="date" id="dv-followup-date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;font-size:13px;">
+          </div>
+          <input type="text" id="dv-followup-note" placeholder="Optional note — e.g. 'buying after tax refund'" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;">
+          <button onclick="saveFollowUpSchedule()" id="dv-followup-save" style="width:100%;padding:9px 14px;background:var(--navy,#0f2557);color:#fff;border:none;border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Schedule follow-up</button>
+          <button onclick="clearFollowUpSchedule()" id="dv-followup-clear" style="display:none;width:100%;padding:8px 14px;background:transparent;color:var(--red);border:1px solid var(--red-light,#fecaca);border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Clear follow-up</button>
+          <div id="dv-followup-saved" style="display:none;font-family:system-ui,sans-serif;font-size:12px;color:var(--green);text-align:center;"></div>
         </div>
       </div>
 
@@ -3844,7 +3866,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       psiStartedAt: r.psi_started_at || null,
       psiMiles: (r.psi_miles != null ? r.psi_miles : ''),
       psiSalePrice: (r.psi_sale_price != null ? r.psi_sale_price : ''),
-      clientPaid: (r.client_paid != null ? r.client_paid : '')  // separate "what the client actually paid" (editable on the profile)
+      clientPaid: (r.client_paid != null ? r.client_paid : ''),  // separate "what the client actually paid" (editable on the profile)
+      // Future follow-up ("not ready yet" — circle back on this date)
+      followUpAt: r.follow_up_at || null,
+      followUpNote: r.follow_up_note || '',
+      followUpSmsSentAt: r.follow_up_sms_sent_at || null
     };
   }
 
@@ -5144,6 +5170,26 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // follow-up drip skips them (TCPA), so they never auto-advance the funnel —
   // they surface in their own tab to be worked by phone/email. Active only
   // (hide sold/rejected/dormant, same as the All view).
+  // A lead parked as "not ready yet" with a date to circle back. Stays in the
+  // Future Follow-ups tab until the scheduled reminder SMS fires (followUpSmsSentAt)
+  // or staff clears it, at which point it rejoins the normal flow/drip.
+  function isFutureFollowUp(r) {
+    return !!(r && r.followUpAt) && !r.followUpSmsSentAt
+      && r.status !== 'sold' && r.status !== 'rejected';
+  }
+  // Small pill for a scheduled follow-up, shown next to the lead name. Turns red
+  // + "Follow-up due" once the date has passed (waiting on the daily cron send).
+  function followUpScheduleBadge(r) {
+    if (!isFutureFollowUp(r)) return '';
+    const t = new Date(r.followUpAt).getTime();
+    if (!Number.isFinite(t)) return '';
+    const due = t <= Date.now();
+    const label = new Date(r.followUpAt).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
+    const style = due ? 'background:#fee2e2;color:#991b1b;' : 'background:#eef2ff;color:#3730a3;';
+    const note = r.followUpNote ? ': ' + String(r.followUpNote).replace(/"/g, '&quot;') : '';
+    return `<span class="fu-sched-badge" style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:99px;font-family:system-ui,sans-serif;font-size:10px;font-weight:700;letter-spacing:0.02em;${style}" title="Future follow-up${note}">${due ? '⏰ Follow-up due' : '📅 ' + label}</span>`;
+  }
+
   function isOptedOutSms(r) {
     return r.smsConsent === false && r.status !== 'sold' && r.status !== 'rejected' && !isDormantRequest(r);
   }
@@ -5212,6 +5258,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // Opted out of SMS (sms_consent === false) — the drip can't chase these, so
     // they surface here to be worked by hand. Active leads only.
     counts.no_sms = requests.filter(isOptedOutSms).length;
+    // Future follow-ups — leads parked with a "circle back" date (not yet texted).
+    counts.future_followups = requests.filter(isFutureFollowUp).length;
     Object.entries(counts).forEach(([k,v]) => {
       const el = document.getElementById('badge-' + k);
       if (el) el.textContent = v;
@@ -5227,7 +5275,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.querySelectorAll('.action-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.sidebar-item, .sidebar-subitem').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
-    const titles = { all: 'All Requests', new: 'New Requests — this week', active: 'Active — new leads older than a week (still being worked)', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Post-Call Follow-ups (had a call)', fu1: 'Post-Call · Follow-up 1', fu2: 'Post-Call · Follow-up 2', fu3: 'Post-Call · Follow-up 3', fu4: 'Post-Call · Follow-up 4', precall_followups: 'Pre-Call Follow-ups (no call yet)', pfu1: 'Pre-Call · Follow-up 1', pfu2: 'Pre-Call · Follow-up 2', pfu3: 'Pre-Call · Follow-up 3', pfu4: 'Pre-Call · Follow-up 4', pending_deposit: 'Pending Deposit — good call, no deposit yet', no_sms: 'Opted Out of SMS — no auto follow-up; work by phone/email', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
+    const titles = { all: 'All Requests', new: 'New Requests — this week', active: 'Active — new leads older than a week (still being worked)', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Post-Call Follow-ups (had a call)', fu1: 'Post-Call · Follow-up 1', fu2: 'Post-Call · Follow-up 2', fu3: 'Post-Call · Follow-up 3', fu4: 'Post-Call · Follow-up 4', precall_followups: 'Pre-Call Follow-ups (no call yet)', pfu1: 'Pre-Call · Follow-up 1', pfu2: 'Pre-Call · Follow-up 2', pfu3: 'Pre-Call · Follow-up 3', pfu4: 'Pre-Call · Follow-up 4', pending_deposit: 'Pending Deposit — good call, no deposit yet', no_sms: 'Opted Out of SMS — no auto follow-up; work by phone/email', future_followups: 'Future Follow-ups — parked "not ready" leads; auto-texts the client on the scheduled date', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
     document.getElementById('table-title').textContent = titles[f] || 'Requests';
     renderTable();
   }
@@ -5488,6 +5536,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       filtered = requests.filter(isDormantRequest);
     } else if (currentFilter === 'rejected') {
       filtered = requests.filter(r => r.status === 'rejected');
+    } else if (currentFilter === 'future_followups') {
+      filtered = requests.filter(isFutureFollowUp);
     } else {
       // 'All Requests' now shows every lead that ever came through — including
       // rejected and dormant (which ALSO keep their own Archive tabs for a
@@ -5525,6 +5575,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (currentSort === 'budget')     filtered.sort((a,b) => b.budgetMax - a.budgetMax);
     else if (currentSort === 'date-asc') filtered.sort((a,b) => new Date(a.submitted) - new Date(b.submitted));
     else filtered.sort((a,b) => new Date(b.submitted) - new Date(a.submitted)); // date-desc default
+    // Future Follow-ups always sort by their scheduled date — soonest / overdue
+    // first — regardless of the active sort control.
+    if (currentFilter === 'future_followups') {
+      filtered.sort((a,b) => new Date(a.followUpAt || 0) - new Date(b.followUpAt || 0));
+    }
 
     const tbody = document.getElementById('requests-tbody');
     if (!filtered.length) {
@@ -5550,7 +5605,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const dayPill = depositDayPill(r);
       const sla = slaDot(r);
       return `<tr draggable="true" data-id="${r.id}" onclick="rowClick(event,${r.id})">
-        <td><strong>${r.firstName} ${r.lastName}</strong>${callBadge(r)}${dispositionBadge(r)}${followUpChip(r)}${replyBadge(r)}${sourceBadge(r)}${smsBadge(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
+        <td><strong>${r.firstName} ${r.lastName}</strong>${callBadge(r)}${dispositionBadge(r)}${followUpChip(r)}${followUpScheduleBadge(r)}${replyBadge(r)}${sourceBadge(r)}${smsBadge(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
         <td data-label="Vehicle">${vehicle}</td>
         <td data-label="Budget">${budget}${paymentBadge(r)}</td>
         <td data-label="Years">${years}</td>
@@ -5754,6 +5809,45 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         setDeal('dv-deal-client-paid', r.clientPaid);
         const saved = document.getElementById('dv-deal-saved');
         if (saved) saved.style.display = 'none';
+      }
+    }
+
+    // Future follow-up card — reflect current schedule (if any) and prefill.
+    const fuSection = document.getElementById('dv-followup-section');
+    if (fuSection) {
+      const dateEl  = document.getElementById('dv-followup-date');
+      const noteEl  = document.getElementById('dv-followup-note');
+      const current = document.getElementById('dv-followup-current');
+      const clearBtn = document.getElementById('dv-followup-clear');
+      const saveBtn = document.getElementById('dv-followup-save');
+      const fsaved  = document.getElementById('dv-followup-saved');
+      if (fsaved) fsaved.style.display = 'none';
+      // Hide entirely for closed-out leads (sold/rejected) where it's moot.
+      fuSection.style.display = (r.status === 'sold' || r.status === 'rejected') ? 'none' : 'block';
+      const d = r.followUpAt ? new Date(r.followUpAt) : null;
+      const scheduled = !!(d && Number.isFinite(d.getTime()));
+      if (scheduled) {
+        if (dateEl) dateEl.value = d.toISOString().slice(0, 10);
+        if (noteEl) noteEl.value = r.followUpNote || '';
+        if (current) {
+          const label = d.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' });
+          if (r.followUpSmsSentAt) {
+            const sd = new Date(r.followUpSmsSentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            current.innerHTML = `✓ Reminder texted <strong>${sd}</strong> — this lead is back in the normal flow. Set a new date to park them again.`;
+          } else {
+            const due = d.getTime() <= Date.now();
+            current.innerHTML = `📅 Scheduled for <strong>${label}</strong>${due ? ' · <span style="color:#991b1b;font-weight:700;">due — client is texted on the next daily run</span>' : ''}.<br>Automatic follow-up drip is paused until then.`;
+          }
+          current.style.display = 'block';
+        }
+        if (clearBtn) clearBtn.style.display = 'block';
+        if (saveBtn) saveBtn.textContent = 'Update follow-up';
+      } else {
+        if (dateEl) dateEl.value = '';
+        if (noteEl) noteEl.value = '';
+        if (current) current.style.display = 'none';
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (saveBtn) saveBtn.textContent = 'Schedule follow-up';
       }
     }
 
@@ -8901,6 +8995,55 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       saved.style.color = ok === false ? 'var(--red)' : 'var(--green)';
       saved.style.display = 'block';
     }
+    if (typeof renderDashboard === 'function') renderDashboard();
+  }
+
+  // ── Future follow-up scheduling ──────────────────────────────────
+  // Park a "not ready yet" lead with a date to circle back. Stores follow_up_at
+  // at noon UTC on the chosen day so the daily cron (14:00 UTC) fires the client
+  // reminder that same day; (re)scheduling clears follow_up_sms_sent_at so the
+  // reminder re-arms, and pauses the automatic drip until the date.
+  async function saveFollowUpSchedule() {
+    const r = requests.find(x => x.id === activeRequestId);
+    if (!r) return;
+    const dateEl = document.getElementById('dv-followup-date');
+    const noteEl = document.getElementById('dv-followup-note');
+    const dateVal = dateEl ? dateEl.value : '';
+    if (!dateVal) { alert('Pick a date to follow up on.'); if (dateEl) dateEl.focus(); return; }
+    const iso = new Date(dateVal + 'T12:00:00Z').toISOString();
+    r.followUpAt = iso;
+    r.followUpNote = noteEl ? noteEl.value.trim() : '';
+    r.followUpSmsSentAt = null;
+    if (typeof save === 'function') save();
+    const btn = document.getElementById('dv-followup-save');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+    const ok = await dbPut('requests', {
+      id: r.id,
+      followUpAt: iso,
+      followUpNote: r.followUpNote || null,
+      followUpSmsSentAt: null
+    });
+    if (btn) btn.disabled = false;
+    const fsaved = document.getElementById('dv-followup-saved');
+    if (fsaved) {
+      fsaved.textContent = ok === false ? '⚠ Saved on this device — server sync failed, try again.' : '✓ Scheduled — they\'re parked in Future Follow-ups.';
+      fsaved.style.color = ok === false ? 'var(--red)' : 'var(--green)';
+      fsaved.style.display = 'block';
+    }
+    populateDetailView(r);
+    if (typeof renderDashboard === 'function') renderDashboard();
+  }
+
+  async function clearFollowUpSchedule() {
+    const r = requests.find(x => x.id === activeRequestId);
+    if (!r) return;
+    if (!confirm('Clear this scheduled follow-up? The lead returns to the normal flow.')) return;
+    r.followUpAt = null;
+    r.followUpNote = '';
+    r.followUpSmsSentAt = null;
+    if (typeof save === 'function') save();
+    await dbPut('requests', { id: r.id, followUpAt: null, followUpNote: null, followUpSmsSentAt: null });
+    populateDetailView(r);
     if (typeof renderDashboard === 'function') renderDashboard();
   }
 

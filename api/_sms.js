@@ -568,6 +568,15 @@ const TEMPLATES = {
     `Hi ${d.firstName || 'there'} — deposit received, thank you! Your Auto Pals USA contract is waiting for your signature in the portal. Once you sign, your ${SEARCH_WINDOW_ADJ} search officially begins: ${d.portalUrl || PORTAL_URL} ` +
     `Reply STOP to opt out.`,
 
+  // ─── FUTURE FOLLOW-UP (client asked us to circle back later) ─────
+  // Fires once from cron on/after the staff-set follow_up_at date, for leads
+  // parked in the Future Follow-ups tab ("not ready yet"). Warm re-engagement:
+  // they asked us to check back, so lead with that. Consent-gated + quiet-hours
+  // like the other drips (SOLICITATION_RE below).
+  client_scheduled_followup: (d) =>
+    `Hi ${d.firstName || 'there'}, this is Auto Pals USA — you asked us to check back around now about the ${vehicleRef(d)} you were after. Still want us to source one at wholesale auction pricing? Just reply and we'll pick right back up, or grab a time here: ${d.bookingUrl || BOOKING_URL} ` +
+    `Reply STOP to opt out.`,
+
   // ─── PORTAL MESSAGE (client-facing) ─────────────────────────────
   // Now includes a preview of the actual message so the client knows why
   // to open the portal, plus the direct link. Preview truncated to ~90
@@ -606,7 +615,7 @@ const QUIET_END_HOUR   = 20;  // exclusive — last allowed hour (stop at 20:00 
 
 // True only for the scheduled solicitation drips (pre-call / post-call /
 // no-show follow-ups). Kept as a pattern so new follow-up numbers are covered.
-const SOLICITATION_RE = /^client_(precall|postcall|noshow)_followup_/;
+const SOLICITATION_RE = /^client_(precall|postcall|noshow)_followup_|^client_scheduled_followup$/;
 
 function currentEtHour(date) {
   // Intl gives the wall-clock hour in ET regardless of the server's TZ or DST.
