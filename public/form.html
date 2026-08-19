@@ -6670,6 +6670,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <button class="ctx-item" onclick="ctxAdvanceFollowUp(1)"><span class="ctx-dot" style="background:#0ea5e9"></span>Advance follow-up →</button>
     <button class="ctx-item" onclick="ctxAdvanceFollowUp(-1)"><span class="ctx-dot" style="background:#94a3b8"></span>Back a stage ←</button>
     <button class="ctx-item" onclick="ctxSetFollowUp(0)"><span class="ctx-dot" style="background:#e2e8f0"></span>Clear follow-up</button>
+    <button class="ctx-item" onclick="ctxScheduleFollowUp()"><span class="ctx-dot" style="background:#3730a3"></span>📅 Schedule follow-up…</button>
     <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
     <button class="ctx-item" onclick="ctxMoveToPsi()" style="color:#4338ca;font-weight:600;"><span class="ctx-dot" style="background:#4338ca"></span>Send to PSI Period</button>
     <button class="ctx-item" onclick="ctxMoveToRepair()" style="color:var(--amber);font-weight:600;"><span class="ctx-dot" style="background:var(--amber)"></span>Send to Repair</button>
@@ -9032,6 +9033,22 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     }
     populateDetailView(r);
     if (typeof renderDashboard === 'function') renderDashboard();
+  }
+
+  // ⋮-menu shortcut: open the lead's profile and jump straight to the Future
+  // Follow-up card (date field focused, picker popped where supported) so staff
+  // can park a "not ready" lead in one click without hunting through the profile.
+  function ctxScheduleFollowUp() {
+    const id = ctxTargetId;
+    ctxMenu.classList.remove('open');
+    if (id == null) return;
+    if (typeof openDetailView === 'function') openDetailView(id);
+    setTimeout(() => {
+      const section = document.getElementById('dv-followup-section');
+      const dateEl = document.getElementById('dv-followup-date');
+      if (section && section.scrollIntoView) { try { section.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {} }
+      if (dateEl) { try { dateEl.focus(); if (dateEl.showPicker) dateEl.showPicker(); } catch (_) {} }
+    }, 180);
   }
 
   async function clearFollowUpSchedule() {
