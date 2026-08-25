@@ -128,6 +128,60 @@ const getCallTranscript = (callId) => quoFetch(`/call-transcripts/${encodeURICom
 const getCallRecordings = (callId) => quoFetch(`/call-recordings/${encodeURIComponent(callId)}`);
 const getVoicemail      = (callId) => quoFetch(`/call-voicemails/${encodeURIComponent(callId)}`);
 
+/**
+ * Our own workspace numbers, in E.164.
+ *
+ * Used to work out which end of a call is the CLIENT. Getting this wrong is
+ * quiet and expensive: on an OUTBOUND call the counterparty resolver would fall
+ * back to our own number, store that as the contact, and then match no lead at
+ * all — so Josh's outbound calls would vanish from the pipeline while inbound
+ * kept working.
+ *
+ * It was originally a hand-entered env var and was typo'd on the first attempt,
+ * which is exactly the kind of configuration that should not be hand-entered.
+ * So: ask Quo, cache for the life of the warm lambda, and fall back to
+ * QUO_PHONE_NUMBERS only if the API is unreachable. One round trip per cold
+ * start, and no way to misconfigure it.
+ */
+let _numbersCache = null;
+let _numbersFetchedAt = 0;
+const NUMBERS_TTL_MS = 15 * 60 * 1000; // survives a burst, still picks up a new number
+
+function envNumbers() {
+  return String(process.env.QUO_PHONE_NUMBERS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+async function getOurNumbers({ force = false } = {}) {
+  const fresh = _numbersCache && (Date.now() - _numbersFetchedAt) < NUMBERS_TTL_MS;
+  if (fresh && !force) return _numbersCache;
+
+  const res = await listPhoneNumbers();
+  if (res.ok) {
+    const list = Array.isArray(res.data) ? res.data : (res.data && res.data.data) || [];
+    const nums = list
+      .map((n) => n && (n.number || n.phoneNumber || n.e164))
+      .filter((v) => typeof v === 'string' && v.trim());
+    if (nums.length) {
+      _numbersCache = nums;
+      _numbersFetchedAt = Date.now();
+      return nums;
+    }
+  }
+
+  // API unavailable (or demo mode): fall back rather than resolving against an
+  // empty set, which would silently mis-attribute every outbound call.
+  const fallback = envNumbers();
+  if (fallback.length) {
+    console.warn('[quo] phone-number lookup failed; using QUO_PHONE_NUMBERS fallback');
+    return fallback;
+  }
+  console.error('[quo] no workspace numbers available — outbound counterparty resolution will be unreliable');
+  return _numbersCache || [];
+}
+
 // ── Webhooks ────────────────────────────────────────────────────────────────
 
 const listWebhooks  = () => quoFetch('/webhooks');
@@ -230,6 +284,7 @@ function flattenTranscript(payload) {
 
 module.exports = {
   quoFetch,
+  getOurNumbers,
   listPhoneNumbers,
   listCalls,
   getCall,

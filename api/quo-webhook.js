@@ -35,7 +35,7 @@
 // makes Quo's retries idempotent.
 
 const { SUPABASE_URL } = require('./_constants.js');
-const { mapCall, flattenTranscript, last10 } = require('./_quo.js');
+const { mapCall, flattenTranscript, last10, getOurNumbers } = require('./_quo.js');
 
 const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || null;
 
@@ -226,11 +226,12 @@ module.exports = async function handler(req, res) {
   const type = String(body.type || body.event || '');
   const object = (body.data && body.data.object) || body.data || body;
 
-  // Our own workspace numbers, so the counterparty is always the CLIENT.
-  // Configured rather than fetched per-event: an extra API round trip on every
-  // webhook would be wasteful and would couple delivery to Quo being up.
-  const ourNumbers = String(process.env.QUO_PHONE_NUMBERS || '')
-    .split(',').map((s) => s.trim()).filter(Boolean);
+  // Our own workspace numbers, so the stored counterparty is always the CLIENT.
+  // Fetched from Quo and cached for the life of the warm lambda (see
+  // getOurNumbers), with QUO_PHONE_NUMBERS as the offline fallback — one round
+  // trip per cold start, and no way to typo it into silently losing every
+  // outbound call from the pipeline.
+  const ourNumbers = await getOurNumbers();
 
   let result;
   try {
