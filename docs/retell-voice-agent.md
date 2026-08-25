@@ -42,7 +42,7 @@ Webhook URL (both functions): `https://www.autopalsusa.com/api/voice`
 Method: `POST`
 
 ### Function 1 — `check_availability`
-Description: *"Look up open 30‑minute intro‑call slots. Call this before offering times. Pass a specific date if the caller named one; otherwise omit `date` to get the next available days."*
+Description: *"Look up open 30‑minute intro‑call slots for a day. Ask the caller what day works, then pass that date. Returns up to three open times for that day (or the next open weekday if you omit `date`). Offer only the times it returns — don't list more."*
 
 Parameters (JSON schema):
 ```json
@@ -104,6 +104,11 @@ The webhook always returns a `message` string you can speak, plus a
 >   inspection → **you approve it before we ever buy** → we handle purchase and
 >   delivery.
 > - The $850 deposit is taken up front, before the search begins.
+> - **60‑day money‑back guarantee — emphasize this often:** if we don't find
+>   them the right vehicle within 60 days, their full $850 deposit is refunded.
+>   There's no risk in starting. Work it into the conversation naturally —
+>   lead with it when explaining the deposit, and bring it up again anytime
+>   someone sounds hesitant about paying or unsure it'll work out.
 > - **Our vehicle minimum is $5,000.** Below that it's simply unworkable, so we
 >   can't take a request under $5,000. If someone's budget is lower, say that
 >   kindly and don't book.
@@ -139,10 +144,12 @@ The webhook always returns a `message` string you can speak, plus a
 >   again until they confirm it's right.
 >
 > **Booking a call:** When someone wants to book — or wants to talk to a real
-> person — book them an intro call (that's how they reach the team). First call
-> `check_availability` and offer real open times. Collect and confirm (per the
-> rule above) first name, last name, email, callback number, and the vehicle
-> they want. **Before you book, read the whole thing back once more** — full
+> person — book them an intro call (that's how they reach the team). **First ask
+> what day works best for them**, then call `check_availability` for that day and
+> read back only the times it returns — it gives you up to three, so offer just
+> those, don't rattle off a long list. If that day is full, offer the next open
+> day it hands back. Collect and confirm (per the rule above) first name, last
+> name, email, callback number, and the vehicle they want. **Before you book, read the whole thing back once more** — full
 > name, number, email, vehicle, and the date and time — and get a final "yes."
 > Then call `book_call` with the exact date and time you offered. Finally, read
 > back the confirmation the webhook returns.

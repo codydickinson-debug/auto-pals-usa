@@ -129,26 +129,28 @@ async function checkAvailability(args) {
       return { success: true, date: res.date, dateLabel: res.dateLabel, slots: [],
         message: `${res.dateLabel} is fully booked. Want me to check the next open day?` };
     }
-    return { success: true, date: res.date, dateLabel: res.dateLabel, slots: res.open,
-      message: `On ${res.dateLabel} we have ${res.open.slice(0, 6).join(', ')} Eastern. What works best?` };
+    // Offer at most THREE times for the chosen day (owner: don't rattle off a
+    // long list — read three options for the day they picked).
+    const offer = res.open.slice(0, 3);
+    return { success: true, date: res.date, dateLabel: res.dateLabel, slots: offer,
+      message: `On ${res.dateLabel} I can do ${offer.join(', ')} Eastern. Which of those works for you?` };
   }
 
-  // No specific date → scan upcoming weekdays for the next few with openings.
-  const days = [];
+  // No specific date → offer the NEXT open weekday with just three times, and
+  // invite them to name a better day. Keeps her flow "ask when you're free →
+  // read three options for that day" instead of listing several days at once.
   let cursor = todayET();
-  for (let i = 0; i < 12 && days.length < 3; i++) {
+  for (let i = 0; i < 14; i++) {
     cursor = addDays(cursor, 1);
     if (!isWeekday(cursor)) continue;
     const res = await openSlotsFor(cursor);
     if (res.ok && res.open.length) {
-      days.push({ date: res.date, dateLabel: res.dateLabel, slots: res.open.slice(0, 4) });
+      const offer = res.open.slice(0, 3);
+      return { success: true, date: res.date, dateLabel: res.dateLabel, slots: offer,
+        message: `The soonest I have is ${res.dateLabel} — I can do ${offer.join(', ')} Eastern. Or is there a day that works better for you?` };
     }
   }
-  if (!days.length) {
-    return { success: true, days: [], message: "I'm not seeing open slots in the next couple weeks — let me take your info and have the team call you." };
-  }
-  const spoken = days.map(d => `${d.dateLabel} at ${d.slots.slice(0, 3).join(' or ')}`).join('; ');
-  return { success: true, days, message: `The next openings are: ${spoken}. Which would you like?` };
+  return { success: true, date: null, dateLabel: null, slots: [], message: "I'm not seeing open slots in the next couple weeks — let me take your info and have the team call you." };
 }
 
 function cleanEmail(e) {
