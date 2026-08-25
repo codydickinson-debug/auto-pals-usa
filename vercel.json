@@ -12,6 +12,7 @@
     { "source": "/api/portal-login",   "destination": "/api/portal-login.js" },
     { "source": "/api/quote-response", "destination": "/api/quote-response.js" },
     { "source": "/api/create-checkout","destination": "/api/create-checkout.js" },
+    { "source": "/api/quo-webhook",   "destination": "/api/quo-webhook.js" },
     { "source": "/home",     "destination": "/home.html" },
     { "source": "/form",     "destination": "/form.html" },
     { "source": "/request",  "destination": "/request.html" },

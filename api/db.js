@@ -991,6 +991,47 @@ module.exports = async function handler(req, res) {
       return res.status(405).json({ error: 'method_not_allowed' });
     }
 
+    // ── COMMUNICATIONS ────────────────────────────────────────────
+    // Staff-only conversation log (inbound texts, and calls once a voice
+    // provider is wired) for the profile Communications timeline. Same posture
+    // as email_log: not a public op, so the gate above already 401s anyone
+    // without a staff token, and the table is RLS-locked to the service role.
+    //
+    // Reads are per-client. request_id is the precise key; phone is the
+    // fallback for rows written before a matching requests row existed (an
+    // unknown number that texts in first, then submits the form later).
+    if (table === 'communications') {
+      if (req.method === 'GET') {
+        if (!isStaff) return res.json([]);
+        const reqId = String(req.query.request_id || '').trim();
+        const phone = String(req.query.phone || '').replace(/\D/g, '').slice(-10);
+        let params;
+        if (reqId && phone) {
+          // Both known: catch rows linked by id AND any orphan rows from the
+          // same number that were logged before the client had a request row.
+          params = `?or=(request_id.eq.${encodeURIComponent(reqId)},phone_last10.eq.${encodeURIComponent(phone)})`
+                 + `&order=ts.desc&limit=200`;
+        } else if (reqId) {
+          params = `?request_id=eq.${encodeURIComponent(reqId)}&order=ts.desc&limit=200`;
+        } else if (phone) {
+          params = `?phone_last10=eq.${encodeURIComponent(phone)}&order=ts.desc&limit=200`;
+        } else {
+          params = `?order=ts.desc&limit=500`;
+        }
+        // The table may not be migrated yet on this environment. query() throws
+        // on a REST error, so treat any failure as "no history" rather than
+        // letting it take down the whole detail view.
+        try {
+          const data = await query('communications', 'GET', null, params);
+          return res.json(data || []);
+        } catch (e) {
+          console.warn('[DB] communications read failed (migration not applied?):', e && e.message);
+          return res.json([]);
+        }
+      }
+      return res.status(405).json({ error: 'method_not_allowed' });
+    }
+
     // ── REPAIRS ───────────────────────────────────────────────────
     if (table === 'repair_cars') {
       if (req.method === 'GET') {
