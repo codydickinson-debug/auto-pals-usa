@@ -5739,6 +5739,50 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const detail = body ? (subj ? `Subject: ${subj}\n\n${body}` : body) : subj;
       events.push({ ts: e.ts, icon: '📧', kind: 'Email — ' + prettifyTpl(e.template), detail, ok: e.ok !== false });
     });
+    // 4) Real conversation log — what the client actually SAID. Inbound texts
+    //    (written by api/salesmsg-inbound.js) and calls, once a voice provider
+    //    is wired. Everything above this point is stuff WE sent; this is the
+    //    other half of the conversation.
+    //
+    //    Matched by request_id and by phone, so a text that arrived before the
+    //    client ever submitted the form still lands on their profile. Returns
+    //    [] until the communications migration is applied, in which case the
+    //    timeline degrades to exactly what it showed before — no error state.
+    const commsKey = '&request_id=' + encodeURIComponent(r.id)
+      + (r.phone ? '&phone=' + encodeURIComponent(r.phone) : '');
+    const comms = await dbGet('communications', commsKey);
+    const seenComm = new Set();
+    (Array.isArray(comms) ? comms : []).forEach(c => {
+      if (!c) return;
+      // request_id and phone can both match the same row; de-dupe on id.
+      if (seenComm.has(c.id)) return;
+      seenComm.add(c.id);
+      const inbound = c.direction !== 'out';
+      if (c.channel === 'call') {
+        const mins = Number(c.duration_sec) > 0
+          ? ' · ' + (c.duration_sec < 60 ? c.duration_sec + 's' : Math.round(c.duration_sec / 60) + ' min')
+          : '';
+        const disp = c.outcome ? ' · ' + c.outcome : '';
+        // Prefer the AI summary; fall back to the transcript, then any note.
+        const detail = (c.summary || c.transcript || c.body || '').trim();
+        events.push({
+          ts: c.ts,
+          icon: inbound ? '📞' : '☎️',
+          kind: 'Call ' + (inbound ? '← from client' : '→ client') + mins + disp,
+          detail: detail.slice(0, 4000),
+          ok: c.outcome !== 'missed'
+        });
+      } else {
+        events.push({
+          ts: c.ts,
+          icon: '💬',
+          kind: 'Text ' + (inbound ? '← from client' : '→ client'),
+          detail: (c.body || '').trim(),
+          ok: true
+        });
+      }
+    });
+
     // Newest first; timestamp-less SMS entries sink to the bottom of the list.
     events.sort((a, b) => (b.ts ? new Date(b.ts).getTime() : 0) - (a.ts ? new Date(a.ts).getTime() : 0));
     if (!events.length) {
