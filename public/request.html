@@ -1355,6 +1355,21 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
      Vercel; until it's set, create-checkout 503s and the fallback page shows a
      friendly "call us" message — nothing hard-breaks. */
   const REP_PHONE_TEL = '+15612209577';   // (561) 220-9577 — the AI phone line
+
+  /* ── Stripe Payment Link (no-secret-key deposit) ───────────────────
+     Skip-the-line submissions are sent straight here. We append the lead id
+     as client_reference_id and prefill the email so Stripe passes both into
+     the session — api/stripe-webhook.js reads client_reference_id to mark the
+     deposit paid on this exact request. No STRIPE_SECRET_KEY needed for this
+     path (the hosted Payment Link handles the card page itself). */
+  const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/eVqaEQ81GcJegzM6gSbo401';
+  function stripeDepositUrl(req) {
+    const sep = STRIPE_PAYMENT_LINK.includes('?') ? '&' : '?';
+    const p = new URLSearchParams();
+    if (req && req.id)    p.set('client_reference_id', String(req.id));
+    if (req && req.email) p.set('prefilled_email', req.email);
+    return STRIPE_PAYMENT_LINK + sep + p.toString();
+  }
   let _depositBusy = false;
   async function startDepositCheckout(ev, requestId) {
     if (ev && ev.preventDefault) ev.preventDefault();
@@ -1878,6 +1893,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       }
       // Write failed — fall through to the success card, which shows the
       // portal code and a manual "book your call" link, rather than redirect.
+    }
+
+    // ── SKIP-THE-LINE → straight to the Stripe deposit page ────────
+    // Owner ask: the moment a skip-the-line form is submitted, send them
+    // directly to the Stripe Payment Link — no interstitial. The lead write
+    // already fired with keepalive, so it lands even though we navigate away;
+    // the id/email ride along so the webhook flips the deposit on this lead.
+    // Rejected (under-$5k) leads are excluded — they get the decline card below.
+    if (isSkipLine && !isRejected) {
+      window.location.href = stripeDepositUrl(req);
+      return;
     }
 
     // ── SKIP-THE-LINE / REJECTED ───────────────────────────────────
