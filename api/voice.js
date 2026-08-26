@@ -158,6 +158,15 @@ function cleanEmail(e) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) ? s : null;
 }
 function digits(p) { return String(p || '').replace(/\D/g, ''); }
+// The AI asks callers which specialist they want — Cody or Josh (Alex doesn't
+// take calls). Normalize whatever it passes to exactly "Cody" or "Josh"; blank
+// if it wasn't captured or it's anyone else, so a bad value never sticks.
+function normalizeRep(v) {
+  const s = String(v || '').trim().toLowerCase();
+  if (s.startsWith('cody')) return 'Cody';
+  if (s.startsWith('josh')) return 'Josh';
+  return '';
+}
 
 async function bookCall(args) {
   const firstName = String(args.firstName || args.first_name || '').trim();
@@ -167,6 +176,7 @@ async function bookCall(args) {
   const date      = String(args.date || '').trim();
   const time      = String(args.time || '').trim();
   const vehicle   = String(args.vehicle || args.vehicleInterest || '').trim();
+  const rep       = normalizeRep(args.rep || args.person || args.specialist || args.with);
   const budgetMin = Number(String(args.budgetMin ?? args.budget_min ?? '').replace(/[^\d.]/g, '')) || 0;
   const budgetMax = Number(String(args.budgetMax ?? args.budget_max ?? '').replace(/[^\d.]/g, '')) || 0;
 
@@ -203,7 +213,8 @@ async function bookCall(args) {
     phone: phoneE164,
     date, time,
     dateLabel: avail.dateLabel,
-    vehicle
+    vehicle,
+    rep
   };
 
   // Step 0 — make sure this caller is a full lead (a "form submission") so they
@@ -281,7 +292,7 @@ async function bookCall(args) {
     success: true,
     date, time, dateLabel: avail.dateLabel,
     calendarOk: !!fanout.calendarOk,
-    message: `You're all set for ${avail.dateLabel} at ${time} Eastern, and I've noted you're after ${vehicle}. You'll get a confirmation email with your client-portal access code and a calendar invite, plus a text reminder about an hour before the call. Anything else I can help with?`
+    message: `You're all set for ${avail.dateLabel} at ${time} Eastern${rep ? ` with ${rep}` : ''}, and I've noted you're after ${vehicle}. You'll get a confirmation email with your client-portal access code and a calendar invite, plus a text reminder about an hour before the call. Anything else I can help with?`
   };
 }
 

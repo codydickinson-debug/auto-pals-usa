@@ -100,7 +100,8 @@ function staffBookingSmsPromise(booking) {
     phone:     booking.phone,
     date:      booking.date,
     dateLabel: booking.dateLabel,
-    time:      booking.time
+    time:      booking.time,
+    rep:       booking.rep
   }).catch(err => console.error('[BOOKING→SMS]', err && err.message));
 }
 
@@ -162,12 +163,13 @@ async function createCalendarEvent(token, booking) {
   const { start, end } = buildEventTimes(booking.date, booking.time);
 
   const event = {
-    summary: `Sales Call — ${booking.firstName} ${booking.lastName}`,
+    summary: `Sales Call — ${booking.firstName} ${booking.lastName}${booking.rep ? ` (with ${booking.rep})` : ''}`,
     description: [
       `Client: ${booking.firstName} ${booking.lastName}`,
       `Email: ${booking.email}`,
       `Phone: ${booking.phone || 'Not provided'}`,
       `Vehicle interest: ${booking.vehicle || 'Not specified'}`,
+      ...(booking.rep ? [`Rep requested: ${booking.rep}`] : []),
       '',
       'Booked via Auto Motivation Enterprise booking page.'
     ].join('\n'),

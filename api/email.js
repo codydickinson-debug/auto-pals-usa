@@ -450,7 +450,7 @@ ${footer(d)}`)
     html: shell(`${header()}
 <tr><td style="padding:28px 40px 0;">
 <div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Ready when you are, ${d.firstName}.</div>
-<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">Your request looks good and we're ready to get started. Grab 30 minutes with Alex or Josh — we'll go over the details, walk through how auctions work, and kick off the real search.</p>
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0 0 22px;">Your request looks good and we're ready to get started. Grab 30 minutes with Cody or Josh — we'll go over the details, walk through how auctions work, and kick off the real search.</p>
 </td></tr>
 <tr><td style="padding:0 40px 22px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BRAND.cream};border-radius:10px;"><tr><td style="padding:20px 24px;">
@@ -1081,7 +1081,7 @@ ${footer(d)}`)
 <tr><td style="padding:6px 0;color:${BRAND.muted};width:40%;">Date</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.dateLabel || d.date || '—'}</td></tr>
 <tr><td style="padding:6px 0;color:${BRAND.muted};">Time</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.time || '—'} EST</td></tr>
 <tr><td style="padding:6px 0;color:${BRAND.muted};">Duration</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">30 minutes</td></tr>
-<tr><td style="padding:6px 0;color:${BRAND.muted};">With</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">Alex or Josh</td></tr>
+<tr><td style="padding:6px 0;color:${BRAND.muted};">With</td><td style="padding:6px 0;color:${BRAND.ink};font-weight:600;text-align:right;">${d.rep || 'Cody or Josh'}</td></tr>
 </table>
 </td></tr></table>
 </td></tr>

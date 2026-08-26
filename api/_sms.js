@@ -443,6 +443,7 @@ const TEMPLATES = {
   staff_booking_made: (d) =>
     `📅 Call booked!\n${d.firstName || ''} ${d.lastName || ''}`.trim() +
     `\n${d.dateLabel || d.date} at ${d.time} EST` +
+    (d.rep ? `\n👤 With: ${d.rep}` : '') +
     `\n📞 ${d.phone || 'no phone'}` +
     (d.email ? `\n📧 ${d.email}` : ''),
 
@@ -489,7 +490,7 @@ const TEMPLATES = {
   // Fires from api/call-reminders.js via the 10-minute pg_cron ticker.
   // One per booking, enforced by bookings.reminder_sms_sent_at.
   client_call_reminder: (d) =>
-    `Hi ${d.firstName || 'there'} — quick reminder from Alex & Josh at Auto Pals USA: your intro call is at ${d.time} EST today, about an hour from now. We'll be calling you from ${CALL_FROM_NUMBER}. Need to reschedule? ${d.bookingUrl || BOOKING_URL} ` +
+    `Hi ${d.firstName || 'there'} — quick reminder from Cody & Josh at Auto Pals USA: your intro call is at ${d.time} EST today, about an hour from now. We'll be calling you from ${CALL_FROM_NUMBER}. Need to reschedule? ${d.bookingUrl || BOOKING_URL} ` +
     `Reply STOP to opt out.`,
 
   // ─── PRE-CALL 4-DAY FOLLOW-UP DRIP ───────────────────────────────
