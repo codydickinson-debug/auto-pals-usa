@@ -2063,6 +2063,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       <button class="nav-tab" onclick="showView('repairs')" id="nav-repairs">Repairs <span id="nav-badge-repair" class="nav-tab-badge">0</span></button>
       <button class="nav-tab" onclick="showView('sales')" id="nav-sales">Sold Cars <span id="nav-badge-sold" class="nav-tab-badge">0</span></button>
       <button class="nav-tab" onclick="showView('messages')" id="nav-messages">Messages <span id="nav-badge-messages" class="nav-tab-badge">0</span></button>
+      <button class="nav-tab" onclick="showView('metaads')" id="nav-metaads">Meta Ads</button>
       <button class="nav-tab" onclick="lockDashboard()" style="color:rgba(255,255,255,0.4);font-size:12px;">🔒 Lock</button>
     </div>
   </div>
@@ -2428,6 +2429,88 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ META ADS VIEW (manual lead entry) ============ -->
+<div id="view-metaads" class="view">
+  <div class="form-page">
+    <div class="form-header">
+      <span class="form-eyebrow">Manual Lead Entry</span>
+      <h1>Meta Ads Leads</h1>
+      <p>Add a lead that came in from a Facebook or Instagram ad. It lands in <strong>Requests</strong> tagged <strong>Meta&nbsp;Ads</strong> and mirrors to Pipedrive and the Leads sheet — same as a website submission. No confirmation email or text is sent unless you tick the box below.</p>
+    </div>
+
+    <!-- success / error banners -->
+    <div id="ma-banner" role="status" aria-live="polite" style="display:none;margin-bottom:18px;padding:14px 16px;border-radius:var(--radius);font-size:14px;font-weight:600;"></div>
+
+    <div class="form-section-title">Contact</div>
+    <div class="form-row">
+      <div>
+        <label for="ma-firstname">First Name <span class="req">*</span></label>
+        <input type="text" id="ma-firstname" placeholder="John" autocomplete="off">
+      </div>
+      <div>
+        <label for="ma-lastname">Last Name <span class="req">*</span></label>
+        <input type="text" id="ma-lastname" placeholder="Smith" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="ma-email">Email <span class="req">*</span></label>
+        <input type="email" id="ma-email" placeholder="john@email.com" autocomplete="off">
+      </div>
+      <div>
+        <label for="ma-phone">Phone Number <span class="req">*</span></label>
+        <input type="tel" id="ma-phone" placeholder="(555) 000-0000" autocomplete="off">
+      </div>
+    </div>
+
+    <hr class="form-divider">
+
+    <div class="form-section-title">Vehicle Interest <span style="font-weight:400;color:var(--text-muted);font-size:12px;">— optional</span></div>
+    <div class="form-row">
+      <div>
+        <label for="ma-make">Make</label>
+        <input type="text" id="ma-make" placeholder="Toyota" autocomplete="off">
+      </div>
+      <div>
+        <label for="ma-model">Model</label>
+        <input type="text" id="ma-model" placeholder="Tacoma" autocomplete="off">
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label for="ma-year">Year</label>
+        <input type="text" id="ma-year" placeholder="2019" inputmode="numeric" autocomplete="off">
+      </div>
+      <div>
+        <label for="ma-budget">Budget — max ($)</label>
+        <input type="number" id="ma-budget" placeholder="25000" min="0" step="500" autocomplete="off">
+      </div>
+    </div>
+    <div style="margin-top:14px;">
+      <label for="ma-notes">Notes</label>
+      <textarea id="ma-notes" rows="3" placeholder="Ad / campaign name, what they said, best time to reach, etc."></textarea>
+    </div>
+
+    <hr class="form-divider">
+
+    <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text);font-weight:500;">
+      <input type="checkbox" id="ma-sms-consent" style="width:18px;height:18px;flex:0 0 auto;margin-top:1px;">
+      <span>Lead agreed to receive text messages <span style="color:var(--text-muted);font-weight:400;">— tick only if the ad's lead form had an SMS-consent box they checked. Required before we can text them (TCPA).</span></span>
+    </label>
+    <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text);font-weight:500;margin-top:12px;">
+      <input type="checkbox" id="ma-notify" style="width:18px;height:18px;flex:0 0 auto;margin-top:1px;">
+      <span>Send this lead our confirmation email + intro-call text now <span style="color:var(--text-muted);font-weight:400;">— the text only goes out if SMS consent above is ticked.</span></span>
+    </label>
+
+    <button type="button" class="submit-btn" onclick="submitMetaLead()" id="ma-submit" style="margin-top:20px;">Add Meta Ads Lead</button>
+
+    <div id="ma-recent-wrap" style="display:none;margin-top:30px;">
+      <div class="form-section-title">Added this session</div>
+      <div id="ma-recent" style="display:flex;flex-direction:column;gap:8px;margin-top:10px;"></div>
     </div>
   </div>
 </div>
@@ -5066,6 +5149,162 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const rand = Array.from(buf, b => alphabet[b % alphabet.length]).join('');
     const suffix = String(id).slice(-3).padStart(3, '0');
     return `${prefix}-${rand}-${suffix}`;
+  }
+
+  // ─── META ADS: MANUAL LEAD ENTRY ───────────────────────────────
+  // Staff-side form (Meta Ads tab) for typing in leads that came from a
+  // Facebook / Instagram ad. Builds the SAME request shape submitForm() does
+  // and pushes it through dbPost('requests', …), so the lead lands in Requests,
+  // Pipedrive and the Leads sheet exactly like a web signup — tagged
+  // referralSource:'Meta Ads'. `manualEntry:true` tells api/db.js to skip the
+  // Meta Conversions API fire (the browser signals would be the STAFF's, not
+  // the lead's) and to hold the client confirmation email + intro-call SMS
+  // unless the "notify this lead now" box (notifyClient) is ticked.
+  function _maEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function maBanner(msg, kind) {
+    const b = document.getElementById('ma-banner');
+    if (!b) return;
+    b.textContent = msg;
+    b.style.display = 'block';
+    if (kind === 'success') {
+      b.style.background = 'rgba(34,197,94,0.12)';
+      b.style.color = '#15803d';
+      b.style.border = '1px solid rgba(34,197,94,0.35)';
+    } else {
+      b.style.background = 'rgba(239,68,68,0.10)';
+      b.style.color = 'var(--red)';
+      b.style.border = '1px solid rgba(239,68,68,0.35)';
+    }
+    try { b.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+  }
+
+  function maResetForm() {
+    ['ma-firstname','ma-lastname','ma-email','ma-phone','ma-make','ma-model','ma-year','ma-budget','ma-notes']
+      .forEach(id => { const el = document.getElementById(id); if (el) { el.value = ''; el.style.borderColor = ''; } });
+    const c1 = document.getElementById('ma-sms-consent'); if (c1) c1.checked = false;
+    const c2 = document.getElementById('ma-notify');      if (c2) c2.checked = false;
+    const f  = document.getElementById('ma-firstname');   if (f) f.focus();
+  }
+
+  function maAddRecent(req) {
+    const wrap = document.getElementById('ma-recent-wrap');
+    const list = document.getElementById('ma-recent');
+    if (!wrap || !list) return;
+    wrap.style.display = 'block';
+    const veh = (req.make && req.make !== '—')
+      ? `${req.make}${req.model && req.model !== '—' ? ' ' + req.model : ''}`
+      : 'Open search';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);font-size:13px;';
+    row.innerHTML = `<div><strong>${_maEsc(req.firstName)} ${_maEsc(req.lastName)}</strong> <span style="color:var(--text-muted);">· ${_maEsc(veh)}</span><br><span style="color:var(--text-muted);">${_maEsc(req.phone)}</span></div>`;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = 'View in Requests →';
+    btn.style.cssText = 'width:auto;background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;padding:0;font-size:13px;white-space:nowrap;';
+    btn.onclick = () => { const nav = document.getElementById('nav-requests'); if (nav) nav.click(); };
+    row.appendChild(btn);
+    list.prepend(row);
+  }
+
+  async function submitMetaLead() {
+    const g = id => document.getElementById(id);
+    const firstName = g('ma-firstname').value.trim();
+    const lastName  = g('ma-lastname').value.trim();
+    const email     = g('ma-email').value.trim();
+    const phone     = g('ma-phone').value.trim();
+    const make      = g('ma-make').value.trim();
+    const model     = g('ma-model').value.trim();
+    const year      = g('ma-year').value.trim();
+    const budgetRaw = g('ma-budget').value.trim();
+    const notes     = g('ma-notes').value.trim();
+    const smsConsent   = g('ma-sms-consent').checked;
+    const notifyClient = g('ma-notify').checked;
+
+    // ── Validation: name + valid email + phone are the hard requirements
+    // (email is also enforced server-side by the spam gate in api/db.js). ──
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    ['ma-firstname','ma-lastname','ma-email','ma-phone'].forEach(id => g(id).style.borderColor = '');
+    const missing = [];
+    if (!firstName) missing.push('ma-firstname');
+    if (!lastName)  missing.push('ma-lastname');
+    if (!email || !emailOk) missing.push('ma-email');
+    if (!phone) missing.push('ma-phone');
+    if (missing.length) {
+      missing.forEach(id => g(id).style.borderColor = 'var(--red)');
+      return maBanner(
+        (!emailOk && email) ? 'That email doesn’t look valid — please double-check it.'
+                            : 'First name, last name, email, and phone are all required.',
+        'error');
+    }
+
+    const budgetMax = budgetRaw ? parseInt(budgetRaw, 10) : 0;
+    const id = Date.now();
+    const portalCode = generateAccessCode(firstName, id);
+    const requestDate = new Date().toISOString().split('T')[0];
+    const req = {
+      id,
+      submitted: new Date().toISOString(),
+      status: 'new',
+      portalCode, accessCode: portalCode,
+      firstName, lastName, email, phone,
+      address: '', city: '', state: '', zip: '',
+      requestDate,
+      deadline: (() => { const d = new Date(requestDate); d.setDate(d.getDate() + 60); return d.toISOString().split('T')[0]; })(),
+      make: make || '',
+      model: model || (make ? '—' : ''),
+      yearFrom: year || '',
+      yearTo: year || '',
+      body: 'No preference',
+      mileage: 'No limit',
+      budgetMin: 0,
+      budgetMax: Number.isFinite(budgetMax) ? budgetMax : 0,
+      paymentMethod: '', downPayment: null, monthlyPayment: null,
+      color: 'No preference', transmission: 'No preference', fuel: 'No preference',
+      searchMode: (make || model) ? 'specific' : 'open',
+      features: [],
+      notes: notes || '—',
+      internalNotes: 'Manually entered from Meta Ads',
+      skipTheLine: false,
+      referralSource: 'Meta Ads',
+      source: 'meta-ads-manual',
+      smsConsent: !!smsConsent,
+      manualEntry: true,
+      notifyClient: !!notifyClient,
+      leadEventId: newEventId('lead')
+    };
+
+    const btn = g('ma-submit');
+    if (btn.disabled) return;
+    const _label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Adding…';
+
+    // Mirror locally first so it shows in Requests immediately (same as submitForm).
+    requests.unshift(req);
+    save();
+
+    const saved = await dbPost('requests', req);
+
+    btn.disabled = false;
+    btn.textContent = _label;
+
+    // dbPost returns null on a real write failure (non-local). Roll back the
+    // local mirror so we never leave a ghost lead that isn't actually in the DB.
+    if (saved === null && !isLocal) {
+      requests = requests.filter(r => r.id !== id);
+      save();
+      return maBanner('Could not save the lead — check your connection and try again.', 'error');
+    }
+
+    try { track('meta_lead_added', { notify_client: !!notifyClient, has_vehicle: !!(make || model), budget_max: budgetMax || null }, id); } catch (e) {}
+
+    const notifyMsg = notifyClient
+      ? ` — confirmation email${smsConsent ? ' + intro-call text' : ''} sent`
+      : '';
+    maBanner(`✓ ${firstName} ${lastName} added to Requests${notifyMsg}.`, 'success');
+    maAddRecent(req);
+    maResetForm();
   }
 
   // Copy the portal access code to the clipboard from the confirmation screen.

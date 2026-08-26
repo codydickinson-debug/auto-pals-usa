@@ -431,7 +431,10 @@ module.exports = async function handler(req, res) {
           // the sole staff channel for lead intake. Staff SMS now limited
           // to call-booked + portal-reply (+ deposit and contract-signed
           // as "money in the door" alerts).
-          fires.push(safeSendEmail('staffNewRequest', {
+          // manualEntry (Meta Ads tab) skips the staff "new lead" email — the
+          // staff member who typed the lead in already knows. It still mirrors
+          // to Pipedrive + the Leads sheet below for attribution.
+          if (!body.manualEntry) fires.push(safeSendEmail('staffNewRequest', {
             clientName:  _name,
             clientEmail: row.email,
             clientPhone: row.phone,
@@ -447,13 +450,18 @@ module.exports = async function handler(req, res) {
           // since they've just booked. Everything else (staff email, client
           // confirmation email, Pipedrive, sheet) still fires so the phone
           // lead is fully aligned with a web signup.
-          if (row.phone && !body.suppressWelcomeSms) {
+          // manualEntry leads only get the welcome SMS / confirmation email
+          // when the staff member explicitly ticks "notify this lead now"
+          // (notifyClient) — so a quietly-logged Meta lead isn't blasted with
+          // a templated "book your intro call" they weren't expecting. SMS is
+          // still hard-gated on sms_consent (TCPA) regardless.
+          if (row.phone && !body.suppressWelcomeSms && (!body.manualEntry || body.notifyClient)) {
             fires.push(sms.send('client_book_call', {
               firstName: row.first_name, phone: row.phone,
               smsConsent: row.sms_consent
             }));
           }
-          if (row.email) {
+          if (row.email && (!body.manualEntry || body.notifyClient)) {
             fires.push(safeSendEmail('confirmation', {
               firstName:  row.first_name,
               lastName:   row.last_name,
@@ -515,7 +523,12 @@ module.exports = async function handler(req, res) {
         // produced this lead, which is the strongest match signal Meta
         // takes. `leadEventId` is minted by form.html and passed through
         // so Meta collapses the browser and server copies into one.
-        if (row.status !== 'rejected') {
+        // manualEntry skips the Meta Conversions API fire: the browser signals
+        // (fbp / fbc / IP / user agent) belong to the STAFF member entering the
+        // lead, not the lead, so forwarding them would misattribute the
+        // conversion. Meta already counts these as leads via its native lead
+        // form anyway, so a server twin here would double-count.
+        if (row.status !== 'rejected' && !body.manualEntry) {
           const _sig = meta.browserSignals(req);
           fires.push(meta.send({
             eventName: 'Lead',
