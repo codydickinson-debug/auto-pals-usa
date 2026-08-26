@@ -1032,6 +1032,92 @@ module.exports = async function handler(req, res) {
       return res.status(405).json({ error: 'method_not_allowed' });
     }
 
+    // ── SPEED TO LEAD ─────────────────────────────────────────────
+    // How long a new lead waits before we place our first outbound call.
+    // Reads public.lead_response_times (staff-only, same posture as email_log).
+    //
+    // Two honesty rules are enforced here rather than left to the caller:
+    //
+    //   1. Only `measurable` leads are scored. Call logging began on
+    //      2026-08-25; leads submitted before that have no call history, and
+    //      counting them would report ~1000 "never contacted" leads and start
+    //      a fire drill over an absence of data, not a failure to call.
+    //
+    //   2. `coverage` is returned alongside the numbers. If outbound calls are
+    //      being placed from personal mobiles rather than through the phone
+    //      system, none of them are logged, and a perfect-looking "0 called"
+    //      would be measuring the gap in instrumentation rather than the team.
+    //      The dashboard uses this to say so out loud instead of implying the
+    //      team ignored every lead.
+    if (table === 'lead_response_times') {
+      if (req.method !== 'GET') return res.status(405).json({ error: 'method_not_allowed' });
+      if (!isStaff) return res.json({ error: 'unauthorized' });
+
+      try {
+        const rows = await query(
+          'lead_response_times',
+          'GET',
+          null,
+          '?measurable=is.true&select=request_id,email,phone,status,submitted_at,first_outbound_call_at,hours_to_first_call,speed_bucket&order=submitted_at.desc&limit=2000'
+        ) || [];
+
+        const buckets = { under_1h: 0, under_4h: 0, under_24h: 0, over_24h: 0, never: 0 };
+        const times = [];
+        for (const r of rows) {
+          if (buckets[r.speed_bucket] !== undefined) buckets[r.speed_bucket]++;
+          if (typeof r.hours_to_first_call === 'number') times.push(r.hours_to_first_call);
+        }
+        times.sort((a, b) => a - b);
+        const median = times.length
+          ? (times.length % 2
+              ? times[(times.length - 1) / 2]
+              : (times[times.length / 2 - 1] + times[times.length / 2]) / 2)
+          : null;
+
+        // Leads still waiting, longest first — the actionable half. A number
+        // tells you that you are slow; this tells you who to ring.
+        const now = Date.now();
+        const uncalled = rows
+          .filter((r) => r.speed_bucket === 'never')
+          .map((r) => ({
+            request_id: r.request_id,
+            email: r.email,
+            phone: r.phone,
+            status: r.status,
+            submitted_at: r.submitted_at,
+            hours_waiting: Math.round(((now - new Date(r.submitted_at).getTime()) / 3600000) * 10) / 10,
+          }))
+          .sort((a, b) => b.hours_waiting - a.hours_waiting)
+          .slice(0, 100);
+
+        // Is the phone system actually seeing our outbound calls at all?
+        const outboundRows = await query(
+          'communications',
+          'GET',
+          null,
+          '?channel=eq.call&direction=eq.out&select=phone_last10,request_id&limit=1000'
+        ) || [];
+        const coverage = {
+          outboundCallsLogged: outboundRows.length,
+          outboundCallsLinkedToLeads: outboundRows.filter((r) => r.request_id !== null).length,
+        };
+
+        return res.json({
+          trackingSince: '2026-08-25T00:00:00.000Z',
+          measurableLeads: rows.length,
+          called: rows.length - buckets.never,
+          neverCalled: buckets.never,
+          medianHoursToFirstCall: median,
+          buckets,
+          uncalled,
+          coverage,
+        });
+      } catch (e) {
+        console.warn('[DB] lead_response_times read failed (view not applied?):', e && e.message);
+        return res.json({ error: 'unavailable', measurableLeads: 0, uncalled: [] });
+      }
+    }
+
     // ── REPAIRS ───────────────────────────────────────────────────
     if (table === 'repair_cars') {
       if (req.method === 'GET') {

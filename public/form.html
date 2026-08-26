@@ -2539,6 +2539,20 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         </div>
       </div>
 
+      <!-- SPEED TO LEAD — hours from form submission to our first outbound call.
+           Populated by renderSpeedToLead(); hidden entirely until the view and
+           the communications table exist, so this degrades to nothing rather
+           than showing a broken card. -->
+      <div id="stl-card" style="display:none;margin-bottom:18px;padding:16px 18px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+          <div style="font-family:system-ui,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);">
+            ⏱ Speed to Lead
+          </div>
+          <div id="stl-window" style="font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);"></div>
+        </div>
+        <div id="stl-body"></div>
+      </div>
+
       <div id="panel-requests">
       <!-- Search bar -->
       <div class="dash-search-row">
@@ -3972,6 +3986,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     renderDashboard();
     syncNavBadges();
     renderConvoList();
+    // Speed-to-lead is its own round trip and moves on the scale of hours, so
+    // it refreshes on a slow cadence of its own rather than on every
+    // renderDashboard() — which the 20s poll and every render burst would
+    // otherwise turn into constant queries against the view.
+    if (typeof scheduleSpeedToLead === 'function') scheduleSpeedToLead();
     // Backfill AI color/score + open-search recommendations for anything missing them
     if (typeof reviewPendingRequests === 'function') reviewPendingRequests();
   }
@@ -5697,6 +5716,128 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // (from email_log, with the exact send time), the two-way portal message
   // thread, and which automated texts have fired. Purely informational — it
   // does NOT touch the pipeline, the tabs, or the drip.
+  // ── SPEED TO LEAD ──────────────────────────────────────────────────
+  // Hours from a lead submitting the form to our first OUTBOUND call.
+  //
+  // The card refuses to state a number it cannot stand behind. Two guards:
+  //
+  //   1. Only leads submitted since call logging began are counted. The view
+  //      does that filtering; counting the ~1000 older leads would report them
+  //      all as "never contacted" when the truth is simply that nothing was
+  //      recording calls yet.
+  //
+  //   2. If no outbound call has ever been linked to a lead, the card says the
+  //      metric is not measuring the team yet — it is measuring whether calls
+  //      go through the phone system at all. A call placed from a personal
+  //      mobile is invisible here, and reporting that as "0 leads called"
+  //      would blame people for a gap in instrumentation.
+  // Refresh at most every 5 minutes. Response time moves in hours; querying it
+  // on the dashboard's 20-second poll would be pure waste.
+  let _stlLastRun = 0;
+  let _stlTimer = null;
+  function scheduleSpeedToLead(force) {
+    const FIVE_MIN = 5 * 60 * 1000;
+    if (!force && (Date.now() - _stlLastRun) < FIVE_MIN) return;
+    _stlLastRun = Date.now();
+    try { renderSpeedToLead(); } catch (e) { console.warn('[STL] render failed', e); }
+    if (!_stlTimer) _stlTimer = setInterval(() => { try { renderSpeedToLead(); } catch (_) {} }, FIVE_MIN);
+  }
+
+  async function renderSpeedToLead() {
+    const card = document.getElementById('stl-card');
+    const body = document.getElementById('stl-body');
+    if (!card || !body) return;
+
+    const d = await dbGet('lead_response_times');
+    if (!d || d.error || typeof d.measurableLeads !== 'number') {
+      card.style.display = 'none';   // view not applied yet — show nothing
+      return;
+    }
+    card.style.display = 'block';
+
+    const since = new Date(d.trackingSince);
+    const win = document.getElementById('stl-window');
+    if (win) {
+      win.textContent = 'since ' + since.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+        + ' · ' + d.measurableLeads + ' lead' + (d.measurableLeads === 1 ? '' : 's');
+    }
+
+    const cov = d.coverage || {};
+    const noCallsLinked = !cov.outboundCallsLinkedToLeads;
+
+    // The instrumentation warning outranks the metric — if it fires, every
+    // number below it is about tooling, not performance.
+    let html = '';
+    if (noCallsLinked) {
+      html += '<div style="padding:11px 13px;background:var(--amber-light,#fffbeb);border:1px solid var(--amber,#92400e);border-radius:8px;margin-bottom:14px;">'
+        + '<div style="font-family:system-ui,sans-serif;font-size:12px;font-weight:700;color:var(--amber,#92400e);margin-bottom:4px;">No outbound calls are reaching a lead record</div>'
+        + '<div style="font-family:system-ui,sans-serif;font-size:12px;line-height:1.5;color:var(--text);">'
+        + cov.outboundCallsLogged + ' outbound call' + (cov.outboundCallsLogged === 1 ? ' has' : 's have')
+        + ' been logged, but none matched a lead. Calls placed from a personal mobile never reach the phone system, '
+        + 'so they cannot be counted. Until sales calls go out through Quo, the figures below measure coverage, not response time.'
+        + '</div></div>';
+    }
+
+    const median = d.medianHoursToFirstCall;
+    const fmtHours = (h) => h === null || h === undefined ? '—'
+      : (h < 1 ? Math.round(h * 60) + ' min' : (h < 48 ? h.toFixed(1) + ' h' : Math.round(h / 24) + ' d'));
+
+    html += '<div style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px;">'
+      + '<div><div style="font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);margin-bottom:2px;">Median to first call</div>'
+      + '<div style="font-size:26px;font-weight:700;color:' + (median === null ? 'var(--text-muted)' : 'var(--text)') + ';">'
+      + fmtHours(median) + '</div></div>'
+      + '<div><div style="font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);margin-bottom:2px;">Called</div>'
+      + '<div style="font-size:26px;font-weight:700;color:var(--green);">' + d.called + '</div></div>'
+      + '<div><div style="font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);margin-bottom:2px;">Not yet called</div>'
+      + '<div style="font-size:26px;font-weight:700;color:' + (d.neverCalled ? 'var(--red)' : 'var(--text-muted)') + ';">' + d.neverCalled + '</div></div>'
+      + '</div>';
+
+    // Distribution — only worth drawing once something has actually been called.
+    const b = d.buckets || {};
+    if (d.called > 0) {
+      const rows = [
+        ['Under 1 hour', b.under_1h || 0, 'var(--green)'],
+        ['1–4 hours', b.under_4h || 0, 'var(--green)'],
+        ['4–24 hours', b.under_24h || 0, 'var(--amber,#92400e)'],
+        ['Over 24 hours', b.over_24h || 0, 'var(--red)'],
+      ];
+      const max = Math.max(1, ...rows.map((r) => r[1]));
+      html += '<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:14px;">';
+      for (const [label, n, colour] of rows) {
+        html += '<div style="display:grid;grid-template-columns:110px 1fr 30px;gap:9px;align-items:center;font-family:system-ui,sans-serif;font-size:12px;">'
+          + '<span style="color:var(--text-muted);">' + label + '</span>'
+          + '<span style="height:7px;background:var(--border);border-radius:4px;overflow:hidden;"><span style="display:block;height:100%;width:' + Math.round((n / max) * 100) + '%;background:' + colour + ';"></span></span>'
+          + '<span style="text-align:right;font-weight:600;">' + n + '</span></div>';
+      }
+      html += '</div>';
+    }
+
+    // The actionable half. A median tells you that you are slow; this tells you
+    // who to ring, oldest first.
+    const uncalled = Array.isArray(d.uncalled) ? d.uncalled : [];
+    if (uncalled.length) {
+      html += '<div style="font-family:system-ui,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:7px;">'
+        + 'Waiting longest · no call logged</div>'
+        + '<div style="display:flex;flex-direction:column;gap:1px;">';
+      for (const u of uncalled.slice(0, 8)) {
+        const req = requests.find((x) => String(x.id) === String(u.request_id));
+        const who = req ? (req.name || req.email || u.phone) : (u.email || u.phone || ('#' + u.request_id));
+        html += '<div onclick="openDetailView(' + JSON.stringify(u.request_id) + ')" '
+          + 'style="display:flex;justify-content:space-between;gap:10px;padding:7px 9px;border-radius:6px;cursor:pointer;font-family:system-ui,sans-serif;font-size:12px;background:var(--cream,#faf7f0);" '
+          + 'onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'var(--cream,#faf7f0)\'">'
+          + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(String(who)) + '</span>'
+          + '<span style="color:var(--red);font-weight:600;white-space:nowrap;">' + fmtHours(u.hours_waiting) + ' waiting</span>'
+          + '</div>';
+      }
+      if (uncalled.length > 8) {
+        html += '<div style="padding:6px 9px;font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);">+ ' + (uncalled.length - 8) + ' more</div>';
+      }
+      html += '</div>';
+    }
+
+    body.innerHTML = html;
+  }
+
   async function renderCommsTimeline(r) {
     const box = document.getElementById('dv-comms');
     if (!box || !r) return;
