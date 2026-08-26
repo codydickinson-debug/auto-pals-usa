@@ -25,7 +25,8 @@
     { "source": "/terms",    "destination": "/terms.html" }
   ],
   "functions": {
-    "api/sms-consent-sync.js": { "maxDuration": 60 }
+    "api/sms-consent-sync.js": { "maxDuration": 60 },
+    "api/cron.js": { "maxDuration": 300 }
   },
   "crons": [
     {

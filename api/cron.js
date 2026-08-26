@@ -583,7 +583,32 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    return res.status(200).json({ ok: true, ...summary, scanned: requests.length });
+    // ── QUO RECONCILIATION ───────────────────────────────────────
+    // Pull any calls the webhooks missed, and fill in summaries and
+    // transcripts that generated after their event fired.
+    //
+    // Deliberately LAST and fully isolated: everything above this line sends
+    // real messages to real customers, and a phone-log sweep must never be
+    // able to interfere with that. syncQuo() is written not to throw, and the
+    // catch here is the second line of defence.
+    //
+    // quo.callsInserted in the log is the health signal for the webhooks: it
+    // counts calls this sweep had to backfill, i.e. ones the push should
+    // already have delivered. Persistently non-zero means they are not working.
+    let quoStats = null;
+    try {
+      const { syncQuo } = require('./_quo-sync.js');
+      quoStats = await syncQuo();
+      console.log('[CRON] quo sync:', JSON.stringify(quoStats));
+      if (quoStats.errors && quoStats.errors.length) {
+        console.warn('[CRON] quo sync had', quoStats.errors.length, 'error(s):', quoStats.errors.slice(0, 5).join(' | '));
+      }
+    } catch (e) {
+      console.error('[CRON] quo sync failed (drips unaffected):', e && e.message);
+      quoStats = { ran: false, errors: [String(e && e.message)] };
+    }
+
+    return res.status(200).json({ ok: true, ...summary, scanned: requests.length, quo: quoStats });
   } catch (err) {
     console.error('[CRON] fatal:', err);
     return res.status(500).json({ error: err.message });
