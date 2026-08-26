@@ -1895,17 +1895,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       // portal code and a manual "book your call" link, rather than redirect.
     }
 
-    // ── SKIP-THE-LINE → straight to the Stripe deposit page ────────
-    // Owner ask: the moment a skip-the-line form is submitted, send them
-    // directly to the Stripe Payment Link — no interstitial. The lead write
-    // already fired with keepalive, so it lands even though we navigate away;
-    // the id/email ride along so the webhook flips the deposit on this lead.
-    // Rejected (under-$5k) leads are excluded — they get the decline card below.
-    if (isSkipLine && !isRejected) {
-      window.location.href = stripeDepositUrl(req);
-      return;
-    }
-
     // ── SKIP-THE-LINE / REJECTED ───────────────────────────────────
     // These clients don't book a call, so the success card stays their
     // place to get the code and the next step.
@@ -1934,15 +1923,19 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       if (secondary) secondary.style.display = 'none';
     } else if (isSkipLine) {
       headline.textContent = `Got it, ${req.firstName} — let's start sourcing.`;
-      subhead.textContent  = `You opted in to Skip the Line, so we skip the call and go straight to the search. Pay your $850 deposit by card and we start hunting auctions the same day.`;
+      subhead.textContent  = `You opted in to Skip the Line, so we skip the call and go straight to the search. Pay your $850 deposit by card and we start hunting auctions the same day — or, if you're not ready to pay right now, book a call instead.`;
       primaryCta.textContent = '💳 Pay $850 deposit by card →';
-      // href is a no-JS fallback (the deposit page); the click starts Stripe inline.
-      primaryCta.setAttribute('href', 'deposit.html?rid=' + encodeURIComponent(req.id));
-      primaryCta.onclick = function (ev) { startDepositCheckout(ev, req.id); };
-      // Reveal the "speak to a representative" fallback → tap-to-call the AI line.
+      // Straight to the Stripe Payment Link (id + email attached for the webhook).
+      primaryCta.setAttribute('href', stripeDepositUrl(req));
+      primaryCta.onclick = function () { try { track('skipline_deposit_click', null, req.id); } catch (e) {} };
+      // "Book a call instead" escape → the booking page. The portal code was
+      // stashed above (skip-the-line isn't rejected), so the calendar unlocks
+      // and prefills just like a normal booking.
       const callAlt = document.getElementById('skipline-call-alt');
       if (callAlt) {
-        callAlt.setAttribute('href', 'tel:' + REP_PHONE_TEL);
+        callAlt.textContent = '📅 Book a call instead →';
+        callAlt.setAttribute('href', 'booking.html');
+        callAlt.onclick = function () { try { track('skipline_book_call_click', null, req.id); } catch (e) {} };
         callAlt.style.display = 'inline-block';
       }
       learnBox.style.display    = 'none';
