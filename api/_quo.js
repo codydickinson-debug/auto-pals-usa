@@ -105,11 +105,17 @@ function listPhoneNumbers() {
 }
 
 /**
- * Calls involving a given number, newest first.
- * `participants` expects E.164. `createdAfter` is an ISO timestamp.
+ * Calls on one of our numbers, newest first.
+ *
+ * phoneNumberId is REQUIRED — the published docs describe `participants` as
+ * sufficient, but the live API returns
+ *   400 /phoneNumberId: Expected required property
+ * without it. Verified against the real API on 2026-08-26. `participants`
+ * still narrows to a specific counterparty when supplied.
  */
-function listCalls({ participants, createdAfter, createdBefore, userId, maxResults = 50, pageToken } = {}) {
+function listCalls({ phoneNumberId, participants, createdAfter, createdBefore, userId, maxResults = 50, pageToken } = {}) {
   const q = new URLSearchParams();
+  if (phoneNumberId) q.set('phoneNumberId', phoneNumberId);
   if (participants) {
     for (const p of [].concat(participants)) q.append('participants', p);
   }
@@ -152,6 +158,36 @@ function envNumbers() {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+/**
+ * Full workspace number records: { id, number, name }.
+ *
+ * The id matters as much as the number — every /calls read is scoped by
+ * phoneNumberId, so a caller that only knows the E.164 cannot list calls.
+ */
+let _recordsCache = null;
+
+async function getOurPhoneNumbers({ force = false } = {}) {
+  const fresh = _recordsCache && (Date.now() - _numbersFetchedAt) < NUMBERS_TTL_MS;
+  if (fresh && !force) return _recordsCache;
+
+  const res = await listPhoneNumbers();
+  if (!res.ok) return _recordsCache || [];
+  const list = Array.isArray(res.data) ? res.data : (res.data && res.data.data) || [];
+  const records = list
+    .map((n) => ({
+      id: n && n.id,
+      number: n && (n.number || n.phoneNumber || n.e164),
+      name: (n && (n.name || n.label)) || null,
+    }))
+    .filter((r) => r.id && r.number);
+  if (records.length) {
+    _recordsCache = records;
+    _numbersCache = records.map((r) => r.number);
+    _numbersFetchedAt = Date.now();
+  }
+  return records;
 }
 
 async function getOurNumbers({ force = false } = {}) {
@@ -225,6 +261,13 @@ function mapCall(call, { ourNumbers = [] } = {}) {
   const ours = new Set(ourNumbers.map(last10).filter(Boolean));
 
   // The counterparty is whichever end is not one of our workspace numbers.
+  //
+  // The LIVE payload carries no from/to at all — only a participants array,
+  // ours first. Verified against a real call on 2026-08-26. So the
+  // ours-exclusion below is load-bearing, not a nicety: with the wrong set of
+  // workspace numbers this stores OUR number as the contact and matches no
+  // lead. from/to are kept as a fallback in case a webhook push differs from
+  // the REST read.
   const from = call.from || call.participants?.[0] || null;
   const to = call.to || call.participants?.[1] || null;
   let counterparty = direction === 'out' ? to : from;
@@ -251,6 +294,13 @@ function mapCall(call, { ourNumbers = [] } = {}) {
       quoUserId: call.userId || null,
       quoPhoneNumberId: call.phoneNumberId || null,
       quoConversationId: call.conversationId || null,
+      // Present on the live payload though absent from the docs. aiHandled is
+      // the useful one: it separates a call Sona took from one a person took,
+      // which is the difference between "we answered" and "a robot answered".
+      quoAiHandled: call.aiHandled ?? null,
+      quoAnsweredBy: call.answeredBy || null,
+      quoInitiatedBy: call.initiatedBy || null,
+      quoForwardedTo: call.forwardedTo || null,
     },
   };
 }
@@ -285,6 +335,7 @@ function flattenTranscript(payload) {
 module.exports = {
   quoFetch,
   getOurNumbers,
+  getOurPhoneNumbers,
   listPhoneNumbers,
   listCalls,
   getCall,
