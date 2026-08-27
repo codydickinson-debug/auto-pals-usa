@@ -48,6 +48,29 @@ async function query(table, method = 'GET', body = null, params = '') {
   return text ? JSON.parse(text) : null;
 }
 
+// Page through EVERY row of a GET query, defeating Supabase's per-request
+// "Max rows" cap (default 1000). A single query() can never return more than
+// that cap, so once the table crosses it the dashboard silently loses the
+// oldest rows — the staff request count froze at ~1000 with 1033 rows in the
+// table. This loops offset/limit until a short page (or empty page) signals the
+// end, advancing by the SERVER'S effective page size (read off the first page)
+// so it stays correct whatever the cap is set to. Guarded at 100 pages.
+async function queryAll(table, params = '') {
+  const sep = params.includes('?') ? '&' : '?';
+  let all = [];
+  let pageSize = null;
+  let offset = 0;
+  for (let guard = 0; guard < 100; guard++) {
+    const page = await query(table, 'GET', null, `${params}${sep}offset=${offset}&limit=1000`);
+    if (!Array.isArray(page) || page.length === 0) break;
+    all = all.concat(page);
+    if (pageSize === null) pageSize = page.length;   // effective server cap
+    if (page.length < pageSize) break;               // short page → last page
+    offset += page.length;
+  }
+  return all;
+}
+
 // Race-safe conditional PATCH. Applies `body` to rows in `table` matching
 // `filter` — a PostgREST filter fragment like "id=eq.123&deposit_paid=is.false".
 // Uses Prefer: return=representation so we can see WHICH rows were actually
@@ -333,10 +356,13 @@ module.exports = async function handler(req, res) {
           // Optional id filter lets the dashboard refresh a single open request
           // (e.g. the 10s detail-view poll) without pulling the whole table.
           const id = String(req.query.id || '').trim();
-          const staffParams = id
-            ? `?id=eq.${encodeURIComponent(id)}&limit=1`
-            : '?order=submitted.desc';
-          const data = await query('requests', 'GET', null, staffParams);
+          if (id) {
+            const one = await query('requests', 'GET', null, `?id=eq.${encodeURIComponent(id)}&limit=1`);
+            return res.json(one || []);
+          }
+          // Full table for the dashboard — paginate past Supabase's per-request
+          // Max-rows cap so all 1000+ requests load (not just the newest 1000).
+          const data = await queryAll('requests', '?order=submitted.desc');
           return res.json(data || []);
         }
         const code = String(req.query.portal_code || '').trim();
