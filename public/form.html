@@ -2030,7 +2030,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v207 · 2026-08-27</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v208 · 2026-08-27</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2536,9 +2536,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     </div>
 
     <!-- Call log -->
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
       <div style="font-family:system-ui,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);">📞 Recent calls</div>
-      <button onclick="renderCallsTab(true)" id="calls-refresh" style="font-family:system-ui,sans-serif;font-size:12px;font-weight:600;color:var(--navy);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;">↻ Refresh</button>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span id="calls-sync-status" style="font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);" aria-live="polite"></span>
+        <button onclick="renderCallsTab(true)" id="calls-refresh" title="Re-read the call log from our database (no Quo call)" style="font-family:system-ui,sans-serif;font-size:12px;font-weight:600;color:var(--navy);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;">↻ Refresh</button>
+        <button onclick="syncFromQuo(this)" id="calls-sync" title="Pull the latest calls, summaries, and recordings from Quo right now" style="font-family:system-ui,sans-serif;font-size:12px;font-weight:700;color:#fff;background:var(--navy);border:1px solid var(--navy);border-radius:8px;padding:6px 13px;cursor:pointer;">⟳ Sync from Quo</button>
+      </div>
     </div>
     <div id="calls-log"><div style="color:var(--text-muted);font-size:13px;padding:12px 0;">Loading…</div></div>
   </div>
@@ -6092,6 +6096,36 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const byId = {};
     requests.forEach(r => { byId[String(r.id)] = r; });
     box.innerHTML = calls.map(c => _callRow(c, byId)).join('');
+  }
+
+  // "Sync from Quo" — pulls new calls + fills in summaries/transcripts/recordings
+  // on demand via /api/quo-sync (the same reconciliation the daily cron runs, in
+  // isolation — no SMS/email drips). Then re-reads the call log.
+  async function syncFromQuo(btn) {
+    if (btn && btn.disabled) return;
+    const status = document.getElementById('calls-sync-status');
+    const label = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '⟳ Syncing…'; }
+    if (status) status.textContent = 'Pulling from Quo…';
+    try {
+      const res = await fetch('/api/quo-sync', { method: 'POST', headers: dbHeaders() });
+      if (res.status === 401) { handleSessionExpired(); return; }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) throw new Error(data.message || data.error || 'sync failed');
+      const nc = data.callsInserted || 0, ns = data.summariesAdded || 0, nr = data.recordingsLinked || 0;
+      if (status) {
+        status.textContent = (nc + ns + nr) === 0
+          ? '✓ Up to date — nothing new'
+          : `✓ ${nc} new call${nc === 1 ? '' : 's'} · ${ns} summar${ns === 1 ? 'y' : 'ies'} · ${nr} recording${nr === 1 ? '' : 's'}`;
+      }
+      // Also refresh Speed-to-Lead (new calls change response-time coverage).
+      await renderCallsTab(true);
+    } catch (e) {
+      console.warn('[quo-sync]', e && e.message);
+      if (status) status.textContent = '⚠ Sync failed — try again in a moment.';
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = label || '⟳ Sync from Quo'; }
+    }
   }
 
   async function renderSpeedToLead() {

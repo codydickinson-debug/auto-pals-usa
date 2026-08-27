@@ -13,6 +13,7 @@
     { "source": "/api/quote-response", "destination": "/api/quote-response.js" },
     { "source": "/api/create-checkout","destination": "/api/create-checkout.js" },
     { "source": "/api/quo-webhook",   "destination": "/api/quo-webhook.js" },
+    { "source": "/api/quo-sync",      "destination": "/api/quo-sync.js" },
     { "source": "/home",     "destination": "/home.html" },
     { "source": "/form",     "destination": "/form.html" },
     { "source": "/request",  "destination": "/request.html" },
@@ -26,6 +27,7 @@
   ],
   "functions": {
     "api/sms-consent-sync.js": { "maxDuration": 60 },
+    "api/quo-sync.js": { "maxDuration": 60 },
     "api/cron.js": { "maxDuration": 300 }
   },
   "crons": [
