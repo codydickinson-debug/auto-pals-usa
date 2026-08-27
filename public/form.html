@@ -3654,12 +3654,23 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
     document.getElementById('view-dashboard').classList.add('active');
     document.getElementById('nav-requests').classList.add('active');
-    showDashboard();
-    // Supabase is source of truth; loadFromDB filters out tombstoned (deleted) ids
-    loadFromDB();
-    fetchCallTimes();
-    startPolling();
-    startAutoRefresh();
+    // DEFER the data-init calls to a microtask. This block runs at the TOP LEVEL
+    // of the script, but `requests` (and other state) is declared with `let`
+    // further down (~line 4135). Calling showDashboard()/loadFromDB() here — as
+    // it used to, synchronously — read `requests` before its declaration ran,
+    // throwing a "Cannot access 'requests' before initialization" (TDZ) error
+    // that ABORTED the rest of the script. Result: whenever a signed-in staffer
+    // reloaded the page, the dashboard came up half-dead (empty table, no
+    // polling, actions silently failing / "needing a second click"). A
+    // microtask runs after this whole script finishes, so `requests` is ready.
+    queueMicrotask(() => {
+      showDashboard();
+      // Supabase is source of truth; loadFromDB filters out tombstoned (deleted) ids
+      loadFromDB();
+      fetchCallTimes();
+      startPolling();
+      startAutoRefresh();
+    });
   } else {
     // Regular visitor — show client form only
     document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
