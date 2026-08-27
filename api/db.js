@@ -1055,7 +1055,12 @@ module.exports = async function handler(req, res) {
         } else if (phone) {
           params = `?phone_last10=eq.${encodeURIComponent(phone)}&order=ts.desc&limit=200`;
         } else {
-          params = `?order=ts.desc&limit=500`;
+          // Global feed (the dashboard Calls tab). An optional ?channel=call|sms
+          // narrows it so the Calls tab pulls calls specifically rather than
+          // filtering a mixed feed client-side.
+          const channel = String(req.query.channel || '').trim();
+          const chFilter = (channel === 'call' || channel === 'sms') ? `channel=eq.${channel}&` : '';
+          params = `?${chFilter}order=ts.desc&limit=500`;
         }
         // The table may not be migrated yet on this environment. query() throws
         // on a REST error, so treat any failure as "no history" rather than

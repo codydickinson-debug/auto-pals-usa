@@ -2063,6 +2063,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       <button class="nav-tab" onclick="showView('repairs')" id="nav-repairs">Repairs <span id="nav-badge-repair" class="nav-tab-badge">0</span></button>
       <button class="nav-tab" onclick="showView('sales')" id="nav-sales">Sold Cars <span id="nav-badge-sold" class="nav-tab-badge">0</span></button>
       <button class="nav-tab" onclick="showView('messages')" id="nav-messages">Messages <span id="nav-badge-messages" class="nav-tab-badge">0</span></button>
+      <button class="nav-tab" onclick="showView('calls')" id="nav-calls">Calls</button>
       <button class="nav-tab" onclick="showView('metaads')" id="nav-metaads">Meta Ads</button>
       <button class="nav-tab" onclick="lockDashboard()" style="color:rgba(255,255,255,0.4);font-size:12px;">🔒 Lock</button>
     </div>
@@ -2515,6 +2516,34 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   </div>
 </div>
 
+<!-- ============ CALLS VIEW (Quo call tracking) ============ -->
+<div id="view-calls" class="view">
+  <div style="max-width:1120px;margin:0 auto;padding:26px 22px 60px;">
+    <div style="font-family:'Playfair Display',serif;font-size:25px;font-weight:700;color:var(--navy);letter-spacing:-0.01em;">Calls</div>
+    <div style="font-family:system-ui,sans-serif;font-size:13px;color:var(--text-muted);margin:6px 0 22px;max-width:64ch;line-height:1.5;">Every call logged through the phone system — inbound and outbound — with outcome, recording, and AI summary. Speed to Lead below tracks how fast new leads get their first call.</div>
+
+    <!-- SPEED TO LEAD — moved here from the Requests dashboard. Populated by
+         renderSpeedToLead(); stays hidden until the view + communications table
+         exist, so it degrades to nothing rather than a broken card. -->
+    <div id="stl-card" style="display:none;margin-bottom:22px;padding:16px 18px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+        <div style="font-family:system-ui,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);">
+          ⏱ Speed to Lead
+        </div>
+        <div id="stl-window" style="font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);"></div>
+      </div>
+      <div id="stl-body"></div>
+    </div>
+
+    <!-- Call log -->
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px;">
+      <div style="font-family:system-ui,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);">📞 Recent calls</div>
+      <button onclick="renderCallsTab(true)" id="calls-refresh" style="font-family:system-ui,sans-serif;font-size:12px;font-weight:600;color:var(--navy);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;">↻ Refresh</button>
+    </div>
+    <div id="calls-log"><div style="color:var(--text-muted);font-size:13px;padding:12px 0;">Loading…</div></div>
+  </div>
+</div>
+
 <!-- ============ DASHBOARD VIEW ============ -->
 <div id="view-dashboard" class="view">
   <div class="dash-layout">
@@ -2622,19 +2651,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         </div>
       </div>
 
-      <!-- SPEED TO LEAD — hours from form submission to our first outbound call.
-           Populated by renderSpeedToLead(); hidden entirely until the view and
-           the communications table exist, so this degrades to nothing rather
-           than showing a broken card. -->
-      <div id="stl-card" style="display:none;margin-bottom:18px;padding:16px 18px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
-          <div style="font-family:system-ui,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);">
-            ⏱ Speed to Lead
-          </div>
-          <div id="stl-window" style="font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);"></div>
-        </div>
-        <div id="stl-body"></div>
-      </div>
+      <!-- Speed to Lead moved to its own Calls tab (see #view-calls). -->
 
       <div id="panel-requests">
       <!-- Search bar -->
@@ -4723,6 +4740,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (v === 'repairs') { renderRepairCards(); document.getElementById('panel-repair').style.display = 'block'; }
     if (v === 'sales')   { updateWeekLabel(); renderSoldTable(); document.getElementById('panel-sold').style.display = 'block'; }
     if (v === 'messages') { renderConvoList(); }
+    if (v === 'calls') { renderCallsTab(); }
   }
 
   function syncNavBadges() {
@@ -5991,6 +6009,89 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     _stlLastRun = Date.now();
     try { renderSpeedToLead(); } catch (e) { console.warn('[STL] render failed', e); }
     if (!_stlTimer) _stlTimer = setInterval(() => { try { renderSpeedToLead(); } catch (_) {} }, FIVE_MIN);
+  }
+
+  // ─── CALLS TAB (Quo call tracking) ─────────────────────────────
+  // Global call log for the Calls tab. Pulls calls (channel=call) from the
+  // communications table via the staff /api/db feed, links each to its lead,
+  // and renders direction, outcome, duration, the AI summary, and an inline
+  // recording player. Speed-to-Lead (below) shares this tab.
+  let _callsLoadedAt = 0;
+  function _fmtCallPhone(p) {
+    const d = String(p || '').replace(/\D/g, '').slice(-10);
+    return d.length === 10 ? `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}` : (p || '');
+  }
+  // Lazily mount an <audio> the first time a recording is opened (preload=none
+  // so 24 rows don't each fetch audio). Toggles play/hide.
+  function toggleCallRec(btn) {
+    const url = btn.dataset.rec || '';
+    const wrap = btn.nextElementSibling;
+    if (!url || !wrap) return;
+    if (wrap.dataset.on === '1') { wrap.style.display = 'none'; wrap.dataset.on = '0'; btn.textContent = '▶ Play recording'; return; }
+    if (!wrap.firstChild) {
+      const a = document.createElement('audio');
+      a.controls = true; a.preload = 'none'; a.src = url;
+      a.style.cssText = 'width:100%;margin-top:8px;';
+      wrap.appendChild(a);
+    }
+    wrap.style.display = 'block'; wrap.dataset.on = '1'; btn.textContent = '▾ Hide recording';
+    const a = wrap.querySelector('audio'); if (a) { try { a.play().catch(() => {}); } catch (e) {} }
+  }
+  function _callRow(c, byId) {
+    const inbound = c.direction !== 'out';
+    const lead = (c.request_id != null) ? byId[String(c.request_id)] : null;
+    const dirIcon = inbound ? '📥' : '📤';
+    const dirLabel = inbound ? 'Inbound' : 'Outbound';
+    const who = lead
+      ? `<span onclick="openDetailView(${lead.id})" style="cursor:pointer;color:var(--accent-bright);font-weight:700;">${_maEsc(lead.firstName + ' ' + lead.lastName)}</span>`
+      : `<span style="font-weight:700;color:var(--text);">${_maEsc(_fmtCallPhone(c.phone) || 'Unknown number')}</span>`;
+    const secs = Number(c.duration_sec) || 0;
+    const dur = secs > 0 ? (secs < 60 ? secs + 's' : Math.floor(secs / 60) + 'm ' + (secs % 60) + 's') : '';
+    const when = c.ts
+      ? new Date(c.ts).toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' ET'
+      : 'time not recorded';
+    const missed = /miss|no.?answer|voicemail|fail|unanswer|declin/i.test(c.outcome || '');
+    const outcomeBadge = c.outcome
+      ? `<span style="font-size:10px;font-weight:700;letter-spacing:0.02em;padding:2px 8px;border-radius:20px;background:${missed ? '#fef2f2' : '#eef2ff'};color:${missed ? '#b91c1c' : '#3730a3'};border:1px solid ${missed ? '#fecaca' : '#c7d2fe'};">${_maEsc(c.outcome)}</span>`
+      : '';
+    const detail = (c.summary || c.transcript || '').trim().slice(0, 1200);
+    const summaryBlock = detail
+      ? `<div style="color:var(--text);font-size:12px;margin-top:6px;line-height:1.55;background:var(--cream,#faf7f0);border-left:2px solid var(--border);border-radius:4px;padding:7px 10px;white-space:pre-wrap;">${_maEsc(detail)}</div>`
+      : '';
+    const recUrl = /^https?:\/\//i.test(c.recording_url || '') ? c.recording_url : '';
+    const recBlock = recUrl
+      ? `<button onclick="toggleCallRec(this)" data-rec="${_maEsc(recUrl)}" style="margin-top:8px;font-family:system-ui,sans-serif;font-size:12px;font-weight:600;color:var(--navy);background:none;border:1px solid var(--border);border-radius:6px;padding:5px 11px;cursor:pointer;">▶ Play recording</button><div style="display:none;" data-on="0"></div>`
+      : '';
+    return `<div style="padding:13px 15px;border:1px solid var(--border);border-radius:10px;background:var(--surface);margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:14px;">${dirIcon}</span>
+        ${who}
+        <span style="font-size:11px;color:var(--text-muted);">${dirLabel}</span>
+        ${outcomeBadge}
+        ${dur ? `<span style="font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;">· ${dur}</span>` : ''}
+        <span style="margin-left:auto;font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums;">${when}</span>
+      </div>
+      ${summaryBlock}
+      ${recBlock}
+    </div>`;
+  }
+  async function renderCallsTab(force) {
+    if (typeof scheduleSpeedToLead === 'function') { try { scheduleSpeedToLead(!!force); } catch (e) {} }
+    const box = document.getElementById('calls-log');
+    if (!box) return;
+    // Throttle re-fetches; the Refresh button forces one.
+    if (!force && box.dataset.loaded === '1' && (Date.now() - _callsLoadedAt) < 15000) return;
+    if (box.dataset.loaded !== '1') box.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0;">Loading…</div>';
+    const calls = await dbGet('communications', '&channel=call');
+    _callsLoadedAt = Date.now();
+    box.dataset.loaded = '1';
+    if (!Array.isArray(calls) || calls.length === 0) {
+      box.innerHTML = '<div style="padding:26px;text-align:center;color:var(--text-muted);font-size:13px;border:1px dashed var(--border);border-radius:10px;">No calls logged yet. Calls placed through the phone system show up here with outcome, recording, and AI summary.</div>';
+      return;
+    }
+    const byId = {};
+    requests.forEach(r => { byId[String(r.id)] = r; });
+    box.innerHTML = calls.map(c => _callRow(c, byId)).join('');
   }
 
   async function renderSpeedToLead() {
