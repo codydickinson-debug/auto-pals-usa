@@ -2030,7 +2030,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v208 · 2026-08-27</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v210 · 2026-08-28</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -6289,13 +6289,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           ? ' · ' + (c.duration_sec < 60 ? c.duration_sec + 's' : Math.round(c.duration_sec / 60) + ' min')
           : '';
         const disp = c.outcome ? ' · ' + c.outcome : '';
-        // Prefer the AI summary; fall back to the transcript, then any note.
-        const detail = (c.summary || c.transcript || c.body || '').trim();
+        // Visible line = the AI summary (or a note if none); the full transcript
+        // rides along separately so it can render in a collapsible below.
+        const detail = (c.summary || c.body || '').trim();
         events.push({
           ts: c.ts,
           icon: inbound ? '📞' : '☎️',
           kind: 'Call ' + (inbound ? '← from client' : '→ client') + mins + disp,
           detail: detail.slice(0, 4000),
+          transcript: (c.transcript || '').trim(),
           ok: c.outcome !== 'missed'
         });
       } else {
@@ -6322,11 +6324,18 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const failTag = ev.ok ? '' : ' <span style="color:var(--red);font-weight:700;">· failed</span>';
       // The actual message copy that went out, as a quoted block.
       const detail = ev.detail ? `<div style="color:var(--text);font-size:11px;margin-top:3px;line-height:1.5;background:var(--cream,#faf7f0);border-left:2px solid var(--border);border-radius:4px;padding:6px 8px;white-space:pre-wrap;">${escapeHtml(ev.detail)}</div>` : '';
+      // Full call transcript in a native collapsible — closed by default so the
+      // timeline stays compact; scrolls internally when a call runs long.
+      const transcriptBlock = ev.transcript
+        ? `<details style="margin-top:5px;"><summary style="cursor:pointer;font-size:11px;font-weight:600;color:var(--accent-bright);outline:none;">Full transcript</summary>`
+          + `<div style="margin-top:4px;color:var(--text);font-size:11px;line-height:1.55;background:var(--cream,#faf7f0);border-left:2px solid var(--border);border-radius:6px;padding:8px 10px;white-space:pre-wrap;max-height:320px;overflow-y:auto;">${escapeHtml(ev.transcript)}</div></details>`
+        : '';
       return `<div style="display:flex;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">`
         + `<div style="flex-shrink:0;">${ev.icon}</div>`
         + `<div style="flex:1;min-width:0;">`
         + `<div style="font-weight:600;color:var(--text);">${escapeHtml(ev.kind)}${failTag}</div>`
         + detail
+        + transcriptBlock
         + `<div style="color:var(--text-muted);font-size:11px;margin-top:1px;">${fmtWhen(ev.ts)}</div>`
         + `</div></div>`;
     }).join('');
