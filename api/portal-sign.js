@@ -252,7 +252,7 @@ async function handleApproveQuote(req, res, body) {
   let repair;
   try {
     const rl = await sb('GET',
-      `repair_cars?id=eq.${repairId}&select=id,client,request_id,quote_approved_at&limit=1`);
+      `repair_cars?id=eq.${repairId}&select=id,client,request_id,quote_approved_at,repairs&limit=1`);
     if (!rl.ok || !Array.isArray(rl.body) || !rl.body.length) {
       return res.status(404).json({ error: 'repair_not_found' });
     }
@@ -281,9 +281,23 @@ async function handleApproveQuote(req, res, body) {
   }
 
   const nowIso = new Date().toISOString();
+  // Approving the whole quote from the portal = approving every line item the
+  // client was shown. Stamp each still-undecided, non-excluded item as approved
+  // (mirrors the per-item email flow in api/quote-response.js) so the dashboard
+  // Repairs tab, the emailed receipt, and every total reflect what the client
+  // okayed — instead of a car that reads "approved" while every item shows
+  // "pending." Explicit prior choices made via the email links are preserved.
+  const decidedRepairs = Array.isArray(repair.repairs)
+    ? repair.repairs.map(item => {
+        if (!item || typeof item !== 'object') return item;
+        if (item.excluded && !item.clientDecision) return item;                              // staff-removed, never shown to client
+        if (item.clientDecision === 'approved' || item.clientDecision === 'denied') return item; // keep an explicit per-item choice
+        return { ...item, clientDecision: 'approved', clientDecidedAt: nowIso, excluded: false };
+      })
+    : repair.repairs;
   try {
     const patch = await sb('PATCH', `repair_cars?id=eq.${repairId}`,
-      { quote_approved_at: nowIso });
+      { quote_approved_at: nowIso, repairs: decidedRepairs });
     if (!patch.ok) {
       console.error('[portal-approve-quote] patch failed', patch.status, JSON.stringify(patch.body).slice(0, 200));
       return res.status(500).json({ error: 'save_failed' });
