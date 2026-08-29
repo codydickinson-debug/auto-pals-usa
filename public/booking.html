@@ -1326,6 +1326,20 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // Anyone hitting /booking.html directly (Google, deep link, etc.) without
   // having come through the form/portal flow will see the gate UI instead.
   (async function gateOrInit() {
+    // A texted/emailed booking link can carry ?code=<booking code> so the
+    // calendar opens on a fresh device with no prior session — used by the
+    // phone agent's "I'll text you the link" flow (api/voice.js) and by the
+    // booking-link SMS/emails when opened on a new phone. The code only unlocks
+    // the calendar VIEW (open slots aren't sensitive); every booking is still
+    // validated server-side (slot-uniqueness index + backstop lead creation).
+    try {
+      const urlCode = new URLSearchParams(location.search).get('code');
+      if (urlCode && urlCode.trim()) {
+        sessionStorage.setItem('portal_code', urlCode.trim());
+        // Strip the code from the address bar so it isn't left in history/shares.
+        try { history.replaceState(null, '', location.pathname); } catch (e) {}
+      }
+    } catch (e) { /* private-mode sessionStorage can throw; non-fatal */ }
     const portalCode = (sessionStorage.getItem('portal_code') || '').trim();
     const gate = document.getElementById('booking-gate');
     const content = document.getElementById('booking-content');

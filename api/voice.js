@@ -33,6 +33,7 @@ const crypto = require('crypto');
 const BASE = process.env.PUBLIC_BASE_URL || 'https://www.autopalsusa.com';
 const { SUPABASE_URL } = require('./_constants.js');
 const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || null;
+const sms = require('./_sms.js');
 
 // Look up an existing lead by email so a caller who already submitted the
 // website form doesn't get a duplicate request row. Service-role read only.
@@ -296,6 +297,37 @@ async function bookCall(args) {
   };
 }
 
+// Text the caller a booking link so they can see our next open times and pick a
+// slot themselves, instead of booking live on the call. Mints a fresh booking
+// code and sends /booking?code=<code> to the number they're calling from (Retell
+// passes it), so the calendar opens on their phone. The code only unlocks the
+// calendar VIEW; the booking itself is validated + creates the lead server-side.
+async function sendBookingText(args, fromNumber) {
+  const firstName = String(args.firstName || args.first_name || '').trim();
+  const phone = sms.normalize(String(args.phone || fromNumber || '').trim());
+  if (!phone) {
+    return { success: false, reason: 'no_number',
+      message: "I don't have a good number to text — what's the best cell for you?" };
+  }
+  const code = genPortalCode(firstName, Date.now());
+  const bookingUrl = `${BASE}/booking?code=${encodeURIComponent(code)}`;
+  try {
+    const r = await sms.send('client_call_booking_link', { firstName, phone, smsConsent: true, bookingUrl });
+    if (!r || r.ok === false) {
+      console.warn('[voice] booking-link SMS not sent:', r && (r.reason || r.error));
+      return { success: false, reason: (r && (r.reason || r.error)) || 'send_failed',
+        message: "I couldn't get that text out just now — want me to just book a time for you instead?" };
+    }
+    console.log('[voice] booking-link texted to …' + phone.slice(-4));
+    return { success: true, textedTo: phone.slice(-4),
+      message: "Perfect — I just texted you a link. You'll see our next open times there and can grab whichever works, right from your phone. Want me to pencil something in for you too, or is the text all you need?" };
+  } catch (e) {
+    console.error('[voice] sendBookingText error', e && e.message);
+    return { success: false, reason: 'server_error',
+      message: "I hit a snag sending that text — I can just book a time for you right now if you'd like." };
+  }
+}
+
 module.exports = async function handler(req, res) {
   // Secret gate — accept via bearer, custom header, or query for flexibility
   // with however Retell is configured.
@@ -319,12 +351,20 @@ module.exports = async function handler(req, res) {
 
   const action = body.name || body.action || req.query.action || '';
   const args = body.args || body.arguments || body.parameters || body;
+  // Caller's number, straight from the Retell call envelope (path varies by
+  // version), so "text me the booking link" doesn't have to make them recite it.
+  const fromNumber = (body.call && (body.call.from_number || body.call.from))
+    || body.from_number
+    || (body.call_inbound && body.call_inbound.from_number)
+    || (body.llm && body.llm.call && body.llm.call.from_number)
+    || '';
 
   try {
     if (action === 'check_availability') return res.status(200).json(await checkAvailability(args));
-    if (action === 'book_call')         return res.status(200).json(await bookCall(args));
+    if (action === 'book_call')          return res.status(200).json(await bookCall(args));
+    if (action === 'send_booking_text')  return res.status(200).json(await sendBookingText(args, fromNumber));
     return res.status(400).json({ success: false, error: 'unknown_action',
-      message: `Unknown action "${action}". Expected check_availability or book_call.` });
+      message: `Unknown action "${action}". Expected check_availability, book_call, or send_booking_text.` });
   } catch (e) {
     console.error('[voice] handler error', action, e && e.message);
     return res.status(200).json({ success: false, reason: 'server_error',

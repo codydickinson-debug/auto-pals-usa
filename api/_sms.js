@@ -486,6 +486,16 @@ const TEMPLATES = {
     `Book your free 30-min intro call so we can start sourcing your vehicle: ${d.bookingUrl || BOOKING_URL} ` +
     `Reply STOP to unsubscribe, HELP for help. Msg & data rates may apply.`,
 
+  // Sent when a caller on the Retell phone line asks us to TEXT them the
+  // booking link instead of booking live ("I can text you a link to see our
+  // next open time, or book it for you"). Transactional + caller-requested
+  // (express consent on the call), so it's exempt from the quiet-hours gate.
+  // d.bookingUrl carries the ?code= link so the calendar opens on their phone.
+  client_call_booking_link: (d) =>
+    `Hi ${d.firstName || 'there'} — Auto Pals USA here, as you asked on our call. ` +
+    `Here's the link to see our next open times and book your free 30-min intro call: ${d.bookingUrl || BOOKING_URL} ` +
+    `Reply STOP to opt out.`,
+
   // ─── CALL REMINDER (~1 hour before the booked slot) ──────────────
   // Fires from api/call-reminders.js via the 10-minute pg_cron ticker.
   // One per booking, enforced by bookings.reminder_sms_sent_at.
