@@ -7988,9 +7988,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     alert('Could not find this client\'s profile to open.');
   }
 
+  // NOTE: currently UNREACHABLE — nothing calls renderPartsList(), and the
+  // #parts-list-container / #parts-list-empty elements it targets no longer
+  // exist in the markup (the standalone parts list was removed; parts now live
+  // inside the repair modal). Kept for if that view returns, but guarded: it
+  // previously dereferenced both elements with no null check, so the moment
+  // anything wired it up it would have thrown and taken the surrounding render
+  // down with it. Same failure shape as the AI Assessment panel removal.
   function renderPartsList() {
     const container = document.getElementById('parts-list-container');
     const emptyEl   = document.getElementById('parts-list-empty');
+    if (!container || !emptyEl) return;   // view not present — nothing to draw
     if (!repairCars.length) {
       emptyEl.style.display = 'block';
       container.innerHTML = '';
