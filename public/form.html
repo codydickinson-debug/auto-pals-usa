@@ -5896,8 +5896,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const dayPill = depositDayPill(r);
       const sla = slaDot(r);
       return `<tr draggable="true" data-id="${r.id}" onclick="rowClick(event,${r.id})">
-        <td><strong>${r.firstName} ${r.lastName}</strong>${callBadge(r)}${dispositionBadge(r)}${followUpChip(r)}${followUpScheduleBadge(r)}${replyBadge(r)}${sourceBadge(r)}${smsBadge(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
-        <td data-label="Vehicle">${vehicle}</td>
+        <td><strong>${escapeHtml(r.firstName)} ${escapeHtml(r.lastName)}</strong>${callBadge(r)}${dispositionBadge(r)}${followUpChip(r)}${followUpScheduleBadge(r)}${replyBadge(r)}${sourceBadge(r)}${smsBadge(r)}${dayPill}${r.searchMode === 'open' ? '<span class="open-search-badge" style="margin-left:6px;">Open Search</span>' : ''}${r.skipTheLine ? '<span class="skip-badge">⚡ SKIP</span>' : ''}</td>
+        <td data-label="Vehicle">${escapeHtml(vehicle)}</td>
         <td data-label="Budget">${budget}${paymentBadge(r)}</td>
         <td data-label="Years">${years}</td>
         <td data-label="AI">${tlCell}</td>
@@ -8979,22 +8979,25 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       return;
     }
     list.innerHTML = openReqs.map(r => {
-      const budget = '$' + r.budgetMin.toLocaleString() + ' – $' + r.budgetMax.toLocaleString();
+      // Null-safe: a legacy row with no budget used to throw here, and the
+      // exception blanked the whole Open Searches panel.
+      const _fmtMoney = (n) => Number.isFinite(Number(n)) ? '$' + Number(n).toLocaleString() : '—';
+      const budget = _fmtMoney(r.budgetMin) + ' – ' + _fmtMoney(r.budgetMax);
       const years = r.yearFrom + (r.yearTo !== r.yearFrom ? '–' + r.yearTo : '');
       const tlCls = { green:'tl-green', yellow:'tl-yellow', red:'tl-red' }[r.aiColor] || '';
       const tlLabel = { green:'Good', yellow:'Review', red:'Unworkable' }[r.aiColor] || '';
       const tl = r.aiColor ? `<span class="tl-badge ${tlCls}" style="margin-left:8px;"><span class="tl-dot tl-dot-${r.aiColor}"></span>${tlLabel}</span>` : '';
       const recsHtml = r.aiRecs && r.aiRecs.length
-        ? r.aiRecs.map(rec => `<div class="rec-item"><div class="rec-title">${rec.title}</div><div class="rec-why">${rec.why}</div></div>`).join('')
+        ? r.aiRecs.map(rec => `<div class="rec-item"><div class="rec-title">${escapeHtml(rec.title)}</div><div class="rec-why">${escapeHtml(rec.why)}</div></div>`).join('')
         : (r.aiPending
           ? '<div style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);padding:8px 0;"><span class="ai-spinner"></span> Generating...</div>'
           : '<div style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);padding:8px 0;">No recommendations yet. <a href="#" onclick="event.preventDefault();const x=requests.find(r=>r.id===' + r.id + ');if(x)runOpenSearchAI(x);" style="color:var(--accent-bright);font-weight:600;">Generate now →</a></div>');
       return `<div class="repair-card" style="border-left-color:#5b21b6;">
         <div class="repair-card-header">
           <div>
-            <div class="repair-card-title">${r.firstName} ${r.lastName} ${tl}</div>
-            <div class="repair-card-sub">${budget} &middot; ${years} &middot; ${r.body || 'Any style'}</div>
-            ${r.notes && r.notes !== '—' ? `<div style="font-size:12px;color:var(--text-muted);font-style:italic;margin-top:4px;font-family:system-ui,sans-serif;">${r.notes}</div>` : ''}
+            <div class="repair-card-title">${escapeHtml(r.firstName)} ${escapeHtml(r.lastName)} ${tl}</div>
+            <div class="repair-card-sub">${escapeHtml(budget)} &middot; ${escapeHtml(years)} &middot; ${escapeHtml(r.body || 'Any style')}</div>
+            ${r.notes && r.notes !== '—' ? `<div style="font-size:12px;color:var(--text-muted);font-style:italic;margin-top:4px;font-family:system-ui,sans-serif;">${escapeHtml(r.notes)}</div>` : ''}
           </div>
           <div class="repair-card-actions">
             <button class="filter-btn" onclick="openDetailView(${r.id})">View</button>

@@ -92,6 +92,29 @@ async function sb(table, method = 'GET', body = null, params = '') {
   return text ? JSON.parse(text) : null;
 }
 
+// Paginating GET — mirrors queryAll() in api/db.js.
+// The drip used to fetch the active set with a flat `limit=500`. Non-final
+// leads accumulate forever (a lead that never converts is never marked sold or
+// rejected), so once that set passed 500 every lead older than the 500th-newest
+// silently stopped receiving ANY drip — no error, no log. That killed the
+// dormant re-engagement campaign by construction, since its 720h/4320h touches
+// target exactly the oldest leads. Paging removes the ceiling.
+async function sbAll(table, params = '') {
+  const sep = params.includes('?') ? '&' : '?';
+  let all = [];
+  let pageSize = null;
+  let offset = 0;
+  for (let guard = 0; guard < 100; guard++) {
+    const page = await sb(table, 'GET', null, `${params}${sep}offset=${offset}&limit=1000`);
+    if (!Array.isArray(page) || page.length === 0) break;
+    all = all.concat(page);
+    if (pageSize === null) pageSize = page.length;   // effective server cap
+    if (page.length < pageSize) break;               // short page → last page
+    offset += page.length;
+  }
+  return all;
+}
+
 async function sendEmail(host, type, data) {
   // host is unused now — we call the in-process helper directly so we
   // don't need to attach the staff token that /api/email requires.
@@ -166,8 +189,11 @@ module.exports = async function handler(req, res) {
   const summary = { bookingRemindersSent: 0, depositRemindersSent: 0, smsRemindersSent: 0, dormantRemindersSent: 0, smsAttempted: 0, smsFailed: 0, errors: [] };
 
   try {
-    // Pull all non-final-state requests (active ones where reminders could apply)
-    const requests = await sb('requests', 'GET', null, '?status=neq.sold&status=neq.rejected&order=submitted.desc&limit=500');
+    // Pull ALL non-final-state requests (active ones where reminders could
+    // apply). Paged — see sbAll(): a flat limit here silently starved every
+    // lead past the cap.
+    const requests = await sbAll('requests', '?status=neq.sold&status=neq.rejected&order=submitted.desc');
+    console.log('[CRON] active leads in scope:', requests.length);
 
     for (const r of requests) {
       try {
