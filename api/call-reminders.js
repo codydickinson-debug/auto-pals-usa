@@ -1,6 +1,9 @@
-// ── call-reminders.js — SMS reminder ~1 hour before a booked call ───
-// Owner request 2026-07-09: "text the people who booked calls an hour
-// before the call starts."
+// ── call-reminders.js — SMS reminders for booked calls ──────────────
+// Two reminders, both riding the every-10-min pg_cron tick:
+//   1) ~1 hour before the call (owner 2026-07-09).
+//   2) the NIGHT BEFORE, ~6pm ET the evening prior (owner 2026-08).
+// Each is tracked by its own bookings stamp (reminder_sms_sent_at /
+// reminder_night_sms_sent_at) so each fires exactly once.
 //
 // Vercel Hobby crons are daily-only, so this rides the same Supabase
 // pg_cron rail as the token heartbeat: a job ticks every 10 minutes and
@@ -69,6 +72,13 @@ function nowNewYork() {
     date: `${parts.year}-${parts.month}-${parts.day}`,
     minutes: (parseInt(parts.hour, 10) % 24) * 60 + parseInt(parts.minute, 10)
   };
+}
+
+// Advance a YYYY-MM-DD (ET calendar date) by n days, UTC-safe.
+function addDaysET(dateStr, n) {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
 }
 
 module.exports = async function handler(req, res) {
@@ -148,7 +158,66 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    if (summary.due.length || summary.sent) {
+    // ── NIGHT-BEFORE reminder ────────────────────────────────────
+    // A second, separate nudge sent once ~6-8pm ET the EVENING BEFORE the
+    // call, tracked via its own bookings.reminder_night_sms_sent_at column
+    // (claimed with a conditional PATCH, same race-safety as the 1h pass).
+    // Fully wrapped + self-contained: if that column doesn't exist yet
+    // (migration not applied), the fetch just fails and this pass no-ops —
+    // it never spams and never disturbs the 1-hour pass above.
+    try {
+      const NIGHT_START_MIN = 18 * 60; // 6:00pm ET
+      const NIGHT_END_MIN   = 20 * 60; // through 7:59pm ET (before SMS quiet-hours cutoff)
+      if (ny.minutes >= NIGHT_START_MIN && ny.minutes < NIGHT_END_MIN) {
+        const tomorrow = addDaysET(ny.date, 1);
+        const nlist = await sb(`bookings?date=eq.${tomorrow}&reminder_night_sms_sent_at=is.null&select=id,time,first_name,phone`);
+        if (!nlist.ok || !Array.isArray(nlist.body)) {
+          console.warn('[call-reminders] night-before fetch failed (run the reminder_night_sms_sent_at migration?):', nlist.status);
+        } else {
+          summary.nightChecked = nlist.body.length;
+          summary.nightSent = 0;
+          for (const b of nlist.body) {
+            if (!b.phone) { summary.skipped.push({ id: b.id, reason: 'night_no_phone' }); continue; }
+            if (dryRun) { summary.due.push({ id: b.id, time: b.time, night: true }); continue; }
+
+            const last10 = String(b.phone).replace(/\D/g, '').slice(-10);
+            let smsConsent; // undefined = legacy/implicit
+            const reqRow = await sb(`requests?phone=like.*${last10}&select=sms_consent&order=id.desc&limit=1`);
+            if (reqRow.ok && Array.isArray(reqRow.body) && reqRow.body.length) smsConsent = reqRow.body[0].sms_consent;
+            if (smsConsent === false) { summary.skipped.push({ id: b.id, reason: 'night_sms_consent_false' }); continue; }
+
+            const claim = await sb(`bookings?id=eq.${b.id}&reminder_night_sms_sent_at=is.null`, {
+              method: 'PATCH',
+              headers: { 'Prefer': 'return=representation' },
+              body: JSON.stringify({ reminder_night_sms_sent_at: new Date().toISOString() })
+            });
+            if (!claim.ok || !Array.isArray(claim.body) || !claim.body.length) {
+              summary.skipped.push({ id: b.id, reason: 'night_already_claimed' });
+              continue;
+            }
+
+            const result = await sms.send('client_call_reminder_night_before', {
+              firstName: b.first_name, time: b.time, phone: b.phone, smsConsent
+            });
+            if (result && result.ok) {
+              summary.nightSent++;
+              console.log('[call-reminders] night-before reminded booking', b.id, tomorrow, b.time, '…' + last10.slice(-4));
+            } else {
+              const permanent = result && [400, 404, 410, 422].includes(result.status);
+              if (!permanent) {
+                await sb(`bookings?id=eq.${b.id}`, { method: 'PATCH', body: JSON.stringify({ reminder_night_sms_sent_at: null }) });
+              }
+              summary.skipped.push({ id: b.id, reason: `night_send_failed_${(result && result.status) || (result && result.error) || 'unknown'}${permanent ? '_permanent' : '_will_retry'}` });
+              console.warn('[call-reminders] night-before send failed for booking', b.id, result && result.status);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[call-reminders] night-before pass error:', e && e.message);
+    }
+
+    if (summary.due.length || summary.sent || summary.nightSent) {
       console.log('[call-reminders]', JSON.stringify(summary));
     }
     return res.status(200).json({ ok: true, ...summary, dryRun: dryRun || undefined });

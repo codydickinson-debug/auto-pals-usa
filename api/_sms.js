@@ -503,6 +503,11 @@ const TEMPLATES = {
     `Hi ${d.firstName || 'there'} — quick reminder from Cody & Josh at Auto Pals USA: your intro call is at ${d.time} EST today, about an hour from now. We'll be calling you from ${CALL_FROM_NUMBER}. Need to reschedule? ${d.bookingUrl || BOOKING_URL} ` +
     `Reply STOP to opt out.`,
 
+  // Night-before nudge, sent ~6pm ET the evening before the booked call.
+  client_call_reminder_night_before: (d) =>
+    `Hi ${d.firstName || 'there'} — reminder from Cody & Josh at Auto Pals USA: your intro call is tomorrow at ${d.time} EST. We'll be calling you from ${CALL_FROM_NUMBER}. Need to reschedule? ${d.bookingUrl || BOOKING_URL} ` +
+    `Reply STOP to opt out.`,
+
   // ─── PRE-CALL 4-DAY FOLLOW-UP DRIP ───────────────────────────────
   // Fires from the daily cron for leads that have submitted the form but
   // haven't booked a call yet. Auto-stops the moment booking_confirmed_at
