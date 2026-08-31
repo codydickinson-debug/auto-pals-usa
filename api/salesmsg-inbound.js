@@ -111,7 +111,7 @@ async function findRequestIdByPhone(last10) {
   if (!SUPABASE_SERVICE_KEY) return null;
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/requests?phone_digits=like.*${last10}&select=id&order=submitted.desc&limit=1`,
+      `${SUPABASE_URL}/rest/v1/requests?phone=like.*${last10}&select=id&order=submitted.desc&limit=1`,
       { headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` } }
     );
     if (!res.ok) return null;
@@ -161,7 +161,7 @@ async function logCommunication({ last10, phoneRaw, tsIso, body, providerId, req
 // move the timestamp backwards).
 async function stampReply(last10, tsIso) {
   if (!SUPABASE_SERVICE_KEY) return { last10: '…' + last10.slice(-4), ok: false, error: 'no_service_key' };
-  const filter = `phone_digits=like.*${last10}&or=(last_reply_at.is.null,last_reply_at.lt.${encodeURIComponent(tsIso)})`;
+  const filter = `phone=like.*${last10}&or=(last_reply_at.is.null,last_reply_at.lt.${encodeURIComponent(tsIso)})`;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/requests?${filter}`, {
       method: 'PATCH',
