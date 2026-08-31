@@ -120,7 +120,7 @@ module.exports = async function handler(req, res) {
       // Consent from the matching request row (by trailing 10 digits).
       const last10 = String(b.phone).replace(/\D/g, '').slice(-10);
       let smsConsent; // undefined = legacy/implicit
-      const reqRow = await sb(`requests?phone=like.*${last10}&select=sms_consent&order=id.desc&limit=1`);
+      const reqRow = await sb(`requests?phone_digits=like.*${last10}&select=sms_consent&order=id.desc&limit=1`);
       if (reqRow.ok && Array.isArray(reqRow.body) && reqRow.body.length) {
         smsConsent = reqRow.body[0].sms_consent;
       }
@@ -182,7 +182,7 @@ module.exports = async function handler(req, res) {
 
             const last10 = String(b.phone).replace(/\D/g, '').slice(-10);
             let smsConsent; // undefined = legacy/implicit
-            const reqRow = await sb(`requests?phone=like.*${last10}&select=sms_consent&order=id.desc&limit=1`);
+            const reqRow = await sb(`requests?phone_digits=like.*${last10}&select=sms_consent&order=id.desc&limit=1`);
             if (reqRow.ok && Array.isArray(reqRow.body) && reqRow.body.length) smsConsent = reqRow.body[0].sms_consent;
             if (smsConsent === false) { summary.skipped.push({ id: b.id, reason: 'night_sms_consent_false' }); continue; }
 

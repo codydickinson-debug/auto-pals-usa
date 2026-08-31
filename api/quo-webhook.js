@@ -53,7 +53,7 @@ async function resolveRequestId(digits) {
   if (!SUPABASE_KEY || !digits || digits.length < 10) return null;
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/requests?phone=like.*${digits}&select=id&order=submitted.desc&limit=1`,
+      `${SUPABASE_URL}/rest/v1/requests?phone_digits=like.*${digits}&select=id&order=submitted.desc&limit=1`,
       { headers: sbHeaders() }
     );
     if (!res.ok) return null;

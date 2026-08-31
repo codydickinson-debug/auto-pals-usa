@@ -302,7 +302,7 @@ async function optOutPhone(phone) {
     // Rows store phones loosely (bare 10-digit, +1..., formatted) — match
     // any value ending in the same 10 digits. like.* also matches the bare
     // 10-digit value itself.
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/requests?phone=like.*${last10}`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/requests?phone_digits=like.*${last10}`, {
       method: 'PATCH',
       headers: {
         'apikey': SUPABASE_SERVICE_KEY,
