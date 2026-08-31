@@ -3138,9 +3138,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <div style="display:flex;flex-direction:column;gap:8px;">
           <div>
             <label for="dv-followup-date" style="display:block;font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);margin-bottom:3px;">Circle back on</label>
-            <input type="date" id="dv-followup-date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;font-size:13px;">
+            <input type="date" id="dv-followup-date" oninput="markFollowUpDirty()" onchange="markFollowUpDirty()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;font-size:13px;">
           </div>
-          <input type="text" id="dv-followup-note" placeholder="Optional note — e.g. 'buying after tax refund'" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;">
+          <input type="text" id="dv-followup-note" oninput="markFollowUpDirty()" placeholder="Optional note — e.g. 'buying after tax refund'" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;">
           <button onclick="saveFollowUpSchedule()" id="dv-followup-save" style="width:100%;padding:9px 14px;background:var(--navy,#0f2557);color:#fff;border:none;border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Schedule follow-up</button>
           <button onclick="clearFollowUpSchedule()" id="dv-followup-clear" style="display:none;width:100%;padding:8px 14px;background:transparent;color:var(--red);border:1px solid var(--red-light,#fecaca);border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Clear follow-up</button>
           <div id="dv-followup-saved" style="display:none;font-family:system-ui,sans-serif;font-size:12px;color:var(--green);text-align:center;"></div>
@@ -4169,6 +4169,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   let currentSort = 'date';
   let currentSourceFilter = 'all';   // lead-source (channel) dropdown filter
   let activeRequestId = null;
+  // Id of the lead whose Future Follow-up fields hold UNSAVED edits. While set,
+  // populateDetailView() leaves the date + note inputs alone so the ~10s poll
+  // can't wipe what's being typed. Cleared on save, on clear, and when a
+  // different lead is opened. Declared HERE, beside activeRequestId, rather
+  // than next to its helpers further down — populateDetailView reads it at
+  // ~6423 and a `let` declared after that point would be in the temporal dead
+  // zone for any call made during initial script evaluation.
+  let _fuDirtyFor = null;
 
   // After a local write we keep that request's optimistic value for a short
   // window, so the 20s auto-refresh poll can't revert a just-clicked change
@@ -6344,6 +6352,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   function openDetailView(id) {
     const r = requests.find(x => x.id === id);
     if (!r) return;
+    // Opening a different lead abandons any half-typed follow-up on the last
+    // one — don't carry the dirty flag across, or the new lead's fields would
+    // be frozen at whatever was on screen.
+    if (activeRequestId !== id) _fuDirtyFor = null;
     activeRequestId = id;
     // Switch view
     document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
@@ -6405,15 +6417,21 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       fuSection.style.display = (r.status === 'sold' || r.status === 'rejected') ? 'none' : 'block';
       const d = r.followUpAt ? new Date(r.followUpAt) : null;
       const scheduled = !!(d && Number.isFinite(d.getTime()));
-      // NEVER overwrite a field the user is currently typing in. populateDetailView
-      // re-runs on every poll tick (~10s), so without these guards the date and
-      // note inputs were wiped mid-entry and it was impossible to schedule a
-      // follow-up — you'd type, the poll would fire, and the box reset. Same
-      // guard the bad-call reason and internal-notes fields already use.
-      const _fuEditing = (el) => el && document.activeElement === el;
+      // NEVER clobber unsaved edits. populateDetailView() re-runs on every poll
+      // tick (~10s), and for an unscheduled lead it reset both inputs to '' —
+      // so a half-entered follow-up was wiped a few seconds later and it was
+      // effectively impossible to schedule one.
+      //
+      // A focus-only guard (document.activeElement === el) is NOT enough, which
+      // is how the first attempt at this still failed in the owner's hands: type
+      // a date, tab to the note, and the next poll clears the date because the
+      // date field is no longer focused. So we track a DIRTY flag for the whole
+      // section instead — once the user touches either field, neither is
+      // overwritten until they Save or Clear (or open a different lead).
+      const _fuDirty = (_fuDirtyFor === r.id);
       if (scheduled) {
-        if (dateEl && !_fuEditing(dateEl)) dateEl.value = d.toISOString().slice(0, 10);
-        if (noteEl && !_fuEditing(noteEl)) noteEl.value = r.followUpNote || '';
+        if (dateEl && !_fuDirty) dateEl.value = d.toISOString().slice(0, 10);
+        if (noteEl && !_fuDirty) noteEl.value = r.followUpNote || '';
         if (current) {
           const label = d.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' });
           if (r.followUpSmsSentAt) {
@@ -6430,8 +6448,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       } else {
         // This is the branch that actually bit: an UNSCHEDULED lead reset both
         // inputs to '' on every poll, so typing a date/note never survived.
-        if (dateEl && !_fuEditing(dateEl)) dateEl.value = '';
-        if (noteEl && !_fuEditing(noteEl)) noteEl.value = '';
+        if (dateEl && !_fuDirty) dateEl.value = '';
+        if (noteEl && !_fuDirty) noteEl.value = '';
         if (current) current.style.display = 'none';
         if (clearBtn) clearBtn.style.display = 'none';
         if (saveBtn) saveBtn.textContent = 'Schedule follow-up';
@@ -9603,6 +9621,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // at noon UTC on the chosen day so the daily cron (14:00 UTC) fires the client
   // reminder that same day; (re)scheduling clears follow_up_sms_sent_at so the
   // reminder re-arms, and pauses the automatic drip until the date.
+  function markFollowUpDirty() { _fuDirtyFor = activeRequestId; }
+
   async function saveFollowUpSchedule() {
     const r = requests.find(x => x.id === activeRequestId);
     if (!r) return;
@@ -9630,6 +9650,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       fsaved.style.color = ok === false ? 'var(--red)' : 'var(--green)';
       fsaved.style.display = 'block';
     }
+    _fuDirtyFor = null;   // edit committed — polls may repaint these fields again
     populateDetailView(r);
     if (typeof renderDashboard === 'function') renderDashboard();
   }
@@ -9659,6 +9680,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     r.followUpSmsSentAt = null;
     if (typeof save === 'function') save();
     await dbPut('requests', { id: r.id, followUpAt: null, followUpNote: null, followUpSmsSentAt: null });
+    _fuDirtyFor = null;   // edit discarded — polls may repaint these fields again
     populateDetailView(r);
     if (typeof renderDashboard === 'function') renderDashboard();
   }
