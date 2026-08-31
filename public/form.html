@@ -2030,7 +2030,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v210 · 2026-08-28</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v213 · 2026-08-31</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2686,14 +2686,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
               <th>Vehicle</th>
               <th>Budget</th>
               <th>Year Range</th>
-              <th>AI</th>
               <th>Status</th>
               <th>Submitted</th>
               <th></th>
             </tr>
           </thead>
           <tbody id="requests-tbody">
-            <tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">No requests yet. Submit the client form to get started.</td></tr>
+            <tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">No requests yet. Submit the client form to get started.</td></tr>
           </tbody>
         </table>
       </div>
@@ -3041,9 +3040,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <div id="dv-notes" style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);font-style:italic;"></div>
       </div>
 
-      <div id="dv-ai-section"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">AI Assessment</div>
-        <div id="dv-ai-content" style="font-size:12px;color:var(--text-muted);font-family:system-ui,sans-serif;"></div>
-      </div>
     </div>
 
     <!-- MIDDLE: Scrollable chat + docs + contract -->
@@ -3467,10 +3463,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       <div id="dp-notes" style="font-family:system-ui,sans-serif;font-size:13px;color:var(--text-muted);font-style:italic;"></div>
     </div>
 
-    <div class="detail-section" id="dp-ai-section">
-      <div class="detail-section-title">AI Assessment</div>
-      <div id="dp-ai-content"><span style="color:var(--text-muted);font-family:system-ui,sans-serif;font-size:13px;">Not yet assessed.</span></div>
-    </div>
 
     <div class="detail-section" id="dp-recs-section">
       <div class="detail-section-title">Send Recommendations to Client</div>
@@ -5056,9 +5048,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // so the triggers moved server-side. /api/email and /api/sms are now
     // staff-only HTTP endpoints, used below for staff dashboard actions.
 
-    // Trigger AI request scoring (color/reason) in background.
-    runAIReview(req);
-    // Also generate vehicle recommendations now so they're ready by the time
+    // (AI request scoring removed 2026-08-31 — see reviewPendingRequests.)
+    // Generate vehicle recommendations now so they're ready by the time
     // staff opens the detail view. Fires for every submit regardless of
     // searchMode — staff can ignore them or use them either way.
     if (req.status !== 'rejected') {
@@ -5883,7 +5874,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const tbody = document.getElementById('requests-tbody');
     if (!filtered.length) {
       const msg = q ? `No requests match "${q.replace(/[<>]/g,'')}".` : 'No requests in this category.';
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">${msg}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:40px;font-family:system-ui,sans-serif;">${msg}</td></tr>`;
       return;
     }
 
@@ -5898,9 +5889,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const vehicle = [r.make, r.model].filter(v => v && v !== '—').join(' ') || '—';
       const budget = r.budgetMax ? '$' + Number(r.budgetMax).toLocaleString() : '—';
       const years = r.yearFrom === r.yearTo ? r.yearFrom : r.yearFrom + '–' + r.yearTo;
-      const tlColor = r.aiColor || '';
-      const tlDot = tlColor === 'green' ? '<span class="tl-dot tl-dot-green"></span>' : tlColor === 'yellow' ? '<span class="tl-dot tl-dot-yellow"></span>' : tlColor === 'red' ? '<span class="tl-dot tl-dot-red"></span>' : '';
-      const tlCell = r.aiColor ? `<div class='tl-table-cell'>${tlDot}</div>` : '<span style="color:var(--text-muted);font-size:11px;">—</span>';
       const dayPill = depositDayPill(r);
       const sla = slaDot(r);
       return `<tr draggable="true" data-id="${r.id}" onclick="rowClick(event,${r.id})">
@@ -5908,7 +5896,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <td data-label="Vehicle">${escapeHtml(vehicle)}</td>
         <td data-label="Budget">${budget}${paymentBadge(r)}</td>
         <td data-label="Years">${years}</td>
-        <td data-label="AI">${tlCell}</td>
         <td data-label="Status">${sla}<span class="status-pill ${statusClass}"><span class="dot ${dotClass}"></span>${statusLabel}</span><div style="margin-top:4px;">${stagePill(r)}</div></td>
         <td data-label="Submitted" style="color:var(--text-muted)">${date}</td>
         <td style="width:80px;text-align:center;">
@@ -6598,16 +6585,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (notesEl) notesEl.textContent = r.notes && r.notes !== '—' ? r.notes : '(no notes)';
 
     // AI
-    const aiEl = document.getElementById('dv-ai-content');
-    if (aiEl) {
-      if (r.aiColor && r.aiReason) {
-        const cls = { green: 'tl-green', yellow: 'tl-yellow', red: 'tl-red' }[r.aiColor];
-        const label = { green: 'Looks Good', yellow: 'Review Needed', red: 'Likely Unworkable' }[r.aiColor];
-        aiEl.innerHTML = `<span class='tl-badge ${cls}'><span class='tl-dot tl-dot-${r.aiColor}'></span>${label}</span><div style="margin-top:8px;font-size:12px;line-height:1.55;">${escapeHtml(r.aiReason)}</div>`;
-      } else {
-        aiEl.innerHTML = '<span style="font-style:italic;">Not yet assessed.</span>';
-      }
-    }
 
     // Call outcome — a graded good/bad wins; else no-show; else pending.
     // (A graded call means we reached them, so it supersedes any stale no-show.)
@@ -7549,29 +7526,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     }
 
     // AI assessment
-    const aiEl = document.getElementById('dp-ai-content');
-    if (r.aiColor && r.aiReason) {
-      const cls = { green: 'tl-green', yellow: 'tl-yellow', red: 'tl-red' }[r.aiColor];
-      const label = { green: 'Looks Good', yellow: 'Review Needed', red: 'Likely Unworkable' }[r.aiColor];
-      let similarHtml = '';
-      if (Array.isArray(r.aiSimilarSales) && r.aiSimilarSales.length) {
-        const items = r.aiSimilarSales.slice(0, 3).map(s => {
-          const title = `${s.year} ${s.make}${s.model ? ' ' + s.model : ''}`;
-          const price = s.total_sale ? `$${Number(s.total_sale).toLocaleString()}` : '—';
-          return `<div style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);padding:4px 0;"><span style="color:var(--text);font-weight:600;">${escapeHtml(title)}</span> · sold ${price}</div>`;
-        }).join('');
-        similarHtml = `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
-          <div style="font-family:system-ui,sans-serif;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px;">Similar past sales</div>
-          ${items}
-        </div>`;
-      }
-      aiEl.innerHTML = `<span class='tl-badge ${cls}'><span class='tl-dot tl-dot-${r.aiColor}'></span>${label}</span><div class='ai-assessment-box'>${escapeHtml(r.aiReason)}${similarHtml}</div>`;
-    } else if (r.aiPending) {
-      aiEl.innerHTML = `<span style='font-family:system-ui,sans-serif;font-size:13px;color:var(--text-muted);'><span class='ai-spinner'></span>Reviewing...</span>`;
-    } else {
-      aiEl.innerHTML = `<span style='font-family:system-ui,sans-serif;font-size:13px;color:var(--text-muted);'>Not yet assessed. <a href='#' onclick='event.preventDefault();runAIReview(requests.find(r=>r.id==${r.id}));setTimeout(()=>{const req=requests.find(r=>r.id==${r.id});if(req)populateDetailView(req);},500);' style='color:var(--accent-bright);'>Run now</a></span>`;
-    }
-
     // Always show the recs section. Staff can add recs manually even before
     // the AI fires; hiding the section was making it look like the feature
     // was missing.
@@ -8846,15 +8800,19 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // at once. Each reviewed lead now persists its color (see runAIReview), so the
   // backlog drains a few per refresh instead of re-storming every 20s.
   const AI_REVIEW_BATCH = 6;
-  function reviewPendingRequests() {
-    // Reset any stuck aiPending before reviewing
-    requests.forEach(r => { if (r.aiPending) r.aiPending = false; });
-    requests.filter(r => !r.aiColor && r.status !== 'rejected')
-      .slice(0, AI_REVIEW_BATCH)
-      .forEach(r => runAIReview(r));
-    // (Vehicle recommendations are no longer auto-backfilled — they fire on
-    // status transition to "searching". See updateStatusFromDetail.)
-  }
+  // AI Assessment REMOVED 2026-08-31 (owner: "we never use it").
+  // This used to batch-run runAIReview() over un-assessed leads on every load
+  // and render, each one an /api/ai call billed to the Anthropic account. The
+  // traffic-light column, both AI Assessment panels, and the Open Searches
+  // badge are gone, so nothing consumes ai_color/ai_reason any more and there
+  // is no reason to keep paying to compute them. Now a no-op.
+  //
+  // The scoring machinery (_localAssess / runAIReview) is intentionally LEFT IN
+  // PLACE but uncalled — reinstating the feature is a matter of restoring the UI
+  // and this loop, and the ai_color / ai_reason columns still hold prior values.
+  // Vehicle recommendations (runOpenSearchAI) are a SEPARATE feature and remain
+  // fully active — they fire on the transition to "searching".
+  function reviewPendingRequests() { /* no-op — AI Assessment retired */ }
   // ─── PSI PERIOD ──────────────────────────────────────────────
   // The PSI ("Post-Sale Inspection") period is the window after we've bought a
   // car for a client and before it's handed over. Moving a request here captures
@@ -9010,9 +8968,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const _fmtMoney = (n) => Number.isFinite(Number(n)) ? '$' + Number(n).toLocaleString() : '—';
       const budget = _fmtMoney(r.budgetMin) + ' – ' + _fmtMoney(r.budgetMax);
       const years = r.yearFrom + (r.yearTo !== r.yearFrom ? '–' + r.yearTo : '');
-      const tlCls = { green:'tl-green', yellow:'tl-yellow', red:'tl-red' }[r.aiColor] || '';
-      const tlLabel = { green:'Good', yellow:'Review', red:'Unworkable' }[r.aiColor] || '';
-      const tl = r.aiColor ? `<span class="tl-badge ${tlCls}" style="margin-left:8px;"><span class="tl-dot tl-dot-${r.aiColor}"></span>${tlLabel}</span>` : '';
       const recsHtml = r.aiRecs && r.aiRecs.length
         ? r.aiRecs.map(rec => `<div class="rec-item"><div class="rec-title">${escapeHtml(rec.title)}</div><div class="rec-why">${escapeHtml(rec.why)}</div></div>`).join('')
         : (r.aiPending
@@ -9021,7 +8976,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       return `<div class="repair-card" style="border-left-color:#5b21b6;">
         <div class="repair-card-header">
           <div>
-            <div class="repair-card-title">${escapeHtml(r.firstName)} ${escapeHtml(r.lastName)} ${tl}</div>
+            <div class="repair-card-title">${escapeHtml(r.firstName)} ${escapeHtml(r.lastName)}</div>
             <div class="repair-card-sub">${escapeHtml(budget)} &middot; ${escapeHtml(years)} &middot; ${escapeHtml(r.body || 'Any style')}</div>
             ${r.notes && r.notes !== '—' ? `<div style="font-size:12px;color:var(--text-muted);font-style:italic;margin-top:4px;font-family:system-ui,sans-serif;">${escapeHtml(r.notes)}</div>` : ''}
           </div>
