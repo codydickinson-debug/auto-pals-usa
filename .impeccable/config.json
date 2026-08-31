@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "radial-halo",
+        "value": "*",
+        "files": [
+          "public/home.html"
+        ],
+        "createdAt": "2026-08-31T16:20:28.494Z",
+        "reason": "Owner confirmed: the hero aurora gradient is a deliberate brand element added on purpose"
+      },
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "public/home.html"
+        ],
+        "createdAt": "2026-08-31T16:20:35.287Z",
+        "reason": "Owner confirmed: FAQ accordion max-height transition is intentional and works fine at this scale"
+      }
+    ]
+  }
+}
