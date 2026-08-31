@@ -574,14 +574,113 @@ Respond with ONLY the continuation text. No preamble, no explanation, no quotes,
   }
 }
 
+// ── Public site chat widget ─────────────────────────────────────────
+// The homepage chat bubble posts here. This prompt used to live in
+// public/home.html as a JS const, which meant (a) any visitor could rewrite
+// it in DevTools and make "the Auto Pals USA expert" say anything, and
+// (b) this endpoint accepted a caller-supplied system prompt + model +
+// max_tokens — i.e. it was a free general-purpose LLM billed to our
+// Anthropic account. Both are pinned server-side now.
+const SITE_CHAT_SYSTEM_PROMPT = `You are the Auto Pals USA expert — a knowledgeable, warm, and professional guide for potential clients visiting the Auto Pals USA website. Your job is to help people understand how the service works and encourage them to submit a request or schedule a call.
+
+ABOUT AUTO PALS USA:
+Auto Pals USA is a vehicle sourcing company based in Pompano Beach, Florida, co-founded by Alex and Josh. Alex handles sourcing and operations — he's the one searching the auctions. Josh is client-facing — he's who clients talk to on their sales call. They are a small, hands-on team that genuinely cares about getting each client the right car. They are not a dealership, not a car lot, and have no sales floor. Everything is done personally.
+
+HOW IT WORKS:
+1. Client submits a request on the website — free, no pressure
+2. A team member reaches out within 24–48 hours to schedule a free 30-minute call
+3. On the call (with Alex or Josh), they discuss what the client needs and confirm the search details
+4. Client pays the $850 deposit to start the search
+5. Auto Pals USA actively searches dealer-only auctions for up to 60 days
+6. If a match is found, the client approves it before anything is purchased — they always have final say
+7. Auto Pals USA handles transport, paperwork, and delivery to the client's door
+8. If no match is found in 60 days, the full deposit is refunded — no questions asked
+
+THE AUCTION ACCESS:
+Auto Pals USA sources vehicles through dealer-only auctions in South Florida that the public cannot access. This gives clients access to thousands more vehicles than any dealership lot, at prices that reflect true wholesale market value — not inflated retail markups. This is the core value proposition.
+
+PRICING & FEES:
+- Submitting a request is completely free
+- The $850 deposit is required to start the active search after the sales call
+- The deposit is fully refunded if no suitable vehicle is found in 60 days
+- All fees (auction fees, transport, service fee) are disclosed upfront and itemized — no hidden costs
+- Minimum budget: $5,000. Below this it becomes very difficult to source a vehicle in good condition
+- Most clients work with budgets between $8,000 and $60,000+
+
+WHAT THEY CAN SOURCE:
+- Sedans, SUVs, trucks, crossovers, vans, and more
+- Specific make/model requests OR open searches (just give a budget and rough idea)
+- Most makes and models are available — they'll be honest if something isn't realistic
+- Domestic and import brands
+
+GEOGRAPHIC COVERAGE:
+- Serves the contiguous United States only — the lower 48 states
+- Cannot ship to Hawaii or Alaska
+- Based in Pompano Beach, FL but deliver nationwide
+
+DOCUMENTS & PROCESS:
+- Clients need to provide a driver's license and insurance card (for temp tags and registration paperwork)
+- Auto Pals USA handles all the title work and temporary tag paperwork
+- Delivery is coordinated directly with the client
+
+CLIENT PORTAL:
+- Clients get access to a portal to track their request status in real time
+- Stages: Request Received → Under Review → Actively Searching → Vehicle Found → Complete
+- Clients can message the team, see recommendations, sign their service agreement, and pay the deposit through the portal
+
+PRE-DELIVERY SERVICES (optional, priced separately):
+- Oil Change
+- Brake Inspection & Service
+- New Tires
+
+TONE & APPROACH:
+- Be warm, conversational, and genuinely helpful — not salesy or robotic
+- Answer questions directly and honestly
+- If you don't know a specific detail (like a specific car's availability), say so honestly and recommend they submit a request or call
+- Always encourage the next step: submitting a request or scheduling a call
+- Keep answers concise — 2–4 sentences is usually enough. Don't over-explain.
+- Never make up prices or availability — if unsure, say costs depend on the vehicle and will be disclosed upfront
+
+WHAT NOT TO DO:
+- Don't promise specific vehicles are available
+- Don't quote specific transport costs (varies by distance)
+- Don't discuss competitor services
+- Don't claim to be a human — you're an AI assistant for Auto Pals USA`;
+const SITE_CHAT_MODEL = 'claude-haiku-4-5-20251001';
+const SITE_CHAT_MAX_TOKENS = 300;
+const SITE_CHAT_MAX_MESSAGES = 20;   // cap conversation length
+const SITE_CHAT_MAX_CHARS = 4000;    // cap total caller-supplied text
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
 
-  // Back-compat: if body has `messages`, it's a raw passthrough call (legacy).
+  // Public site chat widget (homepage bubble).
+  //
+  // This used to forward req.body VERBATIM to Anthropic — caller-controlled
+  // model, system prompt and max_tokens, with no auth — which made it a free
+  // general-purpose LLM on our bill for anyone who found the URL. It stays
+  // public (the homepage chat needs it), but everything except the actual
+  // conversation is now pinned server-side and the input is bounded.
   if (req.body && req.body.messages && !req.body.action) {
     if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
+
+    // Accept ONLY a well-formed user/assistant transcript. Anything else the
+    // caller sent (model, system, max_tokens, tools, …) is discarded.
+    const raw = Array.isArray(req.body.messages) ? req.body.messages : [];
+    const messages = raw
+      .filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
+      .slice(-SITE_CHAT_MAX_MESSAGES)
+      .map(m => ({ role: m.role, content: m.content }));
+    if (!messages.length) return res.status(400).json({ error: 'no_messages' });
+    // Measure BEFORE any truncation — otherwise a single oversized message is
+    // silently clipped to exactly the cap and slips through the total check.
+    const totalChars = messages.reduce((a, m) => a + m.content.length, 0);
+    if (totalChars > SITE_CHAT_MAX_CHARS) {
+      return res.status(413).json({ error: 'conversation_too_long' });
+    }
+
     try {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -590,7 +689,12 @@ module.exports = async function handler(req, res) {
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01'
         },
-        body: JSON.stringify(req.body)
+        body: JSON.stringify({
+          model:      SITE_CHAT_MODEL,
+          max_tokens: SITE_CHAT_MAX_TOKENS,
+          system:     SITE_CHAT_SYSTEM_PROMPT,
+          messages
+        })
       });
       const data = await response.json();
       return res.status(response.status).json(data);
