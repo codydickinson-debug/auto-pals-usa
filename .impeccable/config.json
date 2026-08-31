@@ -20,6 +20,15 @@
         ],
         "createdAt": "2026-08-31T16:20:35.287Z",
         "reason": "Owner confirmed: FAQ accordion max-height transition is intentional and works fine at this scale"
+      },
+      {
+        "rule": "dark-glow",
+        "value": "*",
+        "files": [
+          "public/home.html"
+        ],
+        "createdAt": "2026-08-31T16:22:38.475Z",
+        "reason": "Owner confirmed: sticky nav elevation shadow (0 4px 24px navy) — a real offset drop shadow tinted to brand navy, not a zero-offset glow"
       }
     ]
   }
