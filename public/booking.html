@@ -777,6 +777,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         </div>
         <div class="confirmed-title">You're booked!</div>
         <p class="confirmed-desc">A calendar invite has been sent to your email. Alex or Josh will call you at the scheduled time.</p>
+        <!-- Shown only when the booking SAVED but the calendar/email leg failed
+             (or Google isn't configured). The slot is genuinely reserved and the
+             team can see it — we just can't promise the invite landed, so we say
+             so instead of claiming an email that may never arrive.
+             confirmBooking() fills and reveals this; hidden by default. -->
+        <p id="conf-warning" role="status" style="display:none;max-width:420px;margin:0 auto 18px;padding:12px 16px;background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;font-family:'DM Sans',system-ui,sans-serif;font-size:13.5px;line-height:1.6;color:#92400e;text-align:left;"></p>
         <div class="confirmed-card">
           <div class="confirmed-detail">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1085,7 +1091,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const dateObj = new Date(selectedDate + 'T12:00:00');
     const dateLabel = dateObj.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
 
-    // Save to Supabase bookings table
+    // Save to Supabase bookings table. THIS IS THE SOURCE OF TRUTH — the staff
+    // dashboard, the 1-hour reminder and the night-before reminder all read
+    // from this row. If it doesn't land, the client is NOT booked, no matter
+    // what the Google Calendar leg below does.
+    let bookingSaved = false;
     try {
       const res = await fetch('/api/db?table=bookings', {
         method: 'POST',
@@ -1131,9 +1141,24 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           window.location.href = 'request.html';
           return;
         }
+        // Any OTHER non-ok response (500, validation, rate limit, bad gateway…)
+        // is a real failure. Previously execution fell straight through to the
+        // "You're booked!" screen, so a client could be told their call was
+        // confirmed when nothing was ever written — and nobody would call them.
+        throw new Error('save_failed_http_' + res.status);
       }
+      bookingSaved = true;
     } catch(e) {
-      console.log('[Booking] DB unavailable, continuing in demo mode');
+      // Network error, timeout, non-JSON body, or the throw above. Do NOT
+      // advance to the confirmation screen — tell them plainly and let them
+      // retry, with a phone fallback so a determined client isn't stuck.
+      console.error('[Booking] save FAILED — not confirming:', e && e.message);
+      try { track('booking_submit_failed', { date: selectedDate, time: selectedTime, reason: (e && e.message) || 'unknown' }); } catch (_) {}
+      alert("Sorry — we couldn't save your booking just now, so it is NOT confirmed.\n\n"
+          + "Please tap Confirm Booking again. If it keeps failing, call or text us at (561) 220-9577 and we'll get you scheduled.");
+      btn.disabled = false;
+      btn.textContent = 'Confirm Booking';
+      return;
     }
 
     // Also notify via booking API — this is what creates the Google Calendar
@@ -1141,6 +1166,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // screen on it, but we DO log failures so the staff can see them in the
     // Vercel function logs (which is where they'd debug a missing calendar
     // event from).
+    let calendarOk = false;
     try {
       // If the user happens to have a portal_code in sessionStorage (because
       // they came from the portal), pass it through so the calendar event can
@@ -1167,8 +1193,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         const data = await bRes.json().catch(() => ({}));
         if (data.demo) {
           console.warn('[booking] DEMO MODE — Google Calendar env vars not configured. No calendar event created.');
-        } else if (data.eventId) {
-          console.log('[booking] Calendar event created:', data.eventId, 'emailSent=', data.emailSent);
+        } else {
+          console.log('[booking] /api/booking ok — eventId=', data.eventId,
+                      'calendarOk=', data.calendarOk, 'clientEmailOk=', data.clientEmailOk);
+          // Only promise the invite when the calendar event was created AND the
+          // client confirmation email actually sent. Field names must match
+          // api/booking.js's response (calendarOk / clientEmailOk) — an earlier
+          // draft checked a non-existent `emailSent`, which would have shown the
+          // "no invite" warning on every single successful booking.
+          calendarOk = !!(data.calendarOk && data.clientEmailOk);
         }
       }
     } catch(e) {
@@ -1218,14 +1251,23 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       returning_client: !!sessionStorage.getItem('portal_code')
     }, _scheduleEventId);
 
-    // If the calendar event failed (or we're in demo mode without Google
-    // configured), warn the user instead of silently claiming success.
-    const banner = document.getElementById('conf-warning');
-    if (banner) {
-      try {
-        // Re-read the booking response we logged earlier
-        // (Best-effort; falls through cleanly if the response was non-JSON.)
-      } catch (e) {}
+    // We only reach here when the booking actually saved (bookingSaved === true;
+    // every failure path above returns). But the calendar/email leg is separate
+    // and non-blocking, so if THAT failed we must stop promising an invite that
+    // isn't coming. The slot is genuinely reserved either way.
+    //
+    // (This replaces a stub that read #conf-warning inside an empty try{} — and
+    // #conf-warning didn't exist in the DOM, so it could never fire.)
+    if (!calendarOk) {
+      const banner = document.getElementById('conf-warning');
+      if (banner) {
+        banner.textContent = "One thing: we couldn't send your email invite just now. "
+          + "Your call IS reserved and our team can see it — you don't need to rebook. "
+          + "Add it to your calendar from the details below, and reach us at (561) 220-9577 with any questions.";
+        banner.style.display = 'block';
+      }
+      const desc = document.querySelector('#step-3 .confirmed-desc');
+      if (desc) desc.textContent = 'Your call is reserved. Alex or Josh will call you at the scheduled time.';
     }
     showStep(3);
   }
