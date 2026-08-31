@@ -11,6 +11,12 @@ node_modules
 .claude/
 .tmp-*
 
+# Local-only data containing customer PII. NEVER commit — this repo is public.
+# sales-seed.json (35 historical sales incl. client names + VINs + margins) used
+# to live in public/ and was therefore downloadable by anyone at
+# https://www.autopalsusa.com/sales-seed.json. Moved here 2026-08-31.
+private-data/
+
 # Local AI-session scratch docs — not part of the deployed app
 COWORK_SESSION_PRIMER.md
 LAUNCH_NOTES.md

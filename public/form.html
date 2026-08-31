@@ -9304,6 +9304,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // One-time seed: load historical sales from the CSV-derived JSON bundle.
   // Runs only if we have zero sales and haven't attempted the seed before,
   // so it doesn't keep trying or overwrite user data.
+  //
+  // ⚠️ SECURITY (2026-08-31): /sales-seed.json was REMOVED from public/ — it is
+  // 35 real sales incl. client names, VINs and per-deal profit, and living in
+  // public/ meant anyone could download it from the live site with no auth.
+  // It now lives (gitignored) in private-data/sales-seed.json. This fetch 404s
+  // and returns silently, which is fine: Supabase `sales` is the source of
+  // truth (loadFromDB) and this was only ever a one-time localStorage bootstrap.
+  // DO NOT "fix" this by putting the file back under public/ — if the history
+  // ever needs re-importing, load it into the sales TABLE instead.
   (async function seedHistoricalSales() {
     if (sales.length > 0) return;
     if (localStorage.getItem('am_sales_seeded') === '1') return;

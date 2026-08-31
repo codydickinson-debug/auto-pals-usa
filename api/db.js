@@ -1317,9 +1317,34 @@ module.exports = async function handler(req, res) {
         if (!body.text || !String(body.text).trim()) {
           return res.status(400).json({ error: 'empty_message' });
         }
+        // ── Ownership gate (mirrors the GET branch above) ──────────────
+        // Without this, POST /messages was fully unauthenticated: anyone who
+        // knew (or guessed) a request_id could inject a message into a client's
+        // portal thread AND — because from_role drives the fan-out below — make
+        // it look like it came from staff, firing a real SMS from our Salesmsg
+        // number and an email from info@autopalsusa.com to that customer. That
+        // is a ready-made "wire the deposit somewhere else" phishing vector.
+        //
+        // Staff (valid token) keep posting as 'team'. Public callers must prove
+        // ownership with the portal_code for that request — the portal already
+        // sends it — and are FORCED to 'client' so they can never impersonate
+        // staff. Both existing flows are unchanged.
+        let fromRole = body.from;
+        if (!isStaff) {
+          const code = String(req.query.portal_code || '').trim();
+          if (!body.requestId || !code) {
+            return res.status(401).json({ error: 'unauthorized' });
+          }
+          const owner = await query('requests', 'GET', null,
+            `?id=eq.${encodeURIComponent(body.requestId)}&portal_code=eq.${encodeURIComponent(code)}&limit=1`);
+          if (!owner || !owner.length) {
+            return res.status(401).json({ error: 'unauthorized' });
+          }
+          fromRole = 'client';   // never let a public caller post as staff
+        }
         const row = {
           request_id: body.requestId,
-          from_role: body.from,
+          from_role: fromRole,
           text: body.text,
           ts: body.ts || new Date().toISOString(),
           read: body.read || false
@@ -1330,7 +1355,7 @@ module.exports = async function handler(req, res) {
         //   team→client message  →  SMS to the client's phone
         //   client→team message  →  SMS fan-out to all staff numbers
         try {
-          const reqRow = await query('requests', 'GET', null, `?id=eq.${row.request_id}&limit=1`);
+          const reqRow = await query('requests', 'GET', null, `?id=eq.${encodeURIComponent(row.request_id)}&limit=1`);
           if (reqRow && reqRow.length) {
             const r0 = reqRow[0];
             const msgFires = [];
@@ -1380,7 +1405,7 @@ module.exports = async function handler(req, res) {
       }
       if (req.method === 'PUT') {
         // Mark messages as read
-        await query('messages', 'PATCH', { read: true }, `?request_id=eq.${body.requestId}&from_role=eq.client`);
+        await query('messages', 'PATCH', { read: true }, `?request_id=eq.${encodeURIComponent(body.requestId)}&from_role=eq.client`);
         return res.json({ ok: true });
       }
       if (req.method === 'DELETE') {
