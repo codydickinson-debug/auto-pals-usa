@@ -2030,7 +2030,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v215 · 2026-09-01</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v216 · 2026-09-01</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -5728,7 +5728,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     youtube:   { label: 'YouTube',   icon: '▶️', bg: '#ff0000' },
     email:     { label: 'Email',     icon: '✉️', bg: '#0f2557' },
     referral:  { label: 'Referral',  icon: '🤝', bg: '#15803d' },
-    josh:      { label: 'Josh',      icon: '👤', bg: '#0f2557' }
+    josh:      { label: 'Josh',      icon: '👤', bg: '#0f2557' },
+    joshig:    { label: 'Josh IG',     icon: '📸', bg: '#0f2557' },
+    joshtt:    { label: 'Josh TikTok', icon: '🎵', bg: '#0f2557' }
   };
   function sourceLabel(s) {
     s = (s || '').trim().toLowerCase();
@@ -5755,7 +5757,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // Counts are computed over the CURRENT view (status + search) so the numbers
   // always match the table. "Everything else" = any lead not from the three
   // named channels (other sources + untagged), so the buttons partition the list.
-  const MAIN_SOURCES = ['tiktok', 'instagram', 'meta', 'josh'];
+  const MAIN_SOURCES = ['tiktok', 'instagram', 'meta', 'josh', 'joshig', 'joshtt'];
   function computeSourceCounts(list) {
     const nm = r => (r.source || '').trim().toLowerCase();
     return {
@@ -5764,6 +5766,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       instagram: list.filter(r => nm(r) === 'instagram').length,
       meta:      list.filter(r => nm(r) === 'meta').length,
       josh:      list.filter(r => nm(r) === 'josh').length,
+      joshig:    list.filter(r => nm(r) === 'joshig').length,
+      joshtt:    list.filter(r => nm(r) === 'joshtt').length,
       __other:   list.filter(r => !MAIN_SOURCES.includes(nm(r))).length
     };
   }
@@ -5776,6 +5780,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       { key: 'instagram', label: '📸 Instagram' },
       { key: 'meta',      label: '📘 Meta' },
       { key: 'josh',      label: '👤 Josh' },
+      { key: 'joshig',    label: '📸 Josh IG' },
+      { key: 'joshtt',    label: '🎵 Josh TikTok' },
       { key: '__other',   label: 'Everything else' }
     ];
     row.innerHTML =
