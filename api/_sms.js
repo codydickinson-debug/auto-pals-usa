@@ -64,6 +64,24 @@ const SALESMSG_BASE = 'https://api.salesmessage.com/pub/v2.3';
 //   4. Refresh failures are console.ERROR now — they show up in the
 //      Vercel error feed instead of hiding as warnings.
 //   5. On a 401 from /messages, wipe cache, re-resolve, retry once.
+// v3 hardening (2026-09-01) — after the chain died three times in two days.
+// The failure was never "the token expired"; it is that this chain has no
+// anchor. Refreshing ROTATES (the old token dies the instant a new one is
+// issued), so the single copy in app_config is the only credential that
+// exists, and three things could sever it silently:
+//   a. A FAILED PERSIST. refresh -> old token dead -> save fails -> the only
+//      copy lives in one lambda memory and dies with it. persistToken now
+//      retries 3x, returns a boolean, and an unsaved token logs CRITICAL
+//      (we still USE it — discarding guarantees the outage).
+//   b. CONCURRENT REFRESHES. _refreshInFlight is module-level = per lambda,
+//      and Vercel runs many. Two instances refreshing together invalidate
+//      each other. _resolveToken now ADOPTS a token persisted within
+//      FRESH_TOKEN_MS instead of refreshing it again.
+//   c. A TRANSIENT BLIP. One failed refresh used to wait 30 min for the next
+//      heartbeat. Refresh now retries 3x on 5xx/network, never on 401/403
+//      (genuinely dead — retrying just burns time).
+// Keep SALESMSG_API_KEY in Vercel current: it is the only recovery path once
+// the chain breaks, and it is consumed on first use.
 const { SUPABASE_URL } = require('./_constants.js');
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_KEY
   || process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -74,7 +92,7 @@ let _tokenCache = { value: null, expiresAt: 0 };
 async function loadPersistedToken() {
   if (!SUPABASE_SERVICE_KEY) return null;
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/app_config?key=eq.salesmsg_token&select=value`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/app_config?key=eq.salesmsg_token&select=value,updated_at`, {
       headers: {
         'apikey': SUPABASE_SERVICE_KEY,
         'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
@@ -82,58 +100,99 @@ async function loadPersistedToken() {
       }
     });
     const rows = await res.json().catch(() => []);
-    return (Array.isArray(rows) && rows[0] && rows[0].value) || null;
+    const row = Array.isArray(rows) && rows[0];
+    if (!row || !row.value) return null;
+    // updated_at lets _resolveToken tell "another instance just rotated this"
+    // from "this is stale and needs refreshing" — see FRESH_TOKEN_MS.
+    return { value: row.value, updatedAt: Date.parse(row.updated_at || '') || 0 };
   } catch (e) {
     console.error('[Salesmsg] persisted-token read failed:', e && e.message);
     return null;
   }
 }
 
+// Save the rotated token. Returns true only if it actually landed.
+// This MATTERS: refreshing invalidates the previous token at Salesmsg, so a
+// token we fail to save is a token nobody will ever see again — the chain is
+// severed the moment this lambda dies. Previously this logged and shrugged.
 async function persistToken(token) {
   if (!SUPABASE_SERVICE_KEY) {
     console.error('[Salesmsg] cannot persist token — no service-role key configured');
-    return;
+    return false;
   }
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/app_config`, {
-      method: 'POST',
-      headers: {
-        'apikey': SUPABASE_SERVICE_KEY,
-        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify({ key: 'salesmsg_token', value: token, updated_at: new Date().toISOString() })
-    });
-    if (!res.ok) {
-      console.error('[Salesmsg] token persist failed:', res.status, (await res.text().catch(() => '')).slice(0, 150));
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/app_config`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({ key: 'salesmsg_token', value: token, updated_at: new Date().toISOString() })
+      });
+      if (res.ok) return true;
+      console.error(`[Salesmsg] token persist attempt ${attempt}/3 failed:`, res.status,
+        (await res.text().catch(() => '')).slice(0, 150));
+    } catch (e) {
+      console.error(`[Salesmsg] token persist attempt ${attempt}/3 error:`, e && e.message);
     }
-  } catch (e) {
-    console.error('[Salesmsg] token persist error:', e && e.message);
+    if (attempt < 3) await new Promise(r => setTimeout(r, 300 * attempt));
   }
+  return false;
 }
 
 async function refreshSalesmsgToken(currentToken) {
-  const res = await fetch(`${SALESMSG_BASE}/oauth/personal-token/refresh`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${currentToken}`,
-      'Accept':        'application/json'
+  // Retry TRANSPORT failures and 5xx only. A 401/403 means the token is
+  // genuinely dead — retrying just burns time, and the chain needs a human.
+  let res = null, j = {};
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      res = await fetch(`${SALESMSG_BASE}/oauth/personal-token/refresh`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${currentToken}`,
+          'Accept':        'application/json'
+        }
+      });
+      j = await res.json().catch(() => ({}));
+      if (res.ok && j.access_token) break;
+      if (res.status === 401 || res.status === 403) break;   // dead, don't retry
+      console.warn(`[Salesmsg] refresh attempt ${attempt}/3 -> ${res.status}, retrying`);
+    } catch (e) {
+      console.warn(`[Salesmsg] refresh attempt ${attempt}/3 threw:`, e && e.message);
+      res = null;
     }
-  });
-  const j = await res.json().catch(() => ({}));
-  if (!res.ok || !j.access_token) {
-    console.error('[Salesmsg] TOKEN REFRESH FAILED', res.status, JSON.stringify(j).slice(0, 200),
+    if (attempt < 3) await new Promise(r => setTimeout(r, 400 * attempt));
+  }
+
+  if (!res || !res.ok || !j.access_token) {
+    console.error('[Salesmsg] TOKEN REFRESH FAILED', res && res.status, JSON.stringify(j).slice(0, 200),
       '— if this repeats, the chain is dead: mint a new PAT in Salesmsg (Settings → Developer) and update SALESMSG_API_KEY in Vercel.');
     return null;
   }
+
   // expires_in is seconds. Cap our in-memory horizon at 55 min so we
   // always refresh comfortably before the ~1h extension dies.
   const secs = Number(j.expires_in) || 3600;
   const horizonMs = Math.min(secs, 3600) * 1000 - 5 * 60 * 1000;
   _tokenCache = { value: j.access_token, expiresAt: Date.now() + horizonMs };
-  await persistToken(j.access_token);
-  console.log('[Salesmsg] token refreshed + persisted, valid ~', Math.round(horizonMs / 60000), 'min');
+
+  // Salesmsg has ALREADY invalidated `currentToken` at this point. If we can't
+  // save the replacement, this lambda holds the only copy in existence and the
+  // chain dies when it does. We still return it (discarding guarantees the
+  // outage; using it might carry us to the next successful save), but the log
+  // is deliberately screaming so it's findable, and the keepalive's live check
+  // will email staff within ~30 min.
+  const saved = await persistToken(j.access_token);
+  if (!saved) {
+    console.error('[Salesmsg] CRITICAL: refreshed token could NOT be persisted. The previous token is already ' +
+      'invalidated at Salesmsg, so if this instance dies the chain is severed and SMS stops until a new PAT is ' +
+      'minted. Check Supabase app_config writability (service-role key) immediately.');
+  } else {
+    console.log('[Salesmsg] token refreshed + persisted, valid ~', Math.round(horizonMs / 60000), 'min');
+  }
   return j.access_token;
 }
 
@@ -172,12 +231,27 @@ async function activeToken() {
   }
 }
 
+// A token persisted this recently is certainly still valid (they live ~55 min),
+// so a second instance should USE it rather than refresh again. Refreshing
+// rotates — two instances refreshing concurrently invalidate each other, which
+// is one of the ways this chain kept dying. The module-level single-flight
+// guard only covers one lambda; Vercel runs many.
+const FRESH_TOKEN_MS = 5 * 60 * 1000;
+
 async function _resolveToken() {
   // Cold start / stale cache: try the persisted token first — it's the
   // freshest one ANY lambda instance has seen.
   const persisted = await loadPersistedToken();
-  if (persisted) {
-    const refreshed = await refreshSalesmsgToken(persisted);
+  if (persisted && persisted.value) {
+    const age = Date.now() - persisted.updatedAt;
+    if (persisted.updatedAt && age >= 0 && age < FRESH_TOKEN_MS) {
+      // Another instance rotated it moments ago. Adopt it; do NOT refresh, or
+      // we'd invalidate the token they just saved.
+      _tokenCache = { value: persisted.value, expiresAt: Date.now() + (50 * 60 * 1000) - age };
+      console.log('[Salesmsg] adopted freshly-persisted token (age', Math.round(age / 1000) + 's) — skipped refresh');
+      return persisted.value;
+    }
+    const refreshed = await refreshSalesmsgToken(persisted.value);
     if (refreshed) return refreshed;
     // Persisted token dead too (quiet gap > 1h and keep-alive missed) —
     // fall through to the env seed as last resort.
@@ -185,7 +259,7 @@ async function _resolveToken() {
   // Env seed (fresh deploy or disaster recovery). Note this is expected to
   // fail on any project that has refreshed even once, since that first
   // refresh rotated the seed away — it's a cold-start bootstrap, not a
-  // standing fallback.
+  // standing fallback. Keep it current in Vercel so recovery is possible.
   const seed = process.env.SALESMSG_API_KEY;
   if (!seed) return null;
   const refreshed = await refreshSalesmsgToken(seed);
