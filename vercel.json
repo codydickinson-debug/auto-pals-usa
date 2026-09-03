@@ -35,19 +35,6 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=(self)" }
       ]
-    },
-    {
-      "//": "Always-revalidate the HTML pages so a normal load picks up the newest deploy — no more hard-refresh (Cmd+Shift+R). The big inlined assets still cache; the browser just checks with the server first and gets a fast 304 when nothing changed.",
-      "source": "/(.*\\.html)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
-      ]
-    },
-    {
-      "source": "/(home|form|request|portal|booking|mechanic-shop|deposit|deposit-complete|privacy|terms)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
-      ]
     }
   ],
   "functions": {
