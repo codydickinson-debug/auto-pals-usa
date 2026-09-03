@@ -2030,7 +2030,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v216 · 2026-09-01</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v217 · 2026-09-02</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -4750,7 +4750,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   function syncNavBadges() {
     const rb = document.getElementById('nav-badge-repair');
     const sb = document.getElementById('nav-badge-sold');
-    if (rb) rb.textContent = repairCars.length;
+    // Repairs badge = ACTIVE repairs only (cars still being worked), not every
+    // repair_cars row ever — excludes done-awaiting-paperwork and sold cars, so
+    // it matches the header "repair-count" stat instead of an all-time total.
+    if (rb) rb.textContent = repairCars.filter(c => !repairCarIsClosed(c) && !repairCarIsDone(c)).length;
     if (sb) sb.textContent = sales.length;
   }
 
