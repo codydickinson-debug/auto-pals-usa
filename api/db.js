@@ -789,7 +789,10 @@ module.exports = async function handler(req, res) {
         // actually changed. Awaited so Vercel doesn't kill the lambda mid-
         // PATCH; _pipedrive swallows its own errors and demo-modes when
         // creds aren't set, so this never throws.
-        if (mapped.status && priorRow && mapped.status !== priorRow.status) {
+        // Board drags ("dashboard is the source of truth", Sept 2026) set
+        // b.boardMove so they realign status internally WITHOUT pushing the move
+        // to Pipedrive. Normal staff status changes (no flag) still sync.
+        if (mapped.status && priorRow && mapped.status !== priorRow.status && !b.boardMove) {
           const merged = { ...priorRow, ...mapped };
           await pipedrive.syncStatusChange(merged, mapped.status)
             .catch(err => console.warn('[pipedrive] PUT-sync failed', err && err.message));

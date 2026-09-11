@@ -2049,7 +2049,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v218 · 2026-09-11</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v219 · 2026-09-11</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -4820,6 +4820,19 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     return 'new_lead';
   }
 
+  // Phase 3: coarse board-stage → legacy `status`, so the Requests table and the
+  // status-driven views stay consistent with the board. Terminal/clear stages
+  // map to a real status; everything mid-pipeline stays 'qualified' (active).
+  function stageToStatus(stage) {
+    switch (stage) {
+      case 'new_lead':          return 'new';
+      case 'lost':              return 'rejected';
+      case 'closed_deposit':    return 'awaiting_paperwork';
+      case 'email_remarketing': return 'dormant';
+      default:                  return 'qualified';
+    }
+  }
+
   // Staff follow-up reminder state (Phase 2) — drives the card dot. Reads
   // reminderAt (a staff reminder that does NOT text the client).
   function reminderState(r) {
@@ -4893,8 +4906,23 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         if (!r || !stage || !STAGE_KEYS.has(stage)) return;
         if (deriveStage(r) === stage && r.pipelineStage === stage) return;
         r.pipelineStage = stage;
+        const patch = { id: r.id, pipelineStage: stage };
+        // Phase 3: realign the internal status so the Requests table + views agree
+        // with the board. `boardMove` tells the backend to skip the Pipedrive push
+        // (dashboard is the source of truth) — and no client email/text ever fires
+        // because we never touch deposit/call/no-show fields here. Sold deals are
+        // left alone (managed in Sold Cars, not re-pipelined from the board).
+        const newStatus = stageToStatus(stage);
+        if (newStatus && newStatus !== r.status && r.status !== 'sold') {
+          const prevStatus = r.status;
+          r.status = newStatus;
+          if (typeof stampDormantTransition === 'function') stampDormantTransition(r, newStatus, prevStatus);
+          patch.status = newStatus;
+          patch.dormantAt = r.dormantAt || null;
+          patch.boardMove = true;
+        }
         if (typeof save === 'function') save();
-        dbPut('requests', { id: r.id, pipelineStage: stage });
+        dbPut('requests', patch);
         renderPipelineBoard();
       });
     });
