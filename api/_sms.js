@@ -735,9 +735,50 @@ function withinContactWindow(date) {
   return h >= QUIET_START_HOUR && h < QUIET_END_HOUR;
 }
 
+// ── Global automation pause (kill-switch) ───────────────────────────────────
+// When app_config.automation_paused is 'on', every automated CLIENT text is
+// held: the pre/post-call and no-show drips, scheduled follow-ups, call
+// reminders, and the booking / deposit / no-show / portal / welcome / booking-
+// link confirmations. staff_* alerts are EXEMPT so the team still gets new-lead
+// notifications. Flip the flag off (or delete the row) to resume — no redeploy.
+// Cached ~30s so pause/resume propagates quickly without a DB read on every
+// send. Fails OPEN (a DB blip sends rather than silently dropping messages),
+// consistent with the rest of _sms.js; the disabled call-reminder pg_cron is a
+// second, independent layer for the highest-volume scheduled sender.
+let _pauseCache = { value: null, at: 0 };
+const PAUSE_TTL_MS = 30 * 1000;
+async function isAutomationPaused() {
+  const now = Date.now();
+  if (_pauseCache.value !== null && (now - _pauseCache.at) < PAUSE_TTL_MS) return _pauseCache.value;
+  if (!SUPABASE_SERVICE_KEY) return false;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/app_config?key=eq.automation_paused&select=value`, {
+      headers: {
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Accept': 'application/json'
+      }
+    });
+    const rows = await res.json().catch(() => []);
+    const v = Array.isArray(rows) && rows[0] ? String(rows[0].value || '').toLowerCase() : '';
+    const paused = v === 'on' || v === 'true' || v === '1' || v === 'yes';
+    _pauseCache = { value: paused, at: now };
+    return paused;
+  } catch (e) {
+    console.error('[SMS] automation-pause read failed (failing open):', e && e.message);
+    return false;
+  }
+}
+
 async function send(type, data = {}) {
   const fn = TEMPLATES[type];
   if (!fn) return { ok: false, error: 'unknown_type', type };
+  // Global pause: hold all automated CLIENT messages while it's on. Staff
+  // alerts (staff_*) are exempt so the team still gets lead notifications.
+  if (CLIENT_TYPES.has(type) && await isAutomationPaused()) {
+    console.log('[SMS] skipped — automation paused for', type, data.phone || '');
+    return { ok: false, skipped: true, reason: 'automation_paused' };
+  }
   const body = fn(data);
   if (STAFF_TYPES.has(type)) return sendToStaff(body);
   if (CLIENT_TYPES.has(type)) {
