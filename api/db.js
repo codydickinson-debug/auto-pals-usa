@@ -653,7 +653,15 @@ module.exports = async function handler(req, res) {
           client_paid:                 b.clientPaid,
           follow_up_at:                b.followUpAt,
           follow_up_note:              b.followUpNote,
-          follow_up_sms_sent_at:       b.followUpSmsSentAt
+          follow_up_sms_sent_at:       b.followUpSmsSentAt,
+          // Pipeline board (kanban) + staff-facing follow-up reminders (Sept 2026).
+          // pipeline_stage = the 11-stage board column (separate from `status`,
+          // which still drives drips/sync). reminder_at/reminder_note = a staff
+          // reminder that shows a due/overdue dot on the card — it does NOT text
+          // the client (distinct from follow_up_at, which feeds the SMS drip).
+          pipeline_stage:              b.pipelineStage,
+          reminder_at:                 b.reminderAt,
+          reminder_note:               b.reminderNote
         };
         // Remove undefined values
         Object.keys(mapped).forEach(k => { if (mapped[k] === undefined) delete mapped[k]; });

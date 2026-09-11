@@ -1427,6 +1427,25 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .pl-two { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   @media (max-width: 760px) { .pl-two { grid-template-columns: 1fr; } }
   .pl-fun-row { display: grid; grid-template-columns: 128px 1fr 140px; align-items: center; gap: 12px; margin-bottom: 10px; }
+
+  /* ── Pipeline kanban board (drag-and-drop) ── */
+  .kb-wrap { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 10px; align-items: flex-start; }
+  .kb-col { flex: 0 0 226px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; max-height: 72vh; }
+  .kb-col.kb-over { outline: 2px dashed var(--navy); outline-offset: -2px; }
+  .kb-col-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); font-family: 'DM Sans', system-ui, sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--navy); position: sticky; top: 0; background: var(--bg); border-radius: 10px 10px 0 0; z-index: 1; }
+  .kb-count { flex: none; min-width: 20px; text-align: center; font-size: 11px; font-weight: 700; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 1px 7px; }
+  .kb-col-body { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 48px; }
+  .kb-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; cursor: grab; box-shadow: var(--shadow); transition: box-shadow 0.15s var(--ease-out); }
+  .kb-card:hover { box-shadow: var(--shadow-md); }
+  .kb-card:active { cursor: grabbing; }
+  .kb-card.kb-dragging { opacity: 0.45; }
+  .kb-card-name { font-family: 'DM Sans', system-ui, sans-serif; font-weight: 600; font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 6px; }
+  .kb-card-sub { font-family: system-ui, sans-serif; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .kb-rem-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .kb-rem-overdue { background: var(--red); }
+  .kb-rem-today { background: #15803d; }
+  .kb-rem-upcoming { background: #cbd5e1; }
+  .kb-empty { color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px 4px; font-family: system-ui, sans-serif; }
   .pl-fun-label { font-size: 13px; font-weight: 700; color: var(--text); font-family: system-ui, sans-serif; }
   .pl-fun-barwrap { background: #f1f5f9; border-radius: 6px; overflow: hidden; height: 26px; }
   .pl-fun-bar {
@@ -2030,7 +2049,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v217 · 2026-09-02</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v218 · 2026-09-11</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2950,6 +2969,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <div style="font-size:22px;font-weight:800;color:var(--navy);font-family:'DM Sans',system-ui,sans-serif;">Pipeline</div>
     <div style="font-size:13px;color:var(--text-muted);margin:4px 0 24px;font-family:system-ui,sans-serif;">Where every lead is and where they drop off — computed live from current requests.</div>
 
+    <div class="pl-card" style="padding:16px 14px;">
+      <div class="pl-card-title" style="margin-bottom:2px;">Pipeline board</div>
+      <div class="pl-card-sub" style="margin-bottom:12px;">Drag a lead between stages to move them. A colored dot = a follow-up reminder (red = overdue, green = today). Click a card to open the lead.</div>
+      <div id="kanban-board" class="kb-wrap"></div>
+    </div>
+
     <div class="pl-card">
       <div class="pl-card-title">Lead funnel</div>
       <div class="pl-card-sub">Each stage counts leads that reached at least that far. % is conversion from the previous stage.</div>
@@ -3140,6 +3165,24 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button onclick="saveFollowUpSchedule()" id="dv-followup-save" style="width:100%;padding:9px 14px;background:var(--navy,#0f2557);color:#fff;border:none;border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Schedule follow-up</button>
           <button onclick="clearFollowUpSchedule()" id="dv-followup-clear" style="display:none;width:100%;padding:8px 14px;background:transparent;color:var(--red);border:1px solid var(--red-light,#fecaca);border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Clear follow-up</button>
           <div id="dv-followup-saved" style="display:none;font-family:system-ui,sans-serif;font-size:12px;color:var(--green);text-align:center;"></div>
+        </div>
+      </div>
+
+      <!-- Staff follow-up reminder (Phase 2). A reminder for the TEAM — shows a
+           due/overdue dot on the pipeline card. Does NOT text the client (that's
+           the Future Follow-up above, which feeds the SMS drip). -->
+      <div id="dv-reminder-section" style="margin-bottom:18px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:10px;">⏰ Follow-up reminder <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--text-muted);">· for the team, no text sent</span></div>
+        <div id="dv-reminder-current" style="display:none;font-family:system-ui,sans-serif;font-size:12px;color:var(--text);background:var(--bg,#fff);border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:10px;line-height:1.5;"></div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div>
+            <label for="dv-reminder-date" style="display:block;font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);margin-bottom:3px;">Remind me on</label>
+            <input type="date" id="dv-reminder-date" oninput="markReminderDirty()" onchange="markReminderDirty()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;font-size:13px;">
+          </div>
+          <input type="text" id="dv-reminder-note" oninput="markReminderDirty()" placeholder="Optional note — e.g. 'call back re: financing'" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;">
+          <button onclick="saveReminder()" id="dv-reminder-save" style="width:100%;padding:9px 14px;background:var(--navy,#0f2557);color:#fff;border:none;border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Set reminder</button>
+          <button onclick="clearReminder()" id="dv-reminder-clear" style="display:none;width:100%;padding:8px 14px;background:transparent;color:var(--red);border:1px solid var(--red-light,#fecaca);border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Clear reminder</button>
+          <div id="dv-reminder-saved" style="display:none;font-family:system-ui,sans-serif;font-size:12px;color:var(--green);text-align:center;"></div>
         </div>
       </div>
 
@@ -3991,7 +4034,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       // Future follow-up ("not ready yet" — circle back on this date)
       followUpAt: r.follow_up_at || null,
       followUpNote: r.follow_up_note || '',
-      followUpSmsSentAt: r.follow_up_sms_sent_at || null
+      followUpSmsSentAt: r.follow_up_sms_sent_at || null,
+      // Pipeline board (kanban) stage + staff-facing follow-up reminder.
+      // pipelineStage = the board column (separate from status). reminderAt/Note
+      // = a staff reminder that shows a due/overdue dot — does NOT text the client.
+      pipelineStage: r.pipeline_stage || null,
+      reminderAt: r.reminder_at || null,
+      reminderNote: r.reminder_note || ''
     };
   }
 
@@ -4734,13 +4783,199 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     el.style.height = Math.min(el.scrollHeight, 180) + 'px';
   }
 
+  // ═══════════════ PIPELINE KANBAN BOARD ═══════════════
+  // Pipedrive-style drag-and-drop board over the 11 sales stages. The stage
+  // lives in its own `pipelineStage` field (separate from `status`, which still
+  // drives the drips + Pipedrive sync). Dragging a card sets pipelineStage only.
+  const PIPELINE_STAGES = [
+    { key: 'new_lead',          label: 'New Lead' },
+    { key: 'contact_attempted', label: 'Contact Attempted' },
+    { key: 'call_scheduled',    label: 'Call Scheduled' },
+    { key: 'no_show',           label: 'No Show' },
+    { key: 'qualified',         label: 'Qualified' },
+    { key: 'bad_call',          label: 'Bad Call' },
+    { key: 'good_call',         label: 'Good Call' },
+    { key: 'deposit_pending',   label: 'Deposit Pending' },
+    { key: 'closed_deposit',    label: 'Closed - Deposit' },
+    { key: 'lost',              label: 'Lost / Disqualified' },
+    { key: 'email_remarketing', label: 'Email Remarketing' }
+  ];
+  const STAGE_KEYS = new Set(PIPELINE_STAGES.map(s => s.key));
+
+  // Effective board column: stored stage, else derived from the legacy
+  // status/outcome fields (mirrors the one-time SQL backfill, so a lead with no
+  // stored stage still lands in the right column).
+  function deriveStage(r) {
+    if (r.pipelineStage && STAGE_KEYS.has(r.pipelineStage)) return r.pipelineStage;
+    if (r.depositPaid) return 'closed_deposit';
+    if (['sold', 'awaiting_paperwork', 'psi'].includes(r.status)) return 'closed_deposit';
+    if (['rejected', 'dormant'].includes(r.status)) return 'lost';
+    if (r.noShowAt) return 'no_show';
+    if (r.callOutcome === 'bad') return 'bad_call';
+    if (r.callOutcome === 'good') return 'good_call';
+    if (r.callCompletedAt) return 'good_call';
+    if (r.status === 'searching') return 'good_call';
+    if (r.bookingConfirmedAt) return 'call_scheduled';
+    if (r.status === 'qualified') return 'contact_attempted';
+    return 'new_lead';
+  }
+
+  // Staff follow-up reminder state (Phase 2) — drives the card dot. Reads
+  // reminderAt (a staff reminder that does NOT text the client).
+  function reminderState(r) {
+    if (!r.reminderAt) return 'none';
+    const due = new Date(r.reminderAt);
+    if (isNaN(due)) return 'none';
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const end = new Date();   end.setHours(23, 59, 59, 999);
+    if (due < start) return 'overdue';
+    if (due <= end)  return 'today';
+    return 'upcoming';
+  }
+
+  function kbCard(r) {
+    const veh = [r.make, r.model].filter(v => v && v !== '—').join(' ') || (r.searchMode === 'open' ? 'Open search' : '—');
+    const budget = r.budgetMax ? '$' + Number(r.budgetMax).toLocaleString() : '';
+    const rs = reminderState(r);
+    const dot = rs === 'none' ? '' :
+      `<span class="kb-rem-dot kb-rem-${rs}" title="Follow-up ${rs}${r.reminderNote ? ': ' + escapeHtml(r.reminderNote) : ''}"></span>`;
+    return `<div class="kb-card" draggable="true" data-id="${r.id}" onclick="openDetailView(${r.id})">
+      <div class="kb-card-name">${dot}<span>${escapeHtml(r.firstName || '')} ${escapeHtml(r.lastName || '')}</span></div>
+      <div class="kb-card-sub">${escapeHtml(veh)}${budget ? ' · ' + budget : ''}</div>
+    </div>`;
+  }
+
+  function renderPipelineBoard() {
+    const wrap = document.getElementById('kanban-board');
+    if (!wrap) return;
+    const byStage = {};
+    PIPELINE_STAGES.forEach(s => { byStage[s.key] = []; });
+    (Array.isArray(requests) ? requests : []).forEach(r => {
+      const st = deriveStage(r);
+      (byStage[st] || byStage.new_lead).push(r);
+    });
+    Object.values(byStage).forEach(list => list.sort((a, b) => new Date(b.submitted) - new Date(a.submitted)));
+    wrap.innerHTML = PIPELINE_STAGES.map(s => {
+      const cards = byStage[s.key];
+      const inner = cards.length ? cards.map(kbCard).join('') : '<div class="kb-empty">—</div>';
+      return `<div class="kb-col" data-stage="${s.key}">
+        <div class="kb-col-head"><span>${s.label}</span><span class="kb-count">${cards.length}</span></div>
+        <div class="kb-col-body" data-stage="${s.key}">${inner}</div>
+      </div>`;
+    }).join('');
+    bindKanbanDnD(wrap);
+  }
+
+  let _kbDragId = null;
+  function bindKanbanDnD(wrap) {
+    wrap.querySelectorAll('.kb-card').forEach(card => {
+      card.addEventListener('dragstart', e => {
+        _kbDragId = parseInt(card.dataset.id, 10);
+        card.classList.add('kb-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        try { e.dataTransfer.setData('text/plain', String(_kbDragId)); } catch (err) {}
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('kb-dragging');
+        wrap.querySelectorAll('.kb-col').forEach(c => c.classList.remove('kb-over'));
+      });
+    });
+    wrap.querySelectorAll('.kb-col-body').forEach(body => {
+      const col = body.parentElement;
+      body.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; col.classList.add('kb-over'); });
+      body.addEventListener('dragleave', e => { if (!col.contains(e.relatedTarget)) col.classList.remove('kb-over'); });
+      body.addEventListener('drop', e => {
+        e.preventDefault();
+        col.classList.remove('kb-over');
+        const stage = body.dataset.stage;
+        const r = (requests || []).find(x => x.id === _kbDragId);
+        _kbDragId = null;
+        if (!r || !stage || !STAGE_KEYS.has(stage)) return;
+        if (deriveStage(r) === stage && r.pipelineStage === stage) return;
+        r.pipelineStage = stage;
+        if (typeof save === 'function') save();
+        dbPut('requests', { id: r.id, pipelineStage: stage });
+        renderPipelineBoard();
+      });
+    });
+  }
+
+  // ── Staff follow-up reminders (Phase 2) ──
+  // A reminder for the TEAM on a lead — drives the due/overdue dot on its board
+  // card and the detail-view widget. Stored in reminderAt/reminderNote; NEVER
+  // texts the client (distinct from the Future Follow-up drip).
+  let _remDirtyFor = null;
+  function markReminderDirty() { _remDirtyFor = activeRequestId; }
+
+  function saveReminder() {
+    const r = (requests || []).find(x => x.id === activeRequestId);
+    if (!r) return;
+    const dateEl = document.getElementById('dv-reminder-date');
+    const noteEl = document.getElementById('dv-reminder-note');
+    const val = dateEl ? dateEl.value : '';
+    if (!val) { alert('Pick a date for the reminder.'); return; }
+    r.reminderAt = new Date(val + 'T12:00:00').toISOString(); // local noon → unambiguous day
+    r.reminderNote = noteEl ? noteEl.value.trim() : '';
+    _remDirtyFor = null;
+    if (typeof save === 'function') save();
+    dbPut('requests', { id: r.id, reminderAt: r.reminderAt, reminderNote: r.reminderNote });
+    populateReminderWidget(r);
+    const s = document.getElementById('dv-reminder-saved');
+    if (s) { s.textContent = '✓ Reminder set'; s.style.display = 'block'; setTimeout(() => { s.style.display = 'none'; }, 2500); }
+    if (typeof renderPipelineBoard === 'function') renderPipelineBoard();
+  }
+
+  function clearReminder() {
+    const r = (requests || []).find(x => x.id === activeRequestId);
+    if (!r) return;
+    r.reminderAt = null;
+    r.reminderNote = '';
+    _remDirtyFor = null;
+    if (typeof save === 'function') save();
+    dbPut('requests', { id: r.id, reminderAt: null, reminderNote: '' });
+    populateReminderWidget(r);
+    if (typeof renderPipelineBoard === 'function') renderPipelineBoard();
+  }
+
+  // Reflect the current reminder in the detail widget. Called on open + every
+  // poll tick, so it uses the same dirty guard the follow-up widget does to
+  // avoid clobbering unsaved typing.
+  function populateReminderWidget(r) {
+    const section = document.getElementById('dv-reminder-section');
+    if (!section || !r) return;
+    const dateEl = document.getElementById('dv-reminder-date');
+    const noteEl = document.getElementById('dv-reminder-note');
+    const cur = document.getElementById('dv-reminder-current');
+    const clearBtn = document.getElementById('dv-reminder-clear');
+    const saveBtn = document.getElementById('dv-reminder-save');
+    const dirty = (_remDirtyFor === r.id);
+    const d = r.reminderAt ? new Date(r.reminderAt) : null;
+    const set = !!(d && Number.isFinite(d.getTime()));
+    if (set) {
+      if (dateEl && !dirty) dateEl.value = d.toISOString().slice(0, 10);
+      if (noteEl && !dirty) noteEl.value = r.reminderNote || '';
+      const rs = reminderState(r);
+      const label = { overdue: '🔴 Overdue', today: '🟢 Due today', upcoming: '🕒 Upcoming' }[rs] || '';
+      const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      if (cur) { cur.style.display = 'block'; cur.innerHTML = `${label} — <strong>${dateStr}</strong>${r.reminderNote ? '<br><span style="color:var(--text-muted);">' + escapeHtml(r.reminderNote) + '</span>' : ''}`; }
+      if (clearBtn) clearBtn.style.display = 'block';
+      if (saveBtn) saveBtn.textContent = 'Update reminder';
+    } else {
+      if (dateEl && !dirty) dateEl.value = '';
+      if (noteEl && !dirty) noteEl.value = '';
+      if (cur) cur.style.display = 'none';
+      if (clearBtn) clearBtn.style.display = 'none';
+      if (saveBtn) saveBtn.textContent = 'Set reminder';
+    }
+  }
+
   function showView(v) {
     document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
     document.getElementById('view-' + v).classList.add('active');
     event.target.closest('.nav-tab') ? event.target.closest('.nav-tab').classList.add('active') : event.target.classList.add('active');
     if (v === 'dashboard') showDashboard();
-    if (v === 'pipeline') renderPipeline();
+    if (v === 'pipeline') { renderPipelineBoard(); renderPipeline(); }
     if (v === 'repairs') { renderRepairCards(); document.getElementById('panel-repair').style.display = 'block'; }
     if (v === 'sales')   { updateWeekLabel(); renderSoldTable(); document.getElementById('panel-sold').style.display = 'block'; }
     if (v === 'messages') { renderConvoList(); }
@@ -6401,6 +6636,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         if (saved) saved.style.display = 'none';
       }
     }
+
+    // Staff follow-up reminder widget (Phase 2) — separate from the drip below.
+    populateReminderWidget(r);
 
     // Future follow-up card — reflect current schedule (if any) and prefill.
     const fuSection = document.getElementById('dv-followup-section');
