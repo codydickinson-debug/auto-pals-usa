@@ -736,15 +736,15 @@ function withinContactWindow(date) {
 }
 
 // ── Global automation pause (kill-switch) ───────────────────────────────────
-// When app_config.automation_paused is 'on', every automated CLIENT text is
-// held: the pre/post-call and no-show drips, scheduled follow-ups, call
-// reminders, and the booking / deposit / no-show / portal / welcome / booking-
-// link confirmations. staff_* alerts are EXEMPT so the team still gets new-lead
-// notifications. Flip the flag off (or delete the row) to resume — no redeploy.
-// Cached ~30s so pause/resume propagates quickly without a DB read on every
-// send. Fails OPEN (a DB blip sends rather than silently dropping messages),
-// consistent with the rest of _sms.js; the disabled call-reminder pg_cron is a
-// second, independent layer for the highest-volume scheduled sender.
+// When app_config.automation_paused is 'on', EVERY automated SMS is held —
+// both client messages (pre/post-call + no-show drips, scheduled follow-ups,
+// call reminders, and the booking / deposit / no-show / portal / welcome /
+// booking-link confirmations) AND staff_* alerts. Email (api/email.js) is a
+// separate channel and is NOT affected by this flag. Flip the flag off (or
+// delete the row) to resume — no redeploy. Cached ~30s so pause/resume
+// propagates quickly without a DB read on every send. Fails OPEN (a DB blip
+// sends rather than silently dropping messages), consistent with the rest of
+// _sms.js.
 let _pauseCache = { value: null, at: 0 };
 const PAUSE_TTL_MS = 30 * 1000;
 async function isAutomationPaused() {
@@ -773,9 +773,10 @@ async function isAutomationPaused() {
 async function send(type, data = {}) {
   const fn = TEMPLATES[type];
   if (!fn) return { ok: false, error: 'unknown_type', type };
-  // Global pause: hold all automated CLIENT messages while it's on. Staff
-  // alerts (staff_*) are exempt so the team still gets lead notifications.
-  if (CLIENT_TYPES.has(type) && await isAutomationPaused()) {
+  // Global pause: hold EVERY automated SMS while it's on — client messages and
+  // staff_* alerts alike (owner asked to pause all texts 2026-09-11). Email is
+  // a separate channel and keeps flowing.
+  if (await isAutomationPaused()) {
     console.log('[SMS] skipped — automation paused for', type, data.phone || '');
     return { ok: false, skipped: true, reason: 'automation_paused' };
   }
