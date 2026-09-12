@@ -1446,6 +1446,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .kb-rem-today { background: #15803d; }
   .kb-rem-upcoming { background: #cbd5e1; }
   .kb-warn { flex: none; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid #f59e0b; display: inline-block; }
+  .kb-fu { margin-top: 5px; display: inline-block; font-family: system-ui, sans-serif; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+  .kb-fu-overdue { color: #b91c1c; background: #fef2f2; }
+  .kb-fu-today { color: #15803d; background: #e8f0e8; }
+  .kb-fu-up { color: #475569; background: #f1f5f9; }
   .kb-empty { color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px 4px; font-family: system-ui, sans-serif; }
   .pl-fun-label { font-size: 13px; font-weight: 700; color: var(--text); font-family: system-ui, sans-serif; }
   .pl-fun-barwrap { background: #f1f5f9; border-radius: 6px; overflow: hidden; height: 26px; }
@@ -2050,7 +2054,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v221 · 2026-09-12</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v222 · 2026-09-12</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -4847,9 +4851,19 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const flag = rs === 'none'
       ? `<span class="kb-warn" title="No follow-up scheduled"></span>`
       : `<span class="kb-rem-dot kb-rem-${rs}" title="Follow-up ${rs}${r.reminderNote ? ': ' + escapeHtml(r.reminderNote) : ''}"></span>`;
+    // Show the follow-up date on the card, colored by urgency.
+    let fuDate = '';
+    if (r.reminderAt) {
+      const rd = new Date(r.reminderAt);
+      if (!isNaN(rd)) {
+        const cls = rs === 'overdue' ? 'kb-fu-overdue' : (rs === 'today' ? 'kb-fu-today' : 'kb-fu-up');
+        fuDate = `<div class="kb-fu ${cls}">Follow-up ${rd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>`;
+      }
+    }
     return `<div class="kb-card" draggable="true" data-id="${r.id}" onclick="openDetailView(${r.id})">
       <div class="kb-card-name">${flag}<span>${escapeHtml(r.firstName || '')} ${escapeHtml(r.lastName || '')}</span></div>
       <div class="kb-card-sub">${escapeHtml(veh)}${budget ? ' · ' + budget : ''}</div>
+      ${fuDate}
     </div>`;
   }
 
@@ -4858,9 +4872,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (!wrap) return;
     const byStage = {};
     PIPELINE_STAGES.forEach(s => { byStage[s.key] = []; });
+    // Fresh-slate board (2026-09-12): only leads with an EXPLICIT pipeline_stage
+    // appear. New leads get 'new_lead' on creation (api/db.js); the historical
+    // backfill was cleared, so the board is forward-looking from now. (Kept:
+    // upcoming calls → call_scheduled, and parked future follow-ups.)
     (Array.isArray(requests) ? requests : []).forEach(r => {
-      const st = deriveStage(r);
-      (byStage[st] || byStage.new_lead).push(r);
+      const st = r.pipelineStage;
+      if (!st || !byStage[st]) return;
+      byStage[st].push(r);
     });
     Object.values(byStage).forEach(list => list.sort((a, b) => new Date(b.submitted) - new Date(a.submitted)));
     wrap.innerHTML = PIPELINE_STAGES.map(s => {

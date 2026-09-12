@@ -208,7 +208,9 @@ async function crossLinkOrCreateRequest(body, deps = {}) {
     notes: 'Auto-created from a booked call — this client booked without submitting the request form, so their details were captured from the booking.',
     sms_consent: false,
     deposit_paid: false,
-    booking_confirmed_at: now()
+    booking_confirmed_at: now(),
+    // They booked a call → land them in Call Scheduled on the board.
+    pipeline_stage: 'call_scheduled'
   };
 
   await q('requests', 'POST', reqRow);
@@ -436,7 +438,10 @@ module.exports = async function handler(req, res) {
           skip_the_line: !!body.skipTheLine,
           // Explicit SMS opt-in. Stored as boolean (not coerced) so a
           // missing value stays null = legacy implicit-consent row.
-          sms_consent: typeof body.smsConsent === 'boolean' ? body.smsConsent : null
+          sms_consent: typeof body.smsConsent === 'boolean' ? body.smsConsent : null,
+          // Land every new lead on the pipeline board (the board is forward-
+          // looking from 2026-09-12; historical leads were cleared to NULL).
+          pipeline_stage: 'new_lead'
         };
         const data = await query('requests', 'POST', row);
 
