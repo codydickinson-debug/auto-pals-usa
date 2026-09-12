@@ -2054,7 +2054,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v222 · 2026-09-12</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v223 · 2026-09-12</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -7540,6 +7540,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   const ctxMenu = document.createElement('div');
   ctxMenu.className = 'context-menu';
   ctxMenu.innerHTML = `
+    <button class="ctx-item" onclick="ctxAddToBoard()" style="color:var(--navy);font-weight:700;"><span class="ctx-dot" style="background:var(--navy)"></span>➕ Add to board</button>
+    <div style="border-top:1px solid var(--border);margin:4px 0;"></div>
     <div class="ctx-label">Move to</div>
     <button class="ctx-item" onclick="ctxSetStatus('new')"><span class="ctx-dot" style="background:#1d4ed8"></span>New</button>
     <button class="ctx-item" onclick="ctxSetStatus('review')"><span class="ctx-dot" style="background:var(--amber)"></span>In Review</button>
@@ -7584,6 +7586,22 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     y = Math.max(margin, y);
     ctxMenu.style.left = x + 'px';
     ctxMenu.style.top = y + 'px';
+  }
+
+  // Put a lead onto the pipeline board (the board is forward-only, so historical
+  // leads live in Requests until added here). Places it in the column that
+  // matches its current status/outcome; staff can then drag it. Does NOT change
+  // status or fire anything — it only sets pipeline_stage.
+  function ctxAddToBoard() {
+    ctxMenu.classList.remove('open');
+    const r = requests.find(req => req.id === ctxTargetId);
+    if (!r) return;
+    const stage = (typeof deriveStage === 'function') ? deriveStage(r) : 'new_lead';
+    r.pipelineStage = stage;
+    if (typeof save === 'function') save();
+    dbPut('requests', { id: r.id, pipelineStage: stage });
+    const label = (PIPELINE_STAGES.find(s => s.key === stage) || {}).label || stage;
+    alert(`${r.firstName || 'Lead'} ${r.lastName || ''} added to the board in "${label}". Open the Board tab to see them.`);
   }
 
   function ctxSetStatus(status) {
