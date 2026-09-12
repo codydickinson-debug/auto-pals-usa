@@ -2049,7 +2049,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v219 · 2026-09-11</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v220 · 2026-09-12</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2078,6 +2078,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <button class="nav-tab" id="nav-client-form" onclick="showView('client')">Client Form</button>
     <div id="staff-tabs" style="display:none;">
       <button class="nav-tab" onclick="showView('dashboard')" id="nav-requests">Requests</button>
+      <button class="nav-tab" onclick="showView('board')" id="nav-board">Board</button>
       <button class="nav-tab" onclick="showView('pipeline')" id="nav-pipeline">Pipeline</button>
       <button class="nav-tab" onclick="showView('repairs')" id="nav-repairs">Repairs <span id="nav-badge-repair" class="nav-tab-badge">0</span></button>
       <button class="nav-tab" onclick="showView('sales')" id="nav-sales">Sold Cars <span id="nav-badge-sold" class="nav-tab-badge">0</span></button>
@@ -2964,16 +2965,18 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 </div>
 
 <!-- ════════════ PIPELINE / FUNNEL VIEW ════════════ -->
+<div id="view-board" class="view">
+  <div style="max-width:1600px;margin:0 auto;padding:24px 28px 80px;">
+    <div style="font-size:22px;font-weight:800;color:var(--navy);font-family:'DM Sans',system-ui,sans-serif;">Pipeline Board</div>
+    <div style="font-size:13px;color:var(--text-muted);margin:4px 0 20px;font-family:system-ui,sans-serif;">Drag a lead between stages to move them. A colored dot = a follow-up reminder (red = overdue, green = today). Click a card to open the lead.</div>
+    <div id="kanban-board" class="kb-wrap"></div>
+  </div>
+</div>
+
 <div id="view-pipeline" class="view">
   <div style="max-width:1160px;margin:0 auto;padding:28px 32px 80px;">
     <div style="font-size:22px;font-weight:800;color:var(--navy);font-family:'DM Sans',system-ui,sans-serif;">Pipeline</div>
     <div style="font-size:13px;color:var(--text-muted);margin:4px 0 24px;font-family:system-ui,sans-serif;">Where every lead is and where they drop off — computed live from current requests.</div>
-
-    <div class="pl-card" style="padding:16px 14px;">
-      <div class="pl-card-title" style="margin-bottom:2px;">Pipeline board</div>
-      <div class="pl-card-sub" style="margin-bottom:12px;">Drag a lead between stages to move them. A colored dot = a follow-up reminder (red = overdue, green = today). Click a card to open the lead.</div>
-      <div id="kanban-board" class="kb-wrap"></div>
-    </div>
 
     <div class="pl-card">
       <div class="pl-card-title">Lead funnel</div>
@@ -5003,7 +5006,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.getElementById('view-' + v).classList.add('active');
     event.target.closest('.nav-tab') ? event.target.closest('.nav-tab').classList.add('active') : event.target.classList.add('active');
     if (v === 'dashboard') showDashboard();
-    if (v === 'pipeline') { renderPipelineBoard(); renderPipeline(); }
+    if (v === 'board') renderPipelineBoard();
+    if (v === 'pipeline') renderPipeline();
     if (v === 'repairs') { renderRepairCards(); document.getElementById('panel-repair').style.display = 'block'; }
     if (v === 'sales')   { updateWeekLabel(); renderSoldTable(); document.getElementById('panel-sold').style.display = 'block'; }
     if (v === 'messages') { renderConvoList(); }
