@@ -171,7 +171,9 @@ async function crossLinkOrCreateRequest(body, deps = {}) {
     const prior = anyMatch[0];
     // Already linked to a booking? Nothing to do.
     if (prior.booking_confirmed_at) return { action: 'already_linked', id: prior.id };
-    const patch = { booking_confirmed_at: now() };
+    // Booking a call moves the lead to Call Scheduled on the board, so
+    // "New Lead = no booked call" stays true.
+    const patch = { booking_confirmed_at: now(), pipeline_stage: 'call_scheduled' };
     if (prior.status === 'new' || prior.status === 'review') patch.status = 'qualified';
     await q('requests', 'PATCH', patch, `?id=eq.${prior.id}`);
     if (patch.status && patch.status !== prior.status) {
@@ -732,6 +734,14 @@ module.exports = async function handler(req, res) {
           if (wantsDepositFlip && !advancedStatuses.includes(priorStatus)) {
             mapped.status = 'searching';
           }
+        }
+
+        // A booking just confirmed (null → set) → move the lead onto the board's
+        // Call Scheduled column, unless the caller set a stage explicitly (e.g. a
+        // board drag). Keeps "New Lead = no booked call" true on the board.
+        if (mapped.pipeline_stage === undefined && mapped.booking_confirmed_at
+            && priorRow && !priorRow.booking_confirmed_at) {
+          mapped.pipeline_stage = 'call_scheduled';
         }
 
         // Deposit just flipped paid → the lead has converted past the nurture
