@@ -2054,7 +2054,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v223 · 2026-09-12</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v224 · 2026-09-12</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -4784,11 +4784,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   const PIPELINE_STAGES = [
     { key: 'new_lead',          label: 'New Lead' },
     { key: 'contact_attempted', label: 'Contact Attempted' },
+    { key: 'followup_1',        label: 'Follow-up 1' },
+    { key: 'followup_2',        label: 'Follow-up 2' },
+    { key: 'followup_3',        label: 'Follow-up 3' },
+    { key: 'followup_4',        label: 'Follow-up 4' },
     { key: 'call_scheduled',    label: 'Call Scheduled' },
     { key: 'no_show',           label: 'No Show' },
-    { key: 'qualified',         label: 'Qualified' },
-    { key: 'bad_call',          label: 'Bad Call' },
     { key: 'good_call',         label: 'Good Call' },
+    { key: 'bad_call',          label: 'Bad Call' },
     { key: 'deposit_pending',   label: 'Deposit Pending' },
     { key: 'closed_deposit',    label: 'Closed - Deposit' },
     { key: 'lost',              label: 'Lost / Disqualified' },
@@ -7265,9 +7268,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // the deposit yet: "said they'd sign up but never did." Overlaps with Good
   // call / Follow-up tabs by design.
   function isPendingDeposit(r) {
-    return !!r && !!r.callCompletedAt && r.callOutcome !== 'bad'
-      && !(r.depositPaid || r.depositReceived)
-      && r.status !== 'sold' && r.status !== 'rejected';
+    // Manual stage now — a lead is "pending deposit" ONLY when staff move it into
+    // the Deposit Pending board column (a genuinely committed client), NOT auto
+    // from a good call. (Owner: good call ≠ pending deposit, and a no-reply lead
+    // can't be pending a deposit.)
+    return !!r && r.pipelineStage === 'deposit_pending';
   }
   function replyBadge(r) {
     if (hasReplied(r)) {
