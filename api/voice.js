@@ -105,9 +105,13 @@ async function bookedSlotsFor(dateStr) {
   return { taken, count: Array.isArray(rows) ? rows.length : 0 };
 }
 
+// Latest bookable day — a week out (owner: no intro call more than a week ahead).
+function maxBookableET() { return addDays(todayET(), 7); }
+
 async function openSlotsFor(dateStr) {
   if (!isValidDateStr(dateStr)) return { ok: false, reason: 'invalid_date' };
   if (dateStr <= todayET()) return { ok: false, reason: 'past_or_today' };
+  if (dateStr > maxBookableET()) return { ok: false, reason: 'too_far' };
   if (!isWeekday(dateStr)) return { ok: false, reason: 'weekend' };
   const { taken, count } = await bookedSlotsFor(dateStr);
   if (count >= MAX_PER_DAY) return { ok: true, date: dateStr, dateLabel: dateLabelOf(dateStr), open: [] };
@@ -123,6 +127,7 @@ async function checkAvailability(args) {
     if (!res.ok) {
       const msg = res.reason === 'weekend' ? "We only run intro calls Monday through Friday."
         : res.reason === 'past_or_today' ? "We can't book same-day — the earliest is tomorrow."
+        : res.reason === 'too_far' ? "We schedule intro calls up to a week out — what day in the next few days works for you?"
         : "That date didn't look valid — what day works for you?";
       return { success: false, reason: res.reason, message: msg };
     }
@@ -141,8 +146,10 @@ async function checkAvailability(args) {
   // invite them to name a better day. Keeps her flow "ask when you're free →
   // read three options for that day" instead of listing several days at once.
   let cursor = todayET();
-  for (let i = 0; i < 14; i++) {
+  const maxDay = maxBookableET();
+  for (let i = 0; i < 7 && cursor < maxDay; i++) {
     cursor = addDays(cursor, 1);
+    if (cursor > maxDay) break;              // stay inside the 1-week window
     if (!isWeekday(cursor)) continue;
     const res = await openSlotsFor(cursor);
     if (res.ok && res.open.length) {
@@ -151,7 +158,7 @@ async function checkAvailability(args) {
         message: `The soonest I have is ${res.dateLabel} — I can do ${offer.join(', ')} Eastern. Or is there a day that works better for you?` };
     }
   }
-  return { success: true, date: null, dateLabel: null, slots: [], message: "I'm not seeing open slots in the next couple weeks — let me take your info and have the team call you." };
+  return { success: true, date: null, dateLabel: null, slots: [], message: "I'm not seeing open slots in the next few days — let me take your info and have the team call you." };
 }
 
 function cleanEmail(e) {
@@ -200,6 +207,7 @@ async function bookCall(args) {
   if (!avail.ok) {
     const msg = avail.reason === 'weekend' ? "We only run calls Monday through Friday — pick a weekday and I'll book it."
       : avail.reason === 'past_or_today' ? "That day's already passed — the earliest we can do is tomorrow."
+      : avail.reason === 'too_far' ? "We only book intro calls up to a week out — what day in the next few days works?"
       : "That date didn't look right — what day would you like?";
     return { success: false, reason: avail.reason, message: msg };
   }

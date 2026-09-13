@@ -2054,7 +2054,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v224 · 2026-09-12</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v225 · 2026-09-12</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3611,8 +3611,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       if (!res.ok) return;
       const data = await res.json();
       CALL_TIMES = (data && data.calls) || {};
-      // Re-render so existing pills update immediately
+      // Re-render so existing pills update immediately — and the board, whose
+      // Call Scheduled column is derived from these call times.
       if (typeof renderDashboard === 'function') renderDashboard();
+      if (typeof renderPipelineBoard === 'function') renderPipelineBoard();
     } catch (e) {
       console.warn('[call-times] fetch failed:', e && e.message);
     } finally {
@@ -4870,17 +4872,71 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     </div>`;
   }
 
+  // ── Board membership — self-maintaining (2026-09-12) ─────────────────
+  // The board reflects the CURRENT pipeline, computed from each lead's real
+  // state, rather than one-off stamps that drift out of date. Three columns are
+  // AUTOMATIC and always stay in sync:
+  //   • New Lead       = filled the form within the last week and hasn't booked
+  //   • Call Scheduled = has a genuine UPCOMING call (from CALL_TIMES)
+  //   • No Show        = recently no-showed and hasn't rebooked
+  // The pre-call queue (Contact Attempted, Follow-up 1–4) and the outcome/terminal
+  // columns (Good/Bad Call, Deposit Pending, Closed, Lost, Email Remarketing,
+  // Future Follow-up) are what Renz/staff set by dragging — those explicit stages
+  // win. Booking a call auto-moves a lead into Call Scheduled (even out of the
+  // pre-call queue); once the call passes or an outcome/no-show is recorded it
+  // leaves Call Scheduled on its own.
+  const NEW_LEAD_WINDOW_DAYS = 7;
+  const NO_SHOW_WINDOW_DAYS  = 45;
+  const TERMINAL_STAGES = new Set(['good_call','bad_call','deposit_pending','closed_deposit','lost','email_remarketing','future_follow_up']);
+  const PRECALL_STAGES  = new Set(['contact_attempted','followup_1','followup_2','followup_3','followup_4']);
+
+  function _daysAgo(v) {
+    if (!v) return Infinity;
+    const t = new Date(v).getTime();
+    return isNaN(t) ? Infinity : (Date.now() - t) / 86400000;
+  }
+  // Upcoming call for this lead, from the calendar/bookings cache (keyed by
+  // lowercased email). "Upcoming" = starts from ~an hour ago onward, so a call
+  // earlier today has already dropped out of Call Scheduled.
+  function hasFutureCall(r) {
+    const k = (r.email || '').toLowerCase();
+    const c = k && CALL_TIMES[k];
+    if (!c || !c.startIso) return false;
+    const t = new Date(c.startIso).getTime();
+    return !isNaN(t) && t >= Date.now() - 3600000;
+  }
+
+  // Which board column a lead belongs in right now (null = off the board, lives
+  // in the Requests tab only). Order matters — see the comment block above.
+  function boardStage(r) {
+    if (!r) return null;
+    const stage = r.pipelineStage;
+    // 1) Explicit outcome / terminal columns staff set by hand always win.
+    if (stage && TERMINAL_STAGES.has(stage)) return stage;
+    // 2) Converted or dead leads are worked elsewhere → off the active board.
+    if (r.depositPaid) return null;
+    if (['sold','awaiting_paperwork','psi','rejected','dormant'].includes(r.status)) return null;
+    // 3) Genuine upcoming call (auto) — also catches a rebooked no-show.
+    if (hasFutureCall(r)) return 'call_scheduled';
+    // 4) Recently no-showed and not rebooked (auto) — the rebooking queue.
+    if (r.noShowAt && _daysAgo(r.noShowAt) <= NO_SHOW_WINDOW_DAYS) return 'no_show';
+    // 5) Renz's manual pre-call queue.
+    if (stage && PRECALL_STAGES.has(stage)) return stage;
+    // 6) New Lead = filled the form in the last week and hasn't booked a call.
+    if (!r.bookingConfirmedAt && _daysAgo(r.submitted) <= NEW_LEAD_WINDOW_DAYS) return 'new_lead';
+    // 7) Everything else → Requests tab only.
+    return null;
+  }
+
   function renderPipelineBoard() {
     const wrap = document.getElementById('kanban-board');
     if (!wrap) return;
     const byStage = {};
     PIPELINE_STAGES.forEach(s => { byStage[s.key] = []; });
-    // Fresh-slate board (2026-09-12): only leads with an EXPLICIT pipeline_stage
-    // appear. New leads get 'new_lead' on creation (api/db.js); the historical
-    // backfill was cleared, so the board is forward-looking from now. (Kept:
-    // upcoming calls → call_scheduled, and parked future follow-ups.)
+    // Membership is DERIVED (boardStage) so New Lead / Call Scheduled / No Show
+    // stay accurate on their own; the manual columns honor the stored stage.
     (Array.isArray(requests) ? requests : []).forEach(r => {
-      const st = r.pipelineStage;
+      const st = boardStage(r);
       if (!st || !byStage[st]) return;
       byStage[st].push(r);
     });
@@ -4921,7 +4977,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         const r = (requests || []).find(x => x.id === _kbDragId);
         _kbDragId = null;
         if (!r || !stage || !STAGE_KEYS.has(stage)) return;
-        if (deriveStage(r) === stage && r.pipelineStage === stage) return;
+        if (boardStage(r) === stage && r.pipelineStage === stage) return;
         r.pipelineStage = stage;
         const patch = { id: r.id, pipelineStage: stage };
         // Phase 3: realign the internal status so the Requests table + views agree

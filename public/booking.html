@@ -910,6 +910,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // Earliest bookable day = tomorrow. Same-day sales calls are blocked so
   // the team has at least overnight to prep before any new call lands.
   const earliestBookable = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  // Latest bookable day = one week out. Owner: intro calls can't be scheduled
+  // more than a week ahead, so days past this are greyed out. The server
+  // enforces the same cap (api/db.js + api/booking.js) for any direct POST.
+  const latestBookable = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7);
 
   // First bookable DAY — skips Sundays so the calendar can auto-select
   // a clickable cell on load. (If tomorrow is Sunday, jump to Monday.)
@@ -995,6 +999,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const dow = date.getDay();
       // Same-day calls are blocked — earliest bookable date is tomorrow.
       const isBeforeEarliest = date < earliestBookable;
+      // Nothing more than a week out (owner).
+      const isAfterLatest = date > latestBookable;
       // Sundays are off — Mon-Sat are bookable.
       const isClosedDay = dow === 0;
       const dateStr = `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -1003,7 +1009,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
       const isFull = (DAY_COUNTS[dateStr] || 0) >= MAX_PER_DAY;
 
-      const unavailable = isBeforeEarliest || isClosedDay || isFull;
+      const unavailable = isBeforeEarliest || isAfterLatest || isClosedDay || isFull;
       const el = document.createElement('button');
       el.type = 'button';
       el.textContent = d;
@@ -1019,6 +1025,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       else if (isToday) { el.title = "Same-day calls aren't available — please pick tomorrow or later."; el.disabled = true; el.setAttribute('aria-label', dayLabel + ' — same-day not available'); }
       else if (isClosedDay) { el.title = "Closed Sundays — please pick another day."; el.disabled = true; el.setAttribute('aria-label', dayLabel + ' — closed'); }
       else if (isBeforeEarliest) { el.disabled = true; el.setAttribute('aria-label', dayLabel + ' — unavailable'); }
+      else if (isAfterLatest) { el.title = "We book intro calls up to a week out — please pick a day within the next 7 days."; el.disabled = true; el.setAttribute('aria-label', dayLabel + ' — too far out'); }
       else { el.setAttribute('aria-label', dayLabel + ' — available'); el.onclick = () => selectDate(dateStr, date); }
       grid.appendChild(el);
     }
@@ -1130,6 +1137,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           await loadBookingsForDate(selectedDate);
           const dateObjRefresh = new Date(selectedDate + 'T12:00:00');
           renderTimeSlots(dateObjRefresh);
+          showStep(1);
+          return;
+        }
+        if (err.error === 'too_far') {
+          alert("We only schedule intro calls up to a week out. Please pick a day within the next 7 days.");
+          btn.disabled = false;
+          btn.textContent = 'Confirm Booking';
           showStep(1);
           return;
         }
@@ -1290,7 +1304,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const out = [];
     const startDate = firstBookableWeekday();
     const d = new Date(startDate.getTime());
-    const cutoff = new Date(startDate.getTime() + 60 * 24 * 60 * 60 * 1000);
+    // Stop at the 1-week booking window (owner) — include the last day.
+    const cutoff = new Date(latestBookable.getFullYear(), latestBookable.getMonth(), latestBookable.getDate() + 1);
     while (out.length < maxCount && d < cutoff) {
       if (d.getDay() === 0) { d.setDate(d.getDate() + 1); continue; }  // skip Sundays only
       const dateStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;

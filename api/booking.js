@@ -11,8 +11,23 @@ const sms   = require('./_sms.js');
 const email = require('./email.js');
 const meta  = require('./_meta.js');
 const { verifyToken } = require('./auth.js');
+const { SUPABASE_URL } = require('./_constants.js');
+
+const SUPABASE_KEY = process.env.SUPABASE_KEY
+  || process.env.SUPABASE_SERVICE_ROLE_KEY
+  || process.env.SUPABASE_ANON_KEY
+  || process.env.SUPABASE_ANNON_KEY;
 
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
+
+// Latest day anyone can book — a week out from today (Eastern). Owner: clients
+// can't schedule an intro call more than a week ahead.
+const MAX_BOOK_DAYS_AHEAD = 7;
+function maxBookableET() {
+  const d = new Date(`${todayET()}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + MAX_BOOK_DAYS_AHEAD);
+  return d.toISOString().slice(0, 10);
+}
 
 // Today's date in Eastern time, YYYY-MM-DD. Used to enforce the no-same-day
 // booking rule server-side — a naked `new Date()` on Vercel's UTC runtime
@@ -36,56 +51,104 @@ async function handleListCalls(req, res) {
     || (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   if (!verifyToken(token)) return res.status(401).json({ error: 'unauthorized' });
 
+  // Index by attendee email, keeping the EARLIEST UPCOMING call per email so a
+  // re-booked client shows their next call, not a stale older one. Only calls
+  // from ~an hour ago onward are kept — a finished call shouldn't still read as
+  // "scheduled" (the dashboard board derives Call Scheduled from this).
+  const calls = {};
+  const CUTOFF = Date.now() - 3600000;
+  const put = (key, entry) => {
+    if (!key || !entry || !entry.startIso) return;
+    if (new Date(entry.startIso).getTime() < CUTOFF) return; // already happened
+    const prior = calls[key];
+    if (!prior || new Date(prior.startIso) > new Date(entry.startIso)) calls[key] = entry;
+  };
+
+  // (a) Google Calendar — precise times. Best-effort: if it's down or not
+  //     configured we still return the bookings-table calls from (b) below,
+  //     so the dashboard never loses its Call Scheduled list to a Google blip.
   try {
     const access = await getAccessToken();
-    const timeMin = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(); // include yesterday so just-finished calls still pin
+    const timeMin = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const timeMax = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(process.env.GOOGLE_CALENDAR_ID)}/events`
       + `?singleEvents=true&orderBy=startTime`
       + `&timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`
       + `&q=${encodeURIComponent('Sales Call')}&maxResults=250`;
-
     const r = await fetch(url, { headers: { Authorization: `Bearer ${access}` } });
-    if (!r.ok) {
-      const txt = await r.text();
-      console.error('[booking GET] calendar error:', txt);
-      return res.status(502).json({ error: 'calendar_fetch_failed' });
-    }
-    const data = await r.json();
-
-    // Index by attendee email. Keep the EARLIEST upcoming event per email so
-    // a re-booked client shows their next call, not a stale older one.
-    const calls = {};
-    for (const ev of (data.items || [])) {
-      if (ev.status === 'cancelled') continue;
-      const summary = (ev.summary || '').toLowerCase();
-      if (!summary.includes('sales call')) continue;
-      const startRaw = ev.start && (ev.start.dateTime || ev.start.date);
-      if (!startRaw) continue;
-      const start = new Date(startRaw);
-      const startIso = start.toISOString();
-      const dateLabel = start.toLocaleDateString('en-US', {
-        timeZone: 'America/New_York', month: 'short', day: 'numeric'
-      });
-      const timeLabel = start.toLocaleTimeString('en-US', {
-        timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit'
-      });
-
-      for (const a of (ev.attendees || [])) {
-        if (!a.email) continue;
-        if (a.organizer) continue;            // skip the calendar owner
-        if (a.responseStatus === 'declined') continue;
-        const key = String(a.email).toLowerCase();
-        const prior = calls[key];
-        if (!prior || new Date(prior.startIso) > start) {
-          calls[key] = { startIso, dateLabel, timeLabel };
+    if (r.ok) {
+      const data = await r.json();
+      for (const ev of (data.items || [])) {
+        if (ev.status === 'cancelled') continue;
+        const summary = (ev.summary || '').toLowerCase();
+        if (!summary.includes('sales call')) continue;
+        const startRaw = ev.start && (ev.start.dateTime || ev.start.date);
+        if (!startRaw) continue;
+        const start = new Date(startRaw);
+        const startIso = start.toISOString();
+        const dateLabel = start.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' });
+        const timeLabel = start.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+        for (const a of (ev.attendees || [])) {
+          if (!a.email) continue;
+          if (a.organizer) continue;            // skip the calendar owner
+          if (a.responseStatus === 'declined') continue;
+          put(String(a.email).toLowerCase(), { startIso, dateLabel, timeLabel });
         }
       }
+    } else {
+      console.warn('[booking GET] calendar error', r.status, '— falling back to bookings table');
     }
-    return res.status(200).json({ calls, fetchedAt: new Date().toISOString() });
   } catch (err) {
-    console.error('[booking GET]', err && err.message);
-    return res.status(500).json({ error: err.message || 'internal_error' });
+    console.warn('[booking GET] calendar unavailable, using bookings table only:', err && err.message);
+  }
+
+  // (b) Bookings table — the always-present source of truth. Fills any email
+  //     Google didn't cover (or all of them when Google isn't wired up), so the
+  //     board's Call Scheduled column is reliable either way.
+  try {
+    for (const b of await listUpcomingBookings()) {
+      const key = String(b.email || '').toLowerCase();
+      if (!key) continue;
+      const startIso = easternIsoFor(b.date, b.time);
+      const start = new Date(startIso);
+      put(key, {
+        startIso,
+        dateLabel: start.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }),
+        timeLabel: (b.time || '').trim() || start.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' })
+      });
+    }
+  } catch (e) {
+    console.warn('[booking GET] bookings-table merge failed:', e && e.message);
+  }
+
+  return res.status(200).json({ calls, fetchedAt: new Date().toISOString() });
+}
+
+// Upcoming bookings (date >= today ET) straight from Supabase, so the call list
+// doesn't depend on Google Calendar being configured.
+async function listUpcomingBookings() {
+  if (!SUPABASE_KEY) return [];
+  const url = `${SUPABASE_URL}/rest/v1/bookings?date=gte.${todayET()}&select=email,date,time&order=date.asc&limit=1000`;
+  const r = await fetch(url, {
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Accept: 'application/json' }
+  });
+  if (!r.ok) throw new Error(`bookings_fetch_${r.status}`);
+  const txt = await r.text();
+  return txt ? JSON.parse(txt) : [];
+}
+
+// Absolute ISO for a bookings-table row's wall-clock Eastern time, picking the
+// correct EST/EDT offset for that date (rather than hardcoding one — the same
+// DST trap the calendar-event builder documents).
+function easternIsoFor(dateStr, timeStr) {
+  try {
+    const { hours, minutes } = parseTime((timeStr || '9:00 AM').trim());
+    const probe = new Date(`${dateStr}T12:00:00Z`);
+    const tz = probe.toLocaleTimeString('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' });
+    const off = /EDT/.test(tz) ? '-04:00' : '-05:00';
+    return `${dateStr}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00${off}`;
+  } catch (e) {
+    return `${dateStr}T12:00:00-05:00`;
   }
 }
 
@@ -241,6 +304,13 @@ module.exports = async function handler(req, res) {
   if (typeof date === 'string' && date <= todayET()) {
     return res.status(400).json({
       error: "Same-day calls aren't available — please pick tomorrow or later."
+    });
+  }
+  // No booking more than a week out (owner). date is YYYY-MM-DD, so a string
+  // compare against the Eastern max date is enough.
+  if (typeof date === 'string' && date > maxBookableET()) {
+    return res.status(400).json({
+      error: "We only schedule intro calls up to a week out — please pick a day within the next 7 days."
     });
   }
 

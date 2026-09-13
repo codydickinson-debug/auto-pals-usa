@@ -1547,6 +1547,19 @@ module.exports = async function handler(req, res) {
         if (existing && existing.length >= MAX_BOOKINGS_PER_DAY) {
           return res.status(409).json({ error: 'day_full', count: existing.length });
         }
+        // ≤ 1-week booking window (owner): clients can't book more than a week
+        // out. Web + phone (voice) bookings are non-staff, so this is the
+        // authoritative gate at the row insert; staff (token) can still schedule
+        // further out by hand. body.date is YYYY-MM-DD → string-compare against
+        // the Eastern max date.
+        if (!isStaff && typeof body.date === 'string') {
+          const _et = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+          const _max = new Date(_et.getFullYear(), _et.getMonth(), _et.getDate() + 7);
+          const _maxStr = `${_max.getFullYear()}-${String(_max.getMonth() + 1).padStart(2, '0')}-${String(_max.getDate()).padStart(2, '0')}`;
+          if (body.date > _maxStr) {
+            return res.status(400).json({ error: 'too_far', maxDate: _maxStr });
+          }
+        }
         // Enforce the $5,000 sourcing minimum server-side. If this email already
         // has an auto-rejected (budget-too-low) request, refuse the booking so a
         // rejected client can't reach the calendar even by bypassing the
