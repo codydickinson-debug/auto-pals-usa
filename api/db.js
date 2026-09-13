@@ -397,6 +397,45 @@ module.exports = async function handler(req, res) {
           return res.json({ ok: true, id: Date.now() });
         }
 
+        // ── Dedupe: one active lead per person ──────────────────────────────
+        // If this email already has an ACTIVE lead (not converted, not rejected),
+        // refresh THAT lead with the new details instead of inserting a duplicate
+        // row — repeat submissions are what built the ~100 duplicate piles. Adopts
+        // the just-generated portal_code so the booking flow still lines up, keeps
+        // the existing id / pipeline_stage / booking / deposit, and skips the
+        // new-lead notifications below (it isn't a new lead). Skips manual (Meta
+        // Ads) entries. Fail-open: any lookup error falls through to a normal
+        // insert so a real lead is never lost.
+        if (!body.manualEntry) {
+          try {
+            const prior = (await query('requests', 'GET', null,
+              `?email=eq.${encodeURIComponent(email)}&order=submitted.desc&limit=1`) || [])[0];
+            if (prior) {
+              const converted = prior.deposit_paid || prior.status === 'sold' || prior.status === 'awaiting_paperwork';
+              const dead = prior.status === 'rejected';
+              if (!converted && !dead) {
+                const upd = {
+                  submitted:   body.submitted || prior.submitted,
+                  make:        body.make      || prior.make,
+                  model:       body.model     || prior.model,
+                  year_from:   body.yearFrom  || prior.year_from,
+                  year_to:     body.yearTo    || prior.year_to,
+                  budget_min:  (body.budgetMin != null ? body.budgetMin : prior.budget_min),
+                  budget_max:  (body.budgetMax != null ? body.budgetMax : prior.budget_max),
+                  notes:       body.notes     || prior.notes,
+                  search_mode: body.searchMode || prior.search_mode,
+                  portal_code: body.portalCode || prior.portal_code
+                };
+                await query('requests', 'PATCH', upd, `?id=eq.${prior.id}`);
+                console.log('[DB] dedupe — refreshed active lead for', email, 'id', prior.id, '(no new row, no new-lead notifications)');
+                return res.json([{ ...prior, ...upd, deduped: true }]);
+              }
+            }
+          } catch (e) {
+            console.warn('[DB] dedupe lookup failed; proceeding with a normal insert:', e && e.message);
+          }
+        }
+
         const row = {
           id: body.id || Date.now(),
           submitted: body.submitted,
