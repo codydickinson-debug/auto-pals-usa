@@ -1460,6 +1460,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .card-act-pop { position: fixed; z-index: 3000; width: 250px; background: var(--white); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 34px rgba(15,37,87,0.24); padding: 12px; }
   .cap-head { font-family: system-ui, sans-serif; font-size: 12px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
   .cap-who { font-weight: 600; color: var(--text-muted); }
+  .cap-completing { font-family: system-ui, sans-serif; font-size: 11px; color: #166534; background: var(--green-light, #dcfce7); border-radius: 6px; padding: 6px 8px; margin-bottom: 8px; line-height: 1.35; }
   .card-act-pop .act-input { font-size: 13px; box-sizing: border-box; }
   .cap-chips { display: flex; gap: 6px; margin-bottom: 10px; }
   .cap-chips button { flex: 1; font-family: system-ui, sans-serif; font-size: 11px; font-weight: 600; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; padding: 5px 4px; cursor: pointer; }
@@ -1480,6 +1481,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .act-hover .ah-empty { font-family: system-ui, sans-serif; font-size: 13px; color: var(--text-muted); padding: 2px 0 8px; }
   .act-hover .ah-add { margin-top: 8px; width: 100%; font-family: system-ui, sans-serif; font-size: 12px; font-weight: 600; color: var(--navy); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px; cursor: pointer; }
   .act-hover .ah-add:hover { border-color: var(--navy); }
+  .act-hover .ah-callrow { align-items: center; }
+  .act-hover .ah-callmark { flex: none; width: 16px; text-align: center; font-size: 13px; }
   .kb-card:active { cursor: grabbing; }
   .kb-card.kb-dragging { opacity: 0.45; }
   .kb-card-name { font-family: 'DM Sans', system-ui, sans-serif; font-weight: 600; font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 6px; }
@@ -2127,7 +2130,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <body>
 <!-- Quick "+ Activity" popover, anchored to a board card on demand. -->
 <div id="card-act-pop" class="card-act-pop" style="display:none;">
-  <div class="cap-head">Add activity <span id="cap-who" class="cap-who"></span></div>
+  <div class="cap-head"><span id="cap-head-label">Add activity</span> <span id="cap-who" class="cap-who"></span></div>
+  <div id="cap-completing-note" class="cap-completing" style="display:none;"></div>
   <select id="cap-type" class="act-input" style="width:100%;margin-bottom:6px;">
     <option value="call">📞 Call</option>
     <option value="text">💬 Text</option>
@@ -2143,7 +2147,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <button type="button" onclick="capSetDue(7)">+1 wk</button>
   </div>
   <div class="cap-actions">
-    <button type="button" class="act-add-btn" onclick="saveCardActivity()">Add activity</button>
+    <button type="button" id="cap-add-btn" class="act-add-btn" onclick="saveCardActivity()">Add activity</button>
     <button type="button" class="cap-cancel" onclick="closeCardActivity()">Cancel</button>
   </div>
 </div>
@@ -2151,7 +2155,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v237 · 2026-09-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v238 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -4991,13 +4995,33 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     return 'upcoming';
   }
 
-  // Board-card ACTIVITY color (Pipedrive-style), from the lead's OPEN activities:
-  //   overdue (red) · today (green) · future incl. undated (grey) · none (yellow).
+  // A booked call counts as a scheduled activity on the call date, so a Call
+  // Scheduled lead reads grey (scheduled ahead) and turns green on the call day —
+  // never yellow. Returns 'today' | 'upcoming' | null (no upcoming call).
+  function _leadCallDueState(reqId) {
+    const r = (requests || []).find(x => x.id === reqId);
+    if (!r) return null;
+    const k = (r.email || '').toLowerCase();
+    const c = k && CALL_TIMES[k];
+    if (!c || !c.startIso) return null;
+    const t = new Date(c.startIso).getTime();
+    if (isNaN(t)) return null;
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const end = new Date();   end.setHours(23, 59, 59, 999);
+    if (t < start.getTime()) return null;         // call already passed — ignore
+    return (t <= end.getTime()) ? 'today' : 'upcoming';
+  }
+  // Board-card ACTIVITY color (Pipedrive-style): overdue (red) · today (green) ·
+  // future incl. undated & booked calls (grey) · none (yellow). Considers the
+  // lead's OPEN activities AND any upcoming booked call.
   function leadActivityState(reqId) {
-    const mine = (activities || []).filter(a => a.requestId === reqId && !a.done);
-    if (!mine.length) return 'none';
-    if (mine.some(a => activityDueState(a) === 'overdue')) return 'overdue';
-    if (mine.some(a => activityDueState(a) === 'today'))   return 'today';
+    const states = [];
+    (activities || []).filter(a => a.requestId === reqId && !a.done).forEach(a => states.push(activityDueState(a)));
+    const callSt = _leadCallDueState(reqId);
+    if (callSt) states.push(callSt);
+    if (!states.length) return 'none';
+    if (states.includes('overdue')) return 'overdue';
+    if (states.includes('today'))   return 'today';
     return 'future';
   }
 
@@ -5999,7 +6023,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const who = _actClientName(a);
       const whoHtml = who ? `<button class="act-client" onclick="event.stopPropagation();openDetailView(${a.requestId})">${escapeHtml(who)}</button><span class="act-dot">·</span>` : '';
       return `<div class="act-row">
-        <input type="checkbox" class="act-check" onchange="toggleActivityDone(${a.id}, this.checked)" title="Mark done" aria-label="Mark activity done">
+        <input type="checkbox" class="act-check" onchange="onActivityCheck(${a.id}, this.checked, event)" title="Mark done" aria-label="Mark activity done">
         <span class="act-icon" title="${activityIcon(a.type)}">${activityIcon(a.type)}</span>
         <div class="act-body">
           <div class="act-title">${escapeHtml(a.title)}</div>
@@ -6079,7 +6103,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const dueCls = st === 'overdue' ? 'act-due-overdue' : st === 'today' ? 'act-due-today' : 'act-due-up';
       const dueTxt = a.dueAt ? _actDateStr(a.dueAt) : '';
       return `<div class="act-row${a.done ? ' act-done' : ''}">
-        <input type="checkbox" class="act-check" ${a.done ? 'checked' : ''} onchange="toggleActivityDone(${a.id}, this.checked)" aria-label="Mark done">
+        <input type="checkbox" class="act-check" ${a.done ? 'checked' : ''} onchange="onActivityCheck(${a.id}, this.checked, event)" aria-label="Mark done">
         <span class="act-icon">${activityIcon(a.type)}</span>
         <div class="act-body"><div class="act-title">${escapeHtml(a.title)}</div>${dueTxt ? `<div class="act-meta"><span class="${dueCls}">${dueTxt}</span></div>` : ''}</div>
         <button class="act-del" onclick="deleteActivity(${a.id})" title="Delete">×</button>
@@ -6098,18 +6122,36 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
 
   // ── Quick "+ Activity" popover on a board card (Pipedrive-style inline add) ──
-  let _capReqId = null;
+  // Also drives the "complete → must log the next activity" flow: ticking an
+  // activity's checkbox opens this popover in "next activity" mode, and the
+  // completion is only committed when the next one is added (Cancel = it stays
+  // open). _completingActId holds the activity being closed out (null = plain add).
+  let _capReqId = null, _completingActId = null;
   function _capDateStr(addDays) {
     const d = new Date(); d.setDate(d.getDate() + (addDays || 0));
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
   function capSetDue(days) { const el = document.getElementById('cap-due'); if (el) el.value = _capDateStr(days); }
-  function closeCardActivity() { const pop = document.getElementById('card-act-pop'); if (pop) pop.style.display = 'none'; _capReqId = null; }
-  function openCardActivity(e, reqId) {
+  function closeCardActivity() {
+    const pop = document.getElementById('card-act-pop');
+    if (pop) pop.style.display = 'none';
+    const wasCompleting = _completingActId;
+    _capReqId = null;
+    _completingActId = null;
+    // Cancelled the "log next activity" step → the activity was NOT completed;
+    // re-render so the checkbox that was ticked reverts to unchecked.
+    if (wasCompleting != null) {
+      const a = (activities || []).find(x => x.id === wasCompleting);
+      _activitiesRefresh(a && a.requestId);
+      if (_actHoverReq != null && document.getElementById('act-hover').style.display === 'block') populateActivityHover(_actHoverReq);
+    }
+  }
+  function openCardActivity(e, reqId, completingId) {
     if (e) e.stopPropagation();
     const pop = document.getElementById('card-act-pop');
     if (!pop) return;
     _capReqId = reqId;
+    _completingActId = (completingId != null) ? completingId : null;
     const typeEl = document.getElementById('cap-type');
     const textEl = document.getElementById('cap-text');
     const dueEl  = document.getElementById('cap-due');
@@ -6119,11 +6161,25 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (dueEl)  dueEl.value  = _capDateStr(0);   // default to today
     const r = (requests || []).find(x => x.id === reqId);
     if (whoEl) whoEl.textContent = r ? `· ${(r.firstName || '') + ' ' + (r.lastName || '')}`.trim() : '';
-    // Position near the clicked button, clamped to the viewport.
+    // "next activity" mode when completing one.
+    const labelEl = document.getElementById('cap-head-label');
+    const addBtn  = document.getElementById('cap-add-btn');
+    const noteEl  = document.getElementById('cap-completing-note');
+    if (_completingActId != null) {
+      const done = (activities || []).find(x => x.id === _completingActId);
+      if (labelEl) labelEl.textContent = 'Log the next activity';
+      if (addBtn)  addBtn.textContent = 'Complete & add next';
+      if (noteEl)  { noteEl.textContent = '✓ Completing: ' + (done ? done.title : 'activity') + ' — schedule the next step to close it out.'; noteEl.style.display = 'block'; }
+    } else {
+      if (labelEl) labelEl.textContent = 'Add activity';
+      if (addBtn)  addBtn.textContent = 'Add activity';
+      if (noteEl)  noteEl.style.display = 'none';
+    }
+    // Position near the click, clamped to the viewport.
     pop.style.display = 'block';
     const btn = e && (e.currentTarget || e.target);
     const rect = (btn && btn.getBoundingClientRect) ? btn.getBoundingClientRect() : { left: 120, right: 120, bottom: 120, top: 120 };
-    const pw = 250, ph = pop.offsetHeight || 230;
+    const pw = 250, ph = pop.offsetHeight || 240;
     let left = rect.left;
     let top = rect.bottom + 6;
     if (left + pw > window.innerWidth - 12) left = window.innerWidth - pw - 12;
@@ -6132,20 +6188,40 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     pop.style.top = Math.max(12, top) + 'px';
     setTimeout(() => { if (textEl) textEl.focus(); }, 30);
   }
+  // Checkbox handler used everywhere: ticking = complete (→ must add next);
+  // unticking a done one just reopens it.
+  function onActivityCheck(id, checked, e) {
+    if (checked) requestCompleteActivity(id, e);
+    else toggleActivityDone(id, false);
+  }
+  function requestCompleteActivity(id, e) {
+    const a = (activities || []).find(x => x.id === id);
+    if (!a) return;
+    hideActivityHover();
+    openCardActivity(e, a.requestId, id);
+  }
   async function saveCardActivity() {
-    if (_capReqId == null) return;
-    const reqId = _capReqId;
     const typeEl = document.getElementById('cap-type');
     const textEl = document.getElementById('cap-text');
     const dueEl  = document.getElementById('cap-due');
     const title = ((textEl && textEl.value) || '').trim();
     if (!title) { if (textEl) textEl.focus(); return; }
+    const reqId = _capReqId;
+    const completing = _completingActId;
     const a = _newActivity(reqId, typeEl ? typeEl.value : 'task', title, dueEl ? dueEl.value : '');
     activities.push(a);
+    // Commit the completion now that the next activity exists.
+    let doneA = null;
+    if (completing != null) {
+      doneA = (activities || []).find(x => x.id === completing);
+      if (doneA) { doneA.done = true; doneA.doneAt = new Date().toISOString(); }
+    }
     localStorage.setItem('am_activities', JSON.stringify(activities));
+    _completingActId = null;   // so closeCardActivity doesn't treat this as a cancel
     closeCardActivity();
     _activitiesRefresh(reqId);
     await dbPost('activities', { id: a.id, requestId: reqId, type: a.type, title: a.title, dueAt: a.dueAt });
+    if (doneA) await dbPut('activities', { id: doneA.id, done: true, doneAt: doneA.doneAt });
   }
   // Close the popover on an outside click or Escape.
   document.addEventListener('click', (e) => {
@@ -6171,21 +6247,33 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const stateLabel = { overdue: 'Past due', today: 'Due today', future: 'Scheduled ahead', none: 'No activity set' }[state];
     const mine = (activities || []).filter(a => a.requestId === reqId && !a.done)
       .sort((a, b) => (a.dueAt ? new Date(a.dueAt).getTime() : Infinity) - (b.dueAt ? new Date(b.dueAt).getTime() : Infinity));
-    let body;
-    if (!mine.length) {
-      body = `<div class="ah-empty">No activity set for this lead.</div><button class="ah-add" onclick="hideActivityHover();openCardActivity(event, ${reqId})">+ Add activity</button>`;
-    } else {
-      body = mine.map(a => {
-        const st = activityDueState(a);
-        const dueCls = st === 'overdue' ? 'act-due-overdue' : st === 'today' ? 'act-due-today' : 'act-due-up';
-        const dueTxt = a.dueAt ? (_actDateStr(a.dueAt) + (st === 'overdue' ? ' · overdue' : st === 'today' ? ' · today' : '')) : 'No date';
-        return `<label class="ah-row">
-          <input type="checkbox" onchange="hoverCheckActivity(${a.id})" title="Mark done">
-          <span class="ah-ic">${activityIcon(a.type)}</span>
-          <span class="ah-txt"><span class="ah-title">${escapeHtml(a.title)}</span><span class="ah-due ${dueCls}">${dueTxt}</span></span>
-        </label>`;
-      }).join('') + `<button class="ah-add" onclick="hideActivityHover();openCardActivity(event, ${reqId})">+ Add activity</button>`;
+    // A booked call shows as a read-only row (it's completed via the call's
+    // Good/Bad/No-show outcome, not a checkbox).
+    const callSt = _leadCallDueState(reqId);
+    let callRow = '';
+    if (callSt) {
+      const k = (r && r.email || '').toLowerCase();
+      const c = CALL_TIMES[k];
+      const dueCls = callSt === 'today' ? 'act-due-today' : 'act-due-up';
+      const dueTxt = (c && c.dateLabel ? c.dateLabel : _actDateStr(c && c.startIso)) + (c && c.timeLabel ? ' · ' + c.timeLabel : '') + (callSt === 'today' ? ' · today' : '');
+      callRow = `<div class="ah-row ah-callrow">
+        <span class="ah-callmark">📅</span>
+        <span class="ah-ic">📞</span>
+        <span class="ah-txt"><span class="ah-title">Sales call booked</span><span class="ah-due ${dueCls}">${dueTxt}</span></span>
+      </div>`;
     }
+    const rows = mine.map(a => {
+      const st = activityDueState(a);
+      const dueCls = st === 'overdue' ? 'act-due-overdue' : st === 'today' ? 'act-due-today' : 'act-due-up';
+      const dueTxt = a.dueAt ? (_actDateStr(a.dueAt) + (st === 'overdue' ? ' · overdue' : st === 'today' ? ' · today' : '')) : 'No date';
+      return `<label class="ah-row">
+        <input type="checkbox" onchange="onActivityCheck(${a.id}, this.checked, event)" title="Mark done">
+        <span class="ah-ic">${activityIcon(a.type)}</span>
+        <span class="ah-txt"><span class="ah-title">${escapeHtml(a.title)}</span><span class="ah-due ${dueCls}">${dueTxt}</span></span>
+      </label>`;
+    }).join('');
+    const empty = (!mine.length && !callRow) ? '<div class="ah-empty">No activity set for this lead.</div>' : '';
+    const body = empty + callRow + rows + `<button class="ah-add" onclick="hideActivityHover();openCardActivity(event, ${reqId})">+ Add activity</button>`;
     pop.innerHTML = `<div class="ah-head"><span class="kb-actdot kb-actdot-${state}"></span>${stateLabel}${who ? ` · ${escapeHtml(who)}` : ''}</div>${body}`;
   }
   function showActivityHover(e, reqId) {
@@ -6206,15 +6294,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     pop.style.left = Math.max(12, left) + 'px';
     pop.style.top = Math.max(12, top) + 'px';
   }
-  function hoverCheckActivity(id) {
-    toggleActivityDone(id, true);   // persists + recolors the board via _activitiesRefresh
-    if (_actHoverReq != null) {
-      const stillOpen = (activities || []).some(a => a.requestId === _actHoverReq && !a.done);
-      if (stillOpen) populateActivityHover(_actHoverReq);
-      else hideActivityHover();
-    }
-  }
-
   function renderDashboard() {
     updateStats();
     updateBadges();
