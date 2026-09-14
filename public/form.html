@@ -1448,7 +1448,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .kb-card.kb-act-today   { border-left: 4px solid #16a34a; }
   .kb-card.kb-act-future  { border-left: 4px solid #94a3b8; }
   .kb-card.kb-act-none    { border-left: 4px solid #f59e0b; }
-  .kb-actdot { flex: none; width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .kb-actdot { flex: none; width: 11px; height: 11px; border-radius: 50%; display: inline-block; cursor: help; box-shadow: 0 0 0 3px transparent; transition: box-shadow 0.12s; }
+  .kb-actdot:hover { box-shadow: 0 0 0 3px rgba(15,37,87,0.12); }
   .kb-actdot-overdue { background: #dc2626; }
   .kb-actdot-today   { background: #16a34a; }
   .kb-actdot-future  { background: #94a3b8; }
@@ -1466,6 +1467,19 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .cap-actions { display: flex; gap: 8px; }
   .cap-actions .act-add-btn { flex: 1; }
   .cap-cancel { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 600; border: 1px solid var(--border); background: transparent; color: var(--text-muted); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+  /* Hover-card for a board card's activity dot */
+  .act-hover { position: fixed; z-index: 3200; width: 250px; background: var(--white); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 34px rgba(15,37,87,0.24); padding: 10px 12px; }
+  .act-hover .ah-head { font-family: system-ui, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+  .act-hover .ah-row { display: flex; align-items: flex-start; gap: 9px; padding: 6px 0; cursor: pointer; }
+  .act-hover .ah-row + .ah-row { border-top: 1px solid var(--border); }
+  .act-hover .ah-row input { width: 16px; height: 16px; margin-top: 1px; cursor: pointer; accent-color: var(--green); flex: none; }
+  .act-hover .ah-ic { flex: none; font-size: 14px; }
+  .act-hover .ah-txt { display: flex; flex-direction: column; min-width: 0; }
+  .act-hover .ah-title { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 600; color: var(--text); }
+  .act-hover .ah-due { font-family: system-ui, sans-serif; font-size: 11px; margin-top: 1px; }
+  .act-hover .ah-empty { font-family: system-ui, sans-serif; font-size: 13px; color: var(--text-muted); padding: 2px 0 8px; }
+  .act-hover .ah-add { margin-top: 8px; width: 100%; font-family: system-ui, sans-serif; font-size: 12px; font-weight: 600; color: var(--navy); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px; cursor: pointer; }
+  .act-hover .ah-add:hover { border-color: var(--navy); }
   .kb-card:active { cursor: grabbing; }
   .kb-card.kb-dragging { opacity: 0.45; }
   .kb-card-name { font-family: 'DM Sans', system-ui, sans-serif; font-weight: 600; font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 6px; }
@@ -2134,7 +2148,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   </div>
 </div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v236 · 2026-09-14</div>
+<!-- Hover-card shown when the mouse is over a board card's activity dot. -->
+<div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
+
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v237 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -4992,8 +5009,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // grey = scheduled ahead, yellow = no activity set. Drives the card's left
     // stripe (kb-act-*) and the dot before the name.
     const actState = (typeof leadActivityState === 'function') ? leadActivityState(r.id) : 'none';
-    const actTitle = { overdue: 'Activity past due', today: 'Activity due today', future: 'Activity scheduled ahead', none: 'No activity set' }[actState];
-    const flag = `<span class="kb-actdot kb-actdot-${actState}" title="${actTitle}"></span>`;
+    // Hover the dot → an interactive card showing what the activity is, with a
+    // checkbox to mark it done. (Native title can't do checkboxes.)
+    const flag = `<span class="kb-actdot kb-actdot-${actState}" onmouseenter="showActivityHover(event, ${r.id})" onmouseleave="hideActivityHoverSoon()"></span>`;
     // Show the follow-up date on the card, colored by urgency.
     let fuDate = '';
     if (r.reminderAt) {
@@ -6137,7 +6155,65 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (e.target.closest && e.target.closest('.kb-addact')) return;
     closeCardActivity();
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCardActivity(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeCardActivity(); hideActivityHover(); } });
+
+  // ── Hover a card's color dot → interactive card of its activities + check-off ──
+  let _actHoverTimer = null, _actHoverReq = null;
+  function cancelHideActivityHover() { if (_actHoverTimer) { clearTimeout(_actHoverTimer); _actHoverTimer = null; } }
+  function hideActivityHover() { const p = document.getElementById('act-hover'); if (p) p.style.display = 'none'; _actHoverReq = null; }
+  function hideActivityHoverSoon() { cancelHideActivityHover(); _actHoverTimer = setTimeout(hideActivityHover, 260); }
+  function populateActivityHover(reqId) {
+    const pop = document.getElementById('act-hover');
+    if (!pop) return;
+    const r = (requests || []).find(x => x.id === reqId);
+    const who = r ? `${r.firstName || ''} ${r.lastName || ''}`.trim() : '';
+    const state = (typeof leadActivityState === 'function') ? leadActivityState(reqId) : 'none';
+    const stateLabel = { overdue: 'Past due', today: 'Due today', future: 'Scheduled ahead', none: 'No activity set' }[state];
+    const mine = (activities || []).filter(a => a.requestId === reqId && !a.done)
+      .sort((a, b) => (a.dueAt ? new Date(a.dueAt).getTime() : Infinity) - (b.dueAt ? new Date(b.dueAt).getTime() : Infinity));
+    let body;
+    if (!mine.length) {
+      body = `<div class="ah-empty">No activity set for this lead.</div><button class="ah-add" onclick="hideActivityHover();openCardActivity(event, ${reqId})">+ Add activity</button>`;
+    } else {
+      body = mine.map(a => {
+        const st = activityDueState(a);
+        const dueCls = st === 'overdue' ? 'act-due-overdue' : st === 'today' ? 'act-due-today' : 'act-due-up';
+        const dueTxt = a.dueAt ? (_actDateStr(a.dueAt) + (st === 'overdue' ? ' · overdue' : st === 'today' ? ' · today' : '')) : 'No date';
+        return `<label class="ah-row">
+          <input type="checkbox" onchange="hoverCheckActivity(${a.id})" title="Mark done">
+          <span class="ah-ic">${activityIcon(a.type)}</span>
+          <span class="ah-txt"><span class="ah-title">${escapeHtml(a.title)}</span><span class="ah-due ${dueCls}">${dueTxt}</span></span>
+        </label>`;
+      }).join('') + `<button class="ah-add" onclick="hideActivityHover();openCardActivity(event, ${reqId})">+ Add activity</button>`;
+    }
+    pop.innerHTML = `<div class="ah-head"><span class="kb-actdot kb-actdot-${state}"></span>${stateLabel}${who ? ` · ${escapeHtml(who)}` : ''}</div>${body}`;
+  }
+  function showActivityHover(e, reqId) {
+    if (e) e.stopPropagation();
+    cancelHideActivityHover();
+    _actHoverReq = reqId;
+    const pop = document.getElementById('act-hover');
+    if (!pop) return;
+    populateActivityHover(reqId);
+    pop.style.display = 'block';
+    const anchor = e && (e.currentTarget || e.target);
+    const rect = (anchor && anchor.getBoundingClientRect) ? anchor.getBoundingClientRect() : { left: 100, right: 100, bottom: 100, top: 100 };
+    const pw = 250, ph = pop.offsetHeight || 130;
+    let left = rect.right + 8;
+    let top = rect.top - 4;
+    if (left + pw > window.innerWidth - 12) left = Math.max(12, rect.left - pw - 8);
+    if (top + ph > window.innerHeight - 12) top = Math.max(12, window.innerHeight - ph - 12);
+    pop.style.left = Math.max(12, left) + 'px';
+    pop.style.top = Math.max(12, top) + 'px';
+  }
+  function hoverCheckActivity(id) {
+    toggleActivityDone(id, true);   // persists + recolors the board via _activitiesRefresh
+    if (_actHoverReq != null) {
+      const stillOpen = (activities || []).some(a => a.requestId === _actHoverReq && !a.done);
+      if (stillOpen) populateActivityHover(_actHoverReq);
+      else hideActivityHover();
+    }
+  }
 
   function renderDashboard() {
     updateStats();
