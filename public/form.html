@@ -2060,7 +2060,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v229 · 2026-09-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v230 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -4891,7 +4891,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // win. Booking a call auto-moves a lead into Call Scheduled (even out of the
   // pre-call queue); once the call passes or an outcome/no-show is recorded it
   // leaves Call Scheduled on its own.
-  const NEW_LEAD_WINDOW_DAYS = 7;
   const NO_SHOW_WINDOW_DAYS  = 45;
   const TERMINAL_STAGES = new Set(['good_call','bad_call','deposit_pending','closed_deposit','lost','email_remarketing','future_follow_up']);
   const PRECALL_STAGES  = new Set(['contact_attempted','followup_1','followup_2','followup_3','followup_4']);
@@ -4936,9 +4935,16 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     }
     // 5) Renz's manual pre-call queue.
     if (stage && PRECALL_STAGES.has(stage)) return stage;
-    // 6) New Lead = filled the form in the last week and hasn't booked a call.
-    if (!r.bookingConfirmedAt && _daysAgo(r.submitted) <= NEW_LEAD_WINDOW_DAYS) return 'new_lead';
-    // 7) Everything else → Requests tab only.
+    // 6) New Lead = every active lead that hasn't booked a call and isn't already
+    // in a later manual stage — so the board shows the SAME active leads the
+    // Requests tab does (kept in sync). No age cap: a lead sits here until it
+    // books a call, gets worked into a later column, or the cron retires it to
+    // dormant (~30d cold) — at which point it leaves both the board and the
+    // active Requests views together.
+    if (!r.bookingConfirmedAt) return 'new_lead';
+    // 7) Booked but the call already passed with no outcome recorded, or an old
+    // graded call — off the board; it lives in the Requests tab until staff mark
+    // the outcome or it goes dormant.
     return null;
   }
 
