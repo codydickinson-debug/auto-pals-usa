@@ -128,7 +128,11 @@ async function handleListCalls(req, res) {
 // doesn't depend on Google Calendar being configured.
 async function listUpcomingBookings() {
   if (!SUPABASE_KEY) return [];
-  const url = `${SUPABASE_URL}/rest/v1/bookings?date=gte.${todayET()}&select=email,date,time&order=date.asc&limit=1000`;
+  // Cap at +90 days to match the Google Calendar window, so a stray far-future
+  // booking (e.g. a mis-typed 2027 date) can't leak into Call Scheduled.
+  const maxD = new Date(`${todayET()}T00:00:00Z`); maxD.setUTCDate(maxD.getUTCDate() + 90);
+  const maxStr = maxD.toISOString().slice(0, 10);
+  const url = `${SUPABASE_URL}/rest/v1/bookings?date=gte.${todayET()}&date=lte.${maxStr}&select=email,date,time&order=date.asc&limit=1000`;
   const r = await fetch(url, {
     headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, Accept: 'application/json' }
   });
