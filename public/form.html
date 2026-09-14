@@ -1286,6 +1286,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .repair-totals { display: flex; gap: 24px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-family: system-ui, sans-serif; font-size: 13px; }
   .repair-total-item .rtlbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
   .repair-total-item .rtval { font-size: 16px; font-weight: 700; color: var(--navy); }
+  /* Completed · Sold — expandable row showing the work that was done */
+  .repair-done-details > summary { list-style: none; cursor: pointer; }
+  .repair-done-details > summary::-webkit-details-marker { display: none; }
+  .repair-done-details .rd-chev { transition: transform 0.15s ease; display: inline-block; color: var(--text-muted); }
+  .repair-done-details[open] .rd-chev { transform: rotate(90deg); }
+  .repair-done-details[open] > summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
   /* Repair modal item row — 2-row card so wholesale + charge are clearly labeled */
   .rm-item-row { display: block; background: var(--accent-light); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
   .rm-item-row .rm-row-top { display: grid; grid-template-columns: 1fr 32px; gap: 8px; align-items: center; margin-bottom: 8px; }
@@ -2054,7 +2060,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v226 · 2026-09-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v227 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -8364,10 +8370,16 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       </div>`;
   }
 
+  // Which Completed·Sold rows are expanded — kept across re-renders (the panel
+  // re-renders on poll) so an open drop-down doesn't snap shut while you read.
+  const _completedOpen = new Set();
+  function onCompletedToggle(id, open) { if (open) _completedOpen.add(id); else _completedOpen.delete(id); }
+
   // Compact history of cars whose repairs are finished AND the deal has SOLD
   // (repairCarIsClosed). They've left the active workflow, but the owner wants
-  // to still see who's had repairs done. Shows the wholesale Repair Cost and
-  // what the CLIENT PAID for the repairs (cost + markup) — NOT the markup/profit.
+  // to still see who's had repairs done. Each row expands to show the WORK done
+  // and WHEN. Shows the wholesale Repair Cost and what the CLIENT PAID for the
+  // repairs (cost + markup) — NOT the markup/profit.
   function renderRepairCompletedSection(closedCars) {
     if (!closedCars || !closedCars.length) return '';
     const fmtUsd = (n) => n ? '$' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—';
@@ -8379,24 +8391,61 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const inScope = (car.repairs || []).filter(r => !isItemDeclined(r));
       const cost   = inScope.reduce((a, r) => a + (Number(r.cost) || 0), 0);
       const charge = inScope.reduce((a, r) => a + repairItemCharge(r), 0); // cost × markup + labor = what the client paid
+      // Drop-down body: the actual line items done + when.
+      const itemRows = inScope.length ? inScope.map(r => {
+        const done = r.done ? '<span style="color:var(--green,#166534);font-weight:700;">✓ Done</span>' : '<span style="color:var(--text-muted);">—</span>';
+        return `<tr>
+          <td style="padding:5px 8px;border-bottom:1px solid var(--border);">${escapeHtml(r.desc || '—')}${r.hours ? `<span style="color:var(--text-muted);"> · ${r.hours}h</span>` : ''}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:right;color:var(--text-muted);">${fmtUsd(Number(r.cost) || 0)}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:right;font-weight:600;">${fmtUsd(repairItemCharge(r))}</td>
+          <td style="padding:5px 8px;border-bottom:1px solid var(--border);text-align:right;">${done}</td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="4" style="padding:8px;color:var(--text-muted);">No line items recorded.</td></tr>';
+      const parts = (car.parts || []).filter(p => p && p.name);
+      const partsLine = parts.length
+        ? `<div style="margin-top:8px;font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);">Parts: ${parts.map(p => escapeHtml(p.name) + (p.status ? ` (${escapeHtml(p.status)})` : '')).join(', ')}</div>`
+        : '';
+      const notesLine = car.notes
+        ? `<div style="margin-top:8px;font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);font-style:italic;">${escapeHtml(car.notes)}</div>`
+        : '';
+      const detail = `
+        <div style="padding:12px 14px;border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;background:var(--surface);">
+          <div style="font-family:system-ui,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Work done${car.doneAt ? ` · finished ${fmtDate(car.doneAt)}` : ''}</div>
+          <table style="width:100%;border-collapse:collapse;font-family:system-ui,sans-serif;font-size:12px;">
+            <thead><tr>
+              <th style="text-align:left;padding:4px 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);border-bottom:1px solid var(--border);">Repair Item</th>
+              <th style="text-align:right;padding:4px 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);border-bottom:1px solid var(--border);">Cost</th>
+              <th style="text-align:right;padding:4px 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);border-bottom:1px solid var(--border);">Client Paid</th>
+              <th style="text-align:right;padding:4px 8px;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);border-bottom:1px solid var(--border);">Status</th>
+            </tr></thead>
+            <tbody>${itemRows}</tbody>
+          </table>
+          ${partsLine}${notesLine}
+        </div>`;
       return `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface);">
-        <div style="min-width:0;">
-          <div style="font-family:system-ui,sans-serif;font-weight:600;font-size:14px;color:var(--text);">${car.vehicle || '—'} <span style="display:inline-block;margin-left:4px;padding:1px 8px;border-radius:99px;background:var(--green-light,#dcfce7);color:var(--green,#166534);font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">Sold</span></div>
-          <div style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);">${car.client || ''}${car.vin ? ` · <span style="font-family:monospace;letter-spacing:0.05em;">${car.vin}</span>` : ''}${car.doneAt ? ` · finished ${fmtDate(car.doneAt)}` : ''}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:22px;flex-shrink:0;">
-          <div style="text-align:right;font-family:system-ui,sans-serif;">
-            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Repair Cost</div>
-            <div style="font-size:14px;font-weight:700;color:var(--navy);">${fmtUsd(cost)}</div>
+      <details class="repair-done-details" ${_completedOpen.has(car.id) ? 'open' : ''} ontoggle="onCompletedToggle(${car.id}, this.open)">
+        <summary style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface);">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <span class="rd-chev">▸</span>
+            <div style="min-width:0;">
+              <div style="font-family:system-ui,sans-serif;font-weight:600;font-size:14px;color:var(--text);">${car.vehicle || '—'} <span style="display:inline-block;margin-left:4px;padding:1px 8px;border-radius:99px;background:var(--green-light,#dcfce7);color:var(--green,#166534);font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">Sold</span></div>
+              <div style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);">${car.client || ''}${car.vin ? ` · <span style="font-family:monospace;letter-spacing:0.05em;">${car.vin}</span>` : ''}${car.doneAt ? ` · finished ${fmtDate(car.doneAt)}` : ''}</div>
+            </div>
           </div>
-          <div style="text-align:right;font-family:system-ui,sans-serif;">
-            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Client Paid</div>
-            <div style="font-size:14px;font-weight:700;color:var(--navy);">${fmtUsd(charge)}</div>
+          <div style="display:flex;align-items:center;gap:22px;flex-shrink:0;">
+            <div style="text-align:right;font-family:system-ui,sans-serif;">
+              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Repair Cost</div>
+              <div style="font-size:14px;font-weight:700;color:var(--navy);">${fmtUsd(cost)}</div>
+            </div>
+            <div style="text-align:right;font-family:system-ui,sans-serif;">
+              <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Client Paid</div>
+              <div style="font-size:14px;font-weight:700;color:var(--navy);">${fmtUsd(charge)}</div>
+            </div>
+            <button class="filter-btn" onclick="event.stopPropagation(); openDoneCarProfile(${car.id})" title="Open the client's profile">Open profile →</button>
           </div>
-          <button class="filter-btn" onclick="openDoneCarProfile(${car.id})" title="Open the client's profile">Open profile →</button>
-        </div>
-      </div>`;
+        </summary>
+        ${detail}
+      </details>`;
     }).join('');
     return `
       <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:18px;">
