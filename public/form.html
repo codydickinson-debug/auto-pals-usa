@@ -1461,6 +1461,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .cap-head { font-family: system-ui, sans-serif; font-size: 12px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
   .cap-who { font-weight: 600; color: var(--text-muted); }
   .cap-completing { font-family: system-ui, sans-serif; font-size: 11px; color: #166534; background: var(--green-light, #dcfce7); border-radius: 6px; padding: 6px 8px; margin-bottom: 8px; line-height: 1.35; }
+  .cap-outcome-q { font-family: system-ui, sans-serif; font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+  .cap-outcome-btns { display: flex; flex-direction: column; gap: 6px; }
+  .cap-oc { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 700; border: none; border-radius: 8px; padding: 9px 12px; cursor: pointer; color: #fff; }
+  .cap-oc:active { transform: scale(0.98); }
+  .cap-oc-good { background: #047857; }
+  .cap-oc-bad  { background: #b91c1c; }
+  .cap-oc-ns   { background: #fff; color: #92400e; border: 1px solid #fcd34d; }
   .card-act-pop .act-input { font-size: 13px; box-sizing: border-box; }
   .cap-chips { display: flex; gap: 6px; margin-bottom: 10px; }
   .cap-chips button { flex: 1; font-family: system-ui, sans-serif; font-size: 11px; font-weight: 600; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; padding: 5px 4px; cursor: pointer; }
@@ -2132,30 +2139,43 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <div id="card-act-pop" class="card-act-pop" style="display:none;">
   <div class="cap-head"><span id="cap-head-label">Add activity</span> <span id="cap-who" class="cap-who"></span></div>
   <div id="cap-completing-note" class="cap-completing" style="display:none;"></div>
-  <select id="cap-type" class="act-input" style="width:100%;margin-bottom:6px;">
-    <option value="call">📞 Call</option>
-    <option value="text">💬 Text</option>
-    <option value="email">✉️ Email</option>
-    <option value="meeting">🤝 Meeting</option>
-    <option value="task">✅ To-do</option>
-  </select>
-  <input id="cap-text" class="act-input" style="width:100%;margin-bottom:6px;" type="text" placeholder="What needs doing?" onkeydown="if(event.key==='Enter'){event.preventDefault();saveCardActivity();}">
-  <input id="cap-due" class="act-input" style="width:100%;margin-bottom:6px;" type="date" aria-label="Due date">
-  <div class="cap-chips">
-    <button type="button" onclick="capSetDue(0)">Today</button>
-    <button type="button" onclick="capSetDue(1)">Tomorrow</button>
-    <button type="button" onclick="capSetDue(7)">+1 wk</button>
+  <!-- Step shown when completing a booked call: grade the outcome first. -->
+  <div id="cap-calloutcome" style="display:none;">
+    <div class="cap-outcome-q">How did the call go?</div>
+    <div class="cap-outcome-btns">
+      <button type="button" class="cap-oc cap-oc-good" onclick="pickCallOutcome('good')">Good call</button>
+      <button type="button" class="cap-oc cap-oc-bad" onclick="pickCallOutcome('bad')">Bad call</button>
+      <button type="button" class="cap-oc cap-oc-ns" onclick="pickCallOutcome('noshow')">No-show</button>
+    </div>
+    <button type="button" class="cap-cancel" style="width:100%;margin-top:8px;" onclick="closeCardActivity()">Cancel</button>
   </div>
-  <div class="cap-actions">
-    <button type="button" id="cap-add-btn" class="act-add-btn" onclick="saveCardActivity()">Add activity</button>
-    <button type="button" class="cap-cancel" onclick="closeCardActivity()">Cancel</button>
+  <!-- Activity add form (also the "log next activity" step). -->
+  <div id="cap-form">
+    <select id="cap-type" class="act-input" style="width:100%;margin-bottom:6px;">
+      <option value="call">📞 Call</option>
+      <option value="text">💬 Text</option>
+      <option value="email">✉️ Email</option>
+      <option value="meeting">🤝 Meeting</option>
+      <option value="task">✅ To-do</option>
+    </select>
+    <input id="cap-text" class="act-input" style="width:100%;margin-bottom:6px;" type="text" placeholder="What needs doing?" onkeydown="if(event.key==='Enter'){event.preventDefault();saveCardActivity();}">
+    <input id="cap-due" class="act-input" style="width:100%;margin-bottom:6px;" type="date" aria-label="Due date">
+    <div class="cap-chips">
+      <button type="button" onclick="capSetDue(0)">Today</button>
+      <button type="button" onclick="capSetDue(1)">Tomorrow</button>
+      <button type="button" onclick="capSetDue(7)">+1 wk</button>
+    </div>
+    <div class="cap-actions">
+      <button type="button" id="cap-add-btn" class="act-add-btn" onclick="saveCardActivity()">Add activity</button>
+      <button type="button" class="cap-cancel" onclick="closeCardActivity()">Cancel</button>
+    </div>
   </div>
 </div>
 
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v239 · 2026-09-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v240 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -6130,7 +6150,23 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // activity's checkbox opens this popover in "next activity" mode, and the
   // completion is only committed when the next one is added (Cancel = it stays
   // open). _completingActId holds the activity being closed out (null = plain add).
-  let _capReqId = null, _completingActId = null;
+  let _capReqId = null, _completingActId = null, _completingCallReq = null;
+  // Toggle the popover between the activity form and the call-outcome step.
+  function _capMode(mode) {
+    const oc = document.getElementById('cap-calloutcome');
+    const form = document.getElementById('cap-form');
+    if (oc)   oc.style.display   = (mode === 'call') ? 'block' : 'none';
+    if (form) form.style.display = (mode === 'call') ? 'none'  : 'block';
+  }
+  function _positionCardPop(pop, anchor) {
+    const rect = (anchor && anchor.getBoundingClientRect) ? anchor.getBoundingClientRect() : { left: 120, right: 120, bottom: 120, top: 120 };
+    const pw = 250, ph = pop.offsetHeight || 240;
+    let left = rect.left, top = rect.bottom + 6;
+    if (left + pw > window.innerWidth - 12) left = window.innerWidth - pw - 12;
+    if (top + ph > window.innerHeight - 12) top = Math.max(12, rect.top - ph - 6);
+    pop.style.left = Math.max(12, left) + 'px';
+    pop.style.top = Math.max(12, top) + 'px';
+  }
   function _capDateStr(addDays) {
     const d = new Date(); d.setDate(d.getDate() + (addDays || 0));
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -6142,6 +6178,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const wasCompleting = _completingActId;
     _capReqId = null;
     _completingActId = null;
+    _completingCallReq = null;
+    _capMode('activity');   // reset so the next open shows the form
     // Cancelled the "log next activity" step → the activity was NOT completed;
     // re-render so the checkbox that was ticked reverts to unchecked.
     if (wasCompleting != null) {
@@ -6156,6 +6194,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (!pop) return;
     _capReqId = reqId;
     _completingActId = (completingId != null) ? completingId : null;
+    _completingCallReq = null;
+    _capMode('activity');
     const typeEl = document.getElementById('cap-type');
     const textEl = document.getElementById('cap-text');
     const dueEl  = document.getElementById('cap-due');
@@ -6181,15 +6221,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     }
     // Position near the click, clamped to the viewport.
     pop.style.display = 'block';
-    const btn = e && (e.currentTarget || e.target);
-    const rect = (btn && btn.getBoundingClientRect) ? btn.getBoundingClientRect() : { left: 120, right: 120, bottom: 120, top: 120 };
-    const pw = 250, ph = pop.offsetHeight || 240;
-    let left = rect.left;
-    let top = rect.bottom + 6;
-    if (left + pw > window.innerWidth - 12) left = window.innerWidth - pw - 12;
-    if (top + ph > window.innerHeight - 12) top = Math.max(12, rect.top - ph - 6);
-    pop.style.left = Math.max(12, left) + 'px';
-    pop.style.top = Math.max(12, top) + 'px';
+    _positionCardPop(pop, e && (e.currentTarget || e.target));
     setTimeout(() => { if (textEl) textEl.focus(); }, 30);
   }
   // Checkbox handler used everywhere: ticking = complete (→ must add next);
@@ -6203,6 +6235,53 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (!a) return;
     hideActivityHover();
     openCardActivity(e, a.requestId, id);
+  }
+  // Complete a booked CALL from the board: grade the outcome, then (for good/bad)
+  // force the next activity — same "can't complete without a next step" rule.
+  function requestCompleteCall(reqId, e) {
+    if (e) e.stopPropagation();
+    hideActivityHover();
+    const pop = document.getElementById('card-act-pop');
+    if (!pop) return;
+    _capReqId = reqId; _completingActId = null; _completingCallReq = reqId;
+    const r = (requests || []).find(x => x.id === reqId);
+    const whoEl = document.getElementById('cap-who');
+    const labelEl = document.getElementById('cap-head-label');
+    const noteEl = document.getElementById('cap-completing-note');
+    if (labelEl) labelEl.textContent = 'Complete the call';
+    if (whoEl) whoEl.textContent = r ? `· ${(r.firstName || '') + ' ' + (r.lastName || '')}`.trim() : '';
+    if (noteEl) noteEl.style.display = 'none';
+    _capMode('call');
+    pop.style.display = 'block';
+    _positionCardPop(pop, e && (e.currentTarget || e.target));
+  }
+  function pickCallOutcome(outcome) {
+    const reqId = _completingCallReq;
+    if (reqId == null) return;
+    setCallOutcome(reqId, outcome);   // grades + moves the pipeline (no-show has its own confirm + rebooking)
+    if (typeof renderPipelineBoard === 'function') renderPipelineBoard();
+    if (outcome === 'noshow') {
+      // No-show fires the rebooking drip — that IS the next step, so just close.
+      closeCardActivity();
+      return;
+    }
+    // Good/Bad → force the next activity in the same popover.
+    _completingCallReq = null;
+    _completingActId = null;
+    const labelEl = document.getElementById('cap-head-label');
+    const noteEl  = document.getElementById('cap-completing-note');
+    const addBtn  = document.getElementById('cap-add-btn');
+    if (labelEl) labelEl.textContent = 'Log the next activity';
+    if (noteEl)  { noteEl.textContent = '✓ Call marked ' + (outcome === 'good' ? 'Good' : 'Bad') + ' — schedule the next step.'; noteEl.style.display = 'block'; }
+    if (addBtn)  addBtn.textContent = 'Add next activity';
+    const typeEl = document.getElementById('cap-type');
+    const textEl = document.getElementById('cap-text');
+    const dueEl  = document.getElementById('cap-due');
+    if (typeEl) typeEl.value = (outcome === 'bad') ? 'call' : 'task';
+    if (textEl) textEl.value = '';
+    if (dueEl)  dueEl.value  = _capDateStr(2);   // default a couple days out
+    _capMode('activity');
+    setTimeout(() => { if (textEl) textEl.focus(); }, 30);
   }
   async function saveCardActivity() {
     const typeEl = document.getElementById('cap-type');
@@ -6260,11 +6339,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const c = CALL_TIMES[k];
       const dueCls = callSt === 'today' ? 'act-due-today' : 'act-due-up';
       const dueTxt = (c && c.dateLabel ? c.dateLabel : _actDateStr(c && c.startIso)) + (c && c.timeLabel ? ' · ' + c.timeLabel : '') + (callSt === 'today' ? ' · today' : '');
-      callRow = `<div class="ah-row ah-callrow">
-        <span class="ah-callmark">📅</span>
+      callRow = `<label class="ah-row ah-callrow">
+        <input type="checkbox" onchange="requestCompleteCall(${reqId}, event)" title="Mark call complete">
         <span class="ah-ic">📞</span>
         <span class="ah-txt"><span class="ah-title">Sales call booked</span><span class="ah-due ${dueCls}">${dueTxt}</span></span>
-      </div>`;
+      </label>`;
     }
     // A parked Future Follow-up (reminder_at) shows as a read-only row too.
     let reminderRow = '';
