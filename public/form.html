@@ -1484,6 +1484,33 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .act-del { flex: none; background: none; border: none; color: var(--text-muted); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; }
   .act-del:hover { color: var(--red); }
   .act-row.act-done .act-title { text-decoration: line-through; color: var(--text-muted); }
+  /* Activities tab: calendar + schedule */
+  .act-tab-layout { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; }
+  .act-calendar { flex: 1 1 340px; min-width: 300px; background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .act-schedule { flex: 1.4 1 380px; min-width: 300px; display: flex; flex-direction: column; gap: 16px; }
+  .acal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .acal-title { font-family: system-ui, sans-serif; font-size: 15px; font-weight: 700; color: var(--navy); }
+  .acal-nav { border: 1px solid var(--border); background: var(--surface); color: var(--text); width: 30px; height: 30px; border-radius: 7px; cursor: pointer; font-size: 16px; line-height: 1; }
+  .acal-nav:hover { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .acal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .acal-dow { margin-bottom: 4px; }
+  .acal-dowc { text-align: center; font-family: system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; color: var(--text-muted); text-transform: uppercase; }
+  .acal-cell { position: relative; aspect-ratio: 1 / 1; border: 1px solid transparent; border-radius: 8px; padding: 5px 6px; font-family: system-ui, sans-serif; font-size: 12px; color: var(--text); }
+  .acal-empty { border: none; }
+  .acal-num { font-weight: 600; }
+  .acal-has { background: var(--surface); border-color: var(--border); cursor: pointer; }
+  .acal-has:hover { border-color: var(--navy); }
+  .acal-today { outline: 2px solid var(--navy); outline-offset: -2px; }
+  .acal-sel { background: var(--navy); }
+  .acal-sel .acal-num { color: #fff; }
+  .acal-badge { position: absolute; bottom: 4px; right: 4px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 99px; background: var(--navy); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .acal-badge-over { background: #b91c1c; }
+  .asch-head { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .asch-count { font-size: 11px; font-weight: 700; color: var(--text-muted); background: var(--surface); border-radius: 99px; padding: 1px 8px; }
+  .asch-overdue { color: #b91c1c; }
+  .asch-today { color: #15803d; }
+  .asch-empty { color: var(--text-muted); font-family: system-ui, sans-serif; font-size: 13px; padding: 6px 0; }
+  .asch-group .act-row { margin-bottom: 6px; }
   .kb-empty { color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px 4px; font-family: system-ui, sans-serif; }
   .pl-fun-label { font-size: 13px; font-weight: 700; color: var(--text); font-family: system-ui, sans-serif; }
   .pl-fun-barwrap { background: #f1f5f9; border-radius: 6px; overflow: hidden; height: 26px; }
@@ -2088,7 +2115,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v232 · 2026-09-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v233 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2117,6 +2144,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <button class="nav-tab" id="nav-client-form" onclick="showView('client')">Client Form</button>
     <div id="staff-tabs" style="display:none;">
       <button class="nav-tab" onclick="showView('dashboard')" id="nav-requests">Requests</button>
+      <button class="nav-tab" onclick="showView('activities')" id="nav-activities">Activities <span id="nav-badge-activities" class="nav-tab-badge">0</span></button>
       <button class="nav-tab" onclick="showView('board')" id="nav-board">Board</button>
       <button class="nav-tab" onclick="showView('pipeline')" id="nav-pipeline">Pipeline</button>
       <button class="nav-tab" onclick="showView('repairs')" id="nav-repairs">Repairs <span id="nav-badge-repair" class="nav-tab-badge">0</span></button>
@@ -3020,6 +3048,30 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <div id="msg-polished-flash" class="msg-polished-flash" style="bottom:56px;right:84px;">✓ Polished</div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ ACTIVITIES VIEW ════════════ -->
+<div id="view-activities" class="view">
+  <div style="max-width:1200px;margin:0 auto;padding:24px 28px 80px;">
+    <div style="font-size:22px;font-weight:800;color:var(--navy);font-family:'DM Sans',system-ui,sans-serif;">Activities</div>
+    <div style="font-size:13px;color:var(--text-muted);margin:4px 0 18px;font-family:system-ui,sans-serif;">Everything you've scheduled — calls, texts, meetings and to-dos. Add one below, see what's coming on the calendar, and check them off as you go.</div>
+    <div class="activities-quickadd" style="margin-bottom:20px;">
+      <select id="act-tab-type" class="act-input act-type-sel" aria-label="Activity type">
+        <option value="call">📞 Call</option>
+        <option value="text">💬 Text</option>
+        <option value="email">✉️ Email</option>
+        <option value="meeting">🤝 Meeting</option>
+        <option value="task" selected>✅ To-do</option>
+      </select>
+      <input id="act-tab-title" class="act-input act-title-in" type="text" placeholder="Add an activity…" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddActivity('act-tab');}">
+      <input id="act-tab-due" class="act-input act-due-in" type="date" aria-label="Due date">
+      <button class="act-add-btn" onclick="quickAddActivity('act-tab')">Add</button>
+    </div>
+    <div class="act-tab-layout">
+      <div id="act-calendar" class="act-calendar"></div>
+      <div id="act-schedule" class="act-schedule"></div>
     </div>
   </div>
 </div>
@@ -5201,6 +5253,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     event.target.closest('.nav-tab') ? event.target.closest('.nav-tab').classList.add('active') : event.target.classList.add('active');
     if (v === 'dashboard') showDashboard();
     if (v === 'board') renderPipelineBoard();
+    if (v === 'activities') renderActivitiesView();
     if (v === 'pipeline') renderPipeline();
     if (v === 'repairs') { renderRepairCards(); document.getElementById('panel-repair').style.display = 'block'; }
     if (v === 'sales')   { updateWeekLabel(); renderSoldTable(); document.getElementById('panel-sold').style.display = 'block'; }
@@ -5216,6 +5269,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // it matches the header "repair-count" stat instead of an all-time total.
     if (rb) rb.textContent = repairCars.filter(c => !repairCarIsClosed(c) && !repairCarIsDone(c)).length;
     if (sb) sb.textContent = sales.length;
+    const ab = document.getElementById('nav-badge-activities');
+    if (ab) ab.textContent = (activities || []).filter(a => !a.done).length;
   }
 
   // ─── FORM SUBMIT ───────────────────────────────────────────────
@@ -5946,10 +6001,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     };
   }
   // Quick-add from the homepage panel (standalone; not tied to a lead).
-  async function quickAddActivity() {
-    const titleEl = document.getElementById('act-quick-title');
-    const dueEl   = document.getElementById('act-quick-due');
-    const typeEl  = document.getElementById('act-quick-type');
+  async function quickAddActivity(prefix) {
+    prefix = prefix || 'act-quick';
+    const titleEl = document.getElementById(prefix + '-title');
+    const dueEl   = document.getElementById(prefix + '-due');
+    const typeEl  = document.getElementById(prefix + '-type');
     const title = ((titleEl && titleEl.value) || '').trim();
     if (!title) { if (titleEl) titleEl.focus(); return; }
     const a = _newActivity(null, typeEl ? typeEl.value : 'task', title, dueEl ? dueEl.value : '');
@@ -5957,7 +6013,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     localStorage.setItem('am_activities', JSON.stringify(activities));
     if (titleEl) titleEl.value = '';
     if (dueEl) dueEl.value = '';
-    renderActivities();
+    _activitiesRefresh();
     await dbPost('activities', { id: a.id, requestId: null, type: a.type, title: a.title, dueAt: a.dueAt });
   }
   // Add an activity attached to a specific lead (from the detail view).
@@ -5972,8 +6028,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     localStorage.setItem('am_activities', JSON.stringify(activities));
     if (titleEl) titleEl.value = '';
     if (dueEl) dueEl.value = '';
-    renderLeadActivities(reqId);
-    renderActivities();
+    _activitiesRefresh(reqId);
     await dbPost('activities', { id: a.id, requestId: reqId, type: a.type, title: a.title, dueAt: a.dueAt });
   }
   async function toggleActivityDone(id, done) {
@@ -5981,16 +6036,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (!a) return;
     a.done = !!done; a.doneAt = done ? new Date().toISOString() : null;
     localStorage.setItem('am_activities', JSON.stringify(activities));
-    renderActivities();
-    if (a.requestId != null) renderLeadActivities(a.requestId);
+    _activitiesRefresh(a.requestId);
     await dbPut('activities', { id, done: a.done, doneAt: a.doneAt });
   }
   async function deleteActivity(id) {
     const a = (activities || []).find(x => x.id === id);
     activities = (activities || []).filter(x => x.id !== id);
     localStorage.setItem('am_activities', JSON.stringify(activities));
-    renderActivities();
-    if (a && a.requestId != null) renderLeadActivities(a.requestId);
+    _activitiesRefresh(a && a.requestId);
     await dbDelete('activities', id);
   }
   // Per-lead activity list inside the detail view (open first, then done).
@@ -6012,6 +6065,115 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <button class="act-del" onclick="deleteActivity(${a.id})" title="Delete">×</button>
       </div>`;
     }).join('');
+  }
+
+  // Re-render every activities surface after a change (homepage panel, the
+  // Activities tab, the open lead's widget, the nav badge).
+  function _activitiesRefresh(reqId) {
+    if (typeof renderActivities === 'function') renderActivities();
+    if (typeof renderActivitiesView === 'function') renderActivitiesView();
+    if (reqId != null && typeof renderLeadActivities === 'function') renderLeadActivities(reqId);
+    if (typeof syncNavBadges === 'function') syncNavBadges();
+  }
+
+  // ── Activities TAB: calendar of upcoming activities + full schedule ──
+  let _actCal = null;         // { year, month } currently shown on the calendar
+  let _actDayFilter = null;   // yyyy-mm-dd when a calendar day is clicked
+  function renderActivitiesView() {
+    renderActivityCalendar();
+    renderActivitySchedule();
+  }
+  function actCalShift(delta) {
+    if (!_actCal) { const d = new Date(); _actCal = { year: d.getFullYear(), month: d.getMonth() }; }
+    _actCal.month += delta;
+    if (_actCal.month < 0) { _actCal.month = 11; _actCal.year--; }
+    if (_actCal.month > 11) { _actCal.month = 0; _actCal.year++; }
+    renderActivityCalendar();
+  }
+  function _dayKey(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function renderActivityCalendar() {
+    const el = document.getElementById('act-calendar');
+    if (!el) return;
+    if (!_actCal) { const d = new Date(); _actCal = { year: d.getFullYear(), month: d.getMonth() }; }
+    const { year, month } = _actCal;
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const byDay = {};
+    (activities || []).filter(a => !a.done && a.dueAt).forEach(a => {
+      const d = new Date(a.dueAt); if (isNaN(d)) return;
+      (byDay[_dayKey(d)] = byDay[_dayKey(d)] || []).push(a);
+    });
+    const startDow = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    let cells = '';
+    for (let i = 0; i < startDow; i++) cells += '<div class="acal-cell acal-empty"></div>';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dt = new Date(year, month, d);
+      const key = _dayKey(dt);
+      const items = byDay[key] || [];
+      const isToday = dt.getTime() === today.getTime();
+      const overdue = dt < today && items.length;
+      const sel = _actDayFilter === key;
+      const badge = items.length ? `<span class="acal-badge${overdue ? ' acal-badge-over' : ''}">${items.length}</span>` : '';
+      cells += `<div class="acal-cell${isToday ? ' acal-today' : ''}${items.length ? ' acal-has' : ''}${sel ? ' acal-sel' : ''}" ${items.length ? `onclick="showActivityDay('${key}')"` : ''} title="${items.length ? escapeHtml(items.map(x => x.title).join(', ')) : ''}"><span class="acal-num">${d}</span>${badge}</div>`;
+    }
+    el.innerHTML = `
+      <div class="acal-head">
+        <button class="acal-nav" onclick="actCalShift(-1)" aria-label="Previous month">‹</button>
+        <span class="acal-title">${MONTHS[month]} ${year}</span>
+        <button class="acal-nav" onclick="actCalShift(1)" aria-label="Next month">›</button>
+      </div>
+      <div class="acal-grid acal-dow">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(x => `<div class="acal-dowc">${x}</div>`).join('')}</div>
+      <div class="acal-grid">${cells}</div>`;
+  }
+  function showActivityDay(key) {
+    _actDayFilter = (_actDayFilter === key) ? null : key;
+    renderActivityCalendar();
+    renderActivitySchedule();
+  }
+  function actScheduleRow(a) {
+    const st = activityDueState(a);
+    const dueCls = st === 'overdue' ? 'act-due-overdue' : st === 'today' ? 'act-due-today' : 'act-due-up';
+    const dueTxt = a.dueAt ? (new Date(a.dueAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) + (st === 'overdue' ? ' · overdue' : st === 'today' ? ' · today' : '')) : 'No date';
+    const who = _actClientName(a);
+    const whoHtml = who ? `<button class="act-client" onclick="event.stopPropagation();openDetailView(${a.requestId})">${escapeHtml(who)}</button><span class="act-dot">·</span>` : '';
+    return `<div class="act-row">
+      <input type="checkbox" class="act-check" onchange="toggleActivityDone(${a.id}, this.checked)" aria-label="Mark done">
+      <span class="act-icon">${activityIcon(a.type)}</span>
+      <div class="act-body"><div class="act-title">${escapeHtml(a.title)}</div><div class="act-meta">${whoHtml}<span class="${dueCls}">${dueTxt}</span></div></div>
+      <button class="act-del" onclick="deleteActivity(${a.id})" title="Delete">×</button>
+    </div>`;
+  }
+  function renderActivitySchedule() {
+    const el = document.getElementById('act-schedule');
+    if (!el) return;
+    const open = (activities || []).filter(a => !a.done);
+    // A specific calendar day is selected → show just that day's activities.
+    if (_actDayFilter) {
+      const items = open.filter(a => a.dueAt && _dayKey(new Date(a.dueAt)) === _actDayFilter)
+        .sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt));
+      const label = new Date(_actDayFilter + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      el.innerHTML = `<div class="asch-group"><div class="asch-head">${label}<button class="filter-btn" style="margin-left:10px;" onclick="showActivityDay('${_actDayFilter}')">Show all</button></div>${items.length ? items.map(actScheduleRow).join('') : '<div class="asch-empty">Nothing scheduled this day.</div>'}</div>`;
+      return;
+    }
+    const startToday = new Date(); startToday.setHours(0, 0, 0, 0);
+    const endToday = new Date(); endToday.setHours(23, 59, 59, 999);
+    const endWeek = new Date(startToday.getTime() + 7 * 86400000);
+    const buckets = { Overdue: [], Today: [], 'This week': [], Later: [], 'No date': [] };
+    open.forEach(a => {
+      if (!a.dueAt) { buckets['No date'].push(a); return; }
+      const d = new Date(a.dueAt);
+      if (d < startToday) buckets.Overdue.push(a);
+      else if (d <= endToday) buckets.Today.push(a);
+      else if (d <= endWeek) buckets['This week'].push(a);
+      else buckets.Later.push(a);
+    });
+    Object.values(buckets).forEach(list => list.sort((a, b) => (a.dueAt ? new Date(a.dueAt).getTime() : Infinity) - (b.dueAt ? new Date(b.dueAt).getTime() : Infinity)));
+    const order = ['Overdue', 'Today', 'This week', 'Later', 'No date'];
+    const html = order.filter(k => buckets[k].length).map(k =>
+      `<div class="asch-group"><div class="asch-head asch-${k.replace(/\s/g, '').toLowerCase()}">${k} <span class="asch-count">${buckets[k].length}</span></div>${buckets[k].map(actScheduleRow).join('')}</div>`
+    ).join('');
+    el.innerHTML = html || '<div class="asch-empty">No scheduled activities yet. Add one above.</div>';
   }
 
   function renderDashboard() {
