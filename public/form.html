@@ -1447,6 +1447,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .kb-card.kb-dragging { opacity: 0.45; }
   .kb-card-name { font-family: 'DM Sans', system-ui, sans-serif; font-weight: 600; font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 6px; }
   .kb-card-sub { font-family: system-ui, sans-serif; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .kb-meta { font-family: system-ui, sans-serif; font-size: 10px; color: var(--text-muted); margin-top: 5px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+  .kb-meta .kb-act { font-weight: 600; color: var(--text); }
   .kb-rem-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
   .kb-rem-overdue { background: var(--red); }
   .kb-rem-today { background: #15803d; }
@@ -2060,7 +2062,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v230 · 2026-09-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v231 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -4871,9 +4873,26 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         fuDate = `<div class="kb-fu ${cls}">Follow-up ${rd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>`;
       }
     }
+    // Date the lead came in + its latest activity — the same signals the Requests
+    // row carries, so the two views read the same at a glance.
+    const _sd = (v) => { const d = v ? new Date(v) : null; return (d && !isNaN(d)) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; };
+    const subStr = _sd(r.submitted);
+    let act = '';
+    const _ck = (r.email || '').toLowerCase();
+    const _cal = _ck && CALL_TIMES[_ck];
+    if (_cal && _cal.startIso && new Date(_cal.startIso).getTime() >= Date.now() - 3600000) act = `📅 Call ${_cal.dateLabel || _sd(_cal.startIso)}`;
+    else if (r.callOutcome === 'good' && r.callCompletedAt) act = `📞 Good call ${_sd(r.callCompletedAt)}`;
+    else if (r.callOutcome === 'bad'  && r.callCompletedAt) act = `📞 Bad call ${_sd(r.callCompletedAt)}`;
+    else if (r.callCompletedAt) act = `📞 Called ${_sd(r.callCompletedAt)}`;
+    else if (r.noShowAt) act = `⚠ No-show ${_sd(r.noShowAt)}`;
+    else if (r.lastReplyAt) act = `💬 Replied ${_sd(r.lastReplyAt)}`;
+    const meta = (subStr || act)
+      ? `<div class="kb-meta">${subStr ? `<span title="Filled out the form">🗓 ${subStr}</span>` : ''}${act ? `<span class="kb-act">${act}</span>` : ''}</div>`
+      : '';
     return `<div class="kb-card" draggable="true" data-id="${r.id}" onclick="openDetailView(${r.id})">
       <div class="kb-card-name">${flag}<span>${escapeHtml(r.firstName || '')} ${escapeHtml(r.lastName || '')}</span></div>
       <div class="kb-card-sub">${escapeHtml(veh)}${budget ? ' · ' + budget : ''}</div>
+      ${meta}
       ${fuDate}
     </div>`;
   }
@@ -7302,28 +7321,44 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
   // Canonical "where is this lead" pipeline-stage label. One clear answer,
   // used on the requests table and the pipeline board so both agree.
-  function pipelineStage(r) {
-    if (!r) return { key: 'new', label: 'New', color: '#64748b' };
-    if (r.status === 'sold') return { key: 'sold', label: 'Sold', color: '#0f2557' };
-    if (r.depositPaid || r.depositReceived) return { key: 'deposit', label: 'Deposit paid', color: '#b45309' };
-    if (r.status === 'awaiting_paperwork') return { key: 'awaiting', label: 'Awaiting paperwork', color: '#1d4ed8' };
-    if (r.status === 'psi') return { key: 'psi', label: 'PSI period', color: '#4338ca' };
-    if (r.status === 'in_repair') return { key: 'repair', label: 'In repair', color: '#c2410c' };
-    if (r.status === 'searching') return { key: 'searching', label: 'Actively searching', color: '#047857' };
-    const fu = effectiveFollowUp(r);
-    if (fu) return { key: 'fu', label: 'Follow-up ' + fu, color: '#0ea5e9' };
-    const disp = callDisposition(r);
-    if (disp === 'good') return { key: 'good', label: 'Good call', color: '#047857' };
-    if (disp === 'bad')  return { key: 'bad',  label: 'Bad call',  color: '#b91c1c' };
-    if (disp === 'noshow') return { key: 'noshow', label: 'No-show', color: '#92400e' };
-    if (r.callCompletedAt) return { key: 'called', label: 'Called', color: '#2563eb' };
-    if (r.bookingConfirmedAt) return { key: 'booked', label: 'Booked call', color: '#6d28d9' };
-    if (r.status === 'qualified') return { key: 'qualified', label: 'Qualified', color: '#15803d' };
-    return { key: 'new', label: 'New', color: '#64748b' };
-  }
+  // Label + color for each board column and each off-board status, so the
+  // Requests-table stage badge can be rendered from the SAME boardStage() the
+  // board uses — the two views can never disagree on a lead's stage.
+  const BOARD_STAGE_META = {
+    new_lead:          { label: 'New Lead',          color: '#64748b' },
+    contact_attempted: { label: 'Contact Attempted', color: '#0ea5e9' },
+    followup_1:        { label: 'Follow-up 1',       color: '#0ea5e9' },
+    followup_2:        { label: 'Follow-up 2',       color: '#0ea5e9' },
+    followup_3:        { label: 'Follow-up 3',       color: '#0ea5e9' },
+    followup_4:        { label: 'Follow-up 4',       color: '#0ea5e9' },
+    call_scheduled:    { label: 'Call Scheduled',    color: '#6d28d9' },
+    no_show:           { label: 'No Show',           color: '#92400e' },
+    good_call:         { label: 'Good Call',         color: '#047857' },
+    bad_call:          { label: 'Bad Call',          color: '#b91c1c' },
+    deposit_pending:   { label: 'Deposit Pending',   color: '#b45309' },
+    closed_deposit:    { label: 'Closed - Deposit',  color: '#1d4ed8' },
+    lost:              { label: 'Lost',              color: '#dc2626' },
+    email_remarketing: { label: 'Email Remarketing', color: '#7c3aed' },
+    future_follow_up:  { label: 'Future Follow-up',  color: '#0891b2' }
+  };
+  const OFF_BOARD_STATUS_META = {
+    sold:               { label: 'Sold',               color: '#0f2557' },
+    awaiting_paperwork: { label: 'Awaiting Paperwork', color: '#1d4ed8' },
+    psi:                { label: 'PSI Period',         color: '#4338ca' },
+    in_repair:          { label: 'In Repair',          color: '#c2410c' },
+    searching:          { label: 'Actively Searching', color: '#047857' },
+    dormant:            { label: 'Dormant',            color: '#64748b' },
+    rejected:           { label: 'Rejected',           color: '#b91c1c' }
+  };
+  // Stage badge on the Requests table — computed from the SAME boardStage() the
+  // board uses so the two always agree. Off-board leads (sold / dormant /
+  // awaiting paperwork / etc.) show their real status instead.
   function stagePill(r) {
-    const s = pipelineStage(r);
-    return `<span class="stage-pill" style="color:${s.color};border-color:${s.color}33;background:${s.color}14;">${s.label}</span>`;
+    const st = (typeof boardStage === 'function') ? boardStage(r) : null;
+    let meta = (st && BOARD_STAGE_META[st]) || OFF_BOARD_STATUS_META[r && r.status];
+    if (!meta && r && (r.depositPaid || r.depositReceived)) meta = { label: 'Deposit Paid', color: '#b45309' };
+    if (!meta) meta = { label: '—', color: '#94a3b8' };
+    return `<span class="stage-pill" style="color:${meta.color};border-color:${meta.color}33;background:${meta.color}14;">${meta.label}</span>`;
   }
 
   // ── Reply tracking (from the Salesmsg inbound webhook → last_reply_at) ──
