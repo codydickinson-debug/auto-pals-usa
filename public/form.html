@@ -2060,7 +2060,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v227 · 2026-09-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v228 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -4926,6 +4926,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (hasFutureCall(r)) return 'call_scheduled';
     // 4) Recently no-showed and not rebooked (auto) — the rebooking queue.
     if (r.noShowAt && _daysAgo(r.noShowAt) <= NO_SHOW_WINDOW_DAYS) return 'no_show';
+    // 4b) Recently completed a call (auto) → outcome column, so the post-call
+    // follow-ups on the Requests tab also show on the board (kept in sync).
+    // Bounded to the same 7-day post-call window the Requests funnel uses, so old
+    // calls fall off instead of piling up; a graded 'bad' lands in Bad Call,
+    // everything else (good or ungraded) in Good Call.
+    if (typeof calledWithinFollowUpWindow === 'function' ? calledWithinFollowUpWindow(r) : (r.callCompletedAt && _daysAgo(r.callCompletedAt) <= 7)) {
+      return r.callOutcome === 'bad' ? 'bad_call' : 'good_call';
+    }
     // 5) Renz's manual pre-call queue.
     if (stage && PRECALL_STAGES.has(stage)) return stage;
     // 6) New Lead = filled the form in the last week and hasn't booked a call.
@@ -7388,13 +7396,21 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const isDeposit = r => !!(r.depositPaid || r.depositReceived);
     const isSold    = r => r.status === 'sold';
 
+    // Sold = actual cars sold, taken from the sales log (the same source the Sold
+    // Cars tab uses) so the funnel matches it — not just requests whose status was
+    // flipped to 'sold' (that lags: repair-done deals land in Awaiting Paperwork
+    // with a sale logged but the request status not yet 'sold').
+    const soldN = Math.max(
+      Array.isArray(sales) ? sales.length : 0,
+      all.filter(isSold).length
+    );
     const stages = [
       { label: 'Leads',          n: all.length,                   color: '#64748b' },
       { label: 'Booked call',    n: all.filter(isBooked).length,  color: '#6d28d9' },
       { label: 'Completed call', n: all.filter(isCalled).length,  color: '#2563eb' },
       { label: 'Good call',      n: all.filter(isGood).length,    color: '#047857' },
       { label: 'Deposit paid',   n: all.filter(isDeposit).length, color: '#b45309' },
-      { label: 'Sold',           n: all.filter(isSold).length,    color: '#0f2557' }
+      { label: 'Sold',           n: soldN,                        color: '#0f2557' }
     ];
     const funMax = Math.max(1, stages[0].n);
     const funEl = document.getElementById('pl-funnel');
@@ -8199,6 +8215,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // compact "Completed · Sold" history section below (repair cost + what the
     // client paid, no markup).
     const closedCars = repairCars.filter(c => repairCarIsClosed(c));
+    // Any sold car with repairs recorded only on the sale (surfaced in the
+    // Completed section too) — so the empty-state doesn't hide that history.
+    const hasSaleRepairs = (Array.isArray(sales) ? sales : []).some(s => Number(s.repair) > 0 || Number(s.repairProfit) > 0);
     document.getElementById('repair-count').textContent = activeCars.length;
     const allItems = activeCars.flatMap(c => c.repairs);
     document.getElementById('repair-items').textContent = allItems.length;
@@ -8210,7 +8229,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.getElementById('repair-time').textContent = totalHours ? totalHours + 'h' : '—';
     syncNavBadges();
     const container = document.getElementById('repair-cards-container');
-    if (!activeCars.length && !doneCars.length && !closedCars.length) {
+    if (!activeCars.length && !doneCars.length && !closedCars.length && !hasSaleRepairs) {
       container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:48px;font-family:system-ui,sans-serif;">No cars in repair. Use the 3-dot menu on a request or click &ldquo;+ Add Car to Repair&rdquo;.</div>';
       return;
     }
@@ -8381,9 +8400,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // and WHEN. Shows the wholesale Repair Cost and what the CLIENT PAID for the
   // repairs (cost + markup) — NOT the markup/profit.
   function renderRepairCompletedSection(closedCars) {
-    if (!closedCars || !closedCars.length) return '';
+    closedCars = Array.isArray(closedCars) ? closedCars : [];
     const fmtUsd = (n) => n ? '$' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—';
     const fmtDate = (iso) => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
+    // Also surface sold cars whose repairs were recorded only on the SALE (no
+    // repair_cars row), so the tab reflects EVERY car that had repairs done.
+    // Matched by client name so a car already tracked above isn't double-listed.
+    const covered = new Set(closedCars.map(c => String(c.client || '').trim().toLowerCase()).filter(Boolean));
+    const saleRepairs = (Array.isArray(sales) ? sales : []).filter(s =>
+      (Number(s.repair) > 0 || Number(s.repairProfit) > 0) &&
+      !covered.has(String(s.client || '').trim().toLowerCase()));
+    if (!closedCars.length && !saleRepairs.length) return '';
     const sorted = [...closedCars].sort((a, b) => new Date(b.doneAt || 0) - new Date(a.doneAt || 0));
     const rows = sorted.map(car => {
       // In-scope items only (declined items drop out) — same basis as the active
@@ -8447,14 +8474,40 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         ${detail}
       </details>`;
     }).join('');
+    // Sold cars whose repairs live only on the sale record — compact, non-expandable
+    // rows (there are no itemized line items to drop down into).
+    const saleRows = [...saleRepairs]
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+      .map(s => {
+        const cost = Number(s.repair) || 0;
+        const charge = cost + (Number(s.repairProfit) || 0);
+        return `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface);">
+        <div style="min-width:0;">
+          <div style="font-family:system-ui,sans-serif;font-weight:600;font-size:14px;color:var(--text);">${escapeHtml(s.vehicle || '—')} <span style="display:inline-block;margin-left:4px;padding:1px 8px;border-radius:99px;background:var(--green-light,#dcfce7);color:var(--green,#166534);font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">Sold</span></div>
+          <div style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);">${escapeHtml(s.client || '')}${s.date ? ` · sold ${fmtDate(s.date)}` : ''} · <span style="font-style:italic;">recorded on sale</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:22px;flex-shrink:0;">
+          <div style="text-align:right;font-family:system-ui,sans-serif;">
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Repair Cost</div>
+            <div style="font-size:14px;font-weight:700;color:var(--navy);">${fmtUsd(cost)}</div>
+          </div>
+          <div style="text-align:right;font-family:system-ui,sans-serif;">
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Client Paid</div>
+            <div style="font-size:14px;font-weight:700;color:var(--navy);">${fmtUsd(charge)}</div>
+          </div>
+        </div>
+      </div>`;
+      }).join('');
+    const totalCompleted = sorted.length + saleRepairs.length;
     return `
       <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:18px;">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
           <span style="font-family:system-ui,sans-serif;font-size:13px;font-weight:700;letter-spacing:0.02em;color:var(--text);">✓ Completed · Sold</span>
-          <span style="display:inline-block;padding:2px 10px;border-radius:99px;background:var(--green-light,#dcfce7);color:var(--green,#166534);font-size:11px;font-weight:700;">${sorted.length}</span>
+          <span style="display:inline-block;padding:2px 10px;border-radius:99px;background:var(--green-light,#dcfce7);color:var(--green,#166534);font-size:11px;font-weight:700;">${totalCompleted}</span>
           <span style="font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);">— cars whose repairs are done and the deal has closed. Shows repair cost and what the client paid.</span>
         </div>
-        <div style="display:flex;flex-direction:column;gap:8px;">${rows}</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">${rows}${saleRows}</div>
       </div>`;
   }
 
