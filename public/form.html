@@ -2155,7 +2155,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v238 · 2026-09-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v239 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -5019,6 +5019,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     (activities || []).filter(a => a.requestId === reqId && !a.done).forEach(a => states.push(activityDueState(a)));
     const callSt = _leadCallDueState(reqId);
     if (callSt) states.push(callSt);
+    // A parked Future Follow-up (reminder_at = the date Renz circles back) counts
+    // as a scheduled activity too — grey ahead, green on the day, red if overdue.
+    const r = (requests || []).find(x => x.id === reqId);
+    if (r && r.reminderAt) { const rs = reminderState(r); if (rs !== 'none') states.push(rs === 'upcoming' ? 'upcoming' : rs); }
     if (!states.length) return 'none';
     if (states.includes('overdue')) return 'overdue';
     if (states.includes('today'))   return 'today';
@@ -6262,6 +6266,21 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <span class="ah-txt"><span class="ah-title">Sales call booked</span><span class="ah-due ${dueCls}">${dueTxt}</span></span>
       </div>`;
     }
+    // A parked Future Follow-up (reminder_at) shows as a read-only row too.
+    let reminderRow = '';
+    if (r && r.reminderAt) {
+      const rrs = reminderState(r);
+      const rd = new Date(r.reminderAt);
+      if (!isNaN(rd)) {
+        const dueCls = rrs === 'overdue' ? 'act-due-overdue' : rrs === 'today' ? 'act-due-today' : 'act-due-up';
+        const dueTxt = rd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + (rrs === 'overdue' ? ' · overdue' : rrs === 'today' ? ' · today' : '');
+        reminderRow = `<div class="ah-row ah-callrow">
+          <span class="ah-callmark">📅</span>
+          <span class="ah-ic">⏰</span>
+          <span class="ah-txt"><span class="ah-title">Follow up${r.reminderNote ? ': ' + escapeHtml(r.reminderNote) : ''}</span><span class="ah-due ${dueCls}">${dueTxt}</span></span>
+        </div>`;
+      }
+    }
     const rows = mine.map(a => {
       const st = activityDueState(a);
       const dueCls = st === 'overdue' ? 'act-due-overdue' : st === 'today' ? 'act-due-today' : 'act-due-up';
@@ -6272,8 +6291,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <span class="ah-txt"><span class="ah-title">${escapeHtml(a.title)}</span><span class="ah-due ${dueCls}">${dueTxt}</span></span>
       </label>`;
     }).join('');
-    const empty = (!mine.length && !callRow) ? '<div class="ah-empty">No activity set for this lead.</div>' : '';
-    const body = empty + callRow + rows + `<button class="ah-add" onclick="hideActivityHover();openCardActivity(event, ${reqId})">+ Add activity</button>`;
+    const empty = (!mine.length && !callRow && !reminderRow) ? '<div class="ah-empty">No activity set for this lead.</div>' : '';
+    const body = empty + callRow + reminderRow + rows + `<button class="ah-add" onclick="hideActivityHover();openCardActivity(event, ${reqId})">+ Add activity</button>`;
     pop.innerHTML = `<div class="ah-head"><span class="kb-actdot kb-actdot-${state}"></span>${stateLabel}${who ? ` · ${escapeHtml(who)}` : ''}</div>${body}`;
   }
   function showActivityHover(e, reqId) {
