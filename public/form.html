@@ -1453,6 +1453,19 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .kb-actdot-today   { background: #16a34a; }
   .kb-actdot-future  { background: #94a3b8; }
   .kb-actdot-none    { background: #f59e0b; }
+  /* Inline "+ Activity" button on a card + its quick popover */
+  .kb-addact { margin-top: 8px; width: 100%; font-family: system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--navy); background: transparent; border: 1px dashed var(--border); border-radius: 6px; padding: 5px; cursor: pointer; }
+  .kb-addact:hover { background: var(--white); border-color: var(--navy); }
+  .card-act-pop { position: fixed; z-index: 3000; width: 250px; background: var(--white); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 34px rgba(15,37,87,0.24); padding: 12px; }
+  .cap-head { font-family: system-ui, sans-serif; font-size: 12px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+  .cap-who { font-weight: 600; color: var(--text-muted); }
+  .card-act-pop .act-input { font-size: 13px; box-sizing: border-box; }
+  .cap-chips { display: flex; gap: 6px; margin-bottom: 10px; }
+  .cap-chips button { flex: 1; font-family: system-ui, sans-serif; font-size: 11px; font-weight: 600; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; padding: 5px 4px; cursor: pointer; }
+  .cap-chips button:hover { border-color: var(--navy); }
+  .cap-actions { display: flex; gap: 8px; }
+  .cap-actions .act-add-btn { flex: 1; }
+  .cap-cancel { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 600; border: 1px solid var(--border); background: transparent; color: var(--text-muted); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
   .kb-card:active { cursor: grabbing; }
   .kb-card.kb-dragging { opacity: 0.45; }
   .kb-card-name { font-family: 'DM Sans', system-ui, sans-serif; font-weight: 600; font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 6px; }
@@ -2098,7 +2111,30 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v235 · 2026-09-14</div>
+<!-- Quick "+ Activity" popover, anchored to a board card on demand. -->
+<div id="card-act-pop" class="card-act-pop" style="display:none;">
+  <div class="cap-head">Add activity <span id="cap-who" class="cap-who"></span></div>
+  <select id="cap-type" class="act-input" style="width:100%;margin-bottom:6px;">
+    <option value="call">📞 Call</option>
+    <option value="text">💬 Text</option>
+    <option value="email">✉️ Email</option>
+    <option value="meeting">🤝 Meeting</option>
+    <option value="task">✅ To-do</option>
+  </select>
+  <input id="cap-text" class="act-input" style="width:100%;margin-bottom:6px;" type="text" placeholder="What needs doing?" onkeydown="if(event.key==='Enter'){event.preventDefault();saveCardActivity();}">
+  <input id="cap-due" class="act-input" style="width:100%;margin-bottom:6px;" type="date" aria-label="Due date">
+  <div class="cap-chips">
+    <button type="button" onclick="capSetDue(0)">Today</button>
+    <button type="button" onclick="capSetDue(1)">Tomorrow</button>
+    <button type="button" onclick="capSetDue(7)">+1 wk</button>
+  </div>
+  <div class="cap-actions">
+    <button type="button" class="act-add-btn" onclick="saveCardActivity()">Add activity</button>
+    <button type="button" class="cap-cancel" onclick="closeCardActivity()">Cancel</button>
+  </div>
+</div>
+
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v236 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -4988,6 +5024,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       <div class="kb-card-sub">${escapeHtml(veh)}${budget ? ' · ' + budget : ''}</div>
       ${meta}
       ${fuDate}
+      <button class="kb-addact" onclick="event.stopPropagation();openCardActivity(event, ${r.id})" title="Set an activity for this lead">+ Activity</button>
     </div>`;
   }
 
@@ -6036,10 +6073,71 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // Activities tab, the open lead's widget, the nav badge).
   function _activitiesRefresh(reqId) {
     if (typeof renderActivities === 'function') renderActivities();
-    if (typeof renderActivitiesView === 'function') renderActivitiesView();
     if (reqId != null && typeof renderLeadActivities === 'function') renderLeadActivities(reqId);
+    // The board colors each card by its activity state — repaint it too.
+    if (typeof renderPipelineBoard === 'function') renderPipelineBoard();
     if (typeof syncNavBadges === 'function') syncNavBadges();
   }
+
+  // ── Quick "+ Activity" popover on a board card (Pipedrive-style inline add) ──
+  let _capReqId = null;
+  function _capDateStr(addDays) {
+    const d = new Date(); d.setDate(d.getDate() + (addDays || 0));
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function capSetDue(days) { const el = document.getElementById('cap-due'); if (el) el.value = _capDateStr(days); }
+  function closeCardActivity() { const pop = document.getElementById('card-act-pop'); if (pop) pop.style.display = 'none'; _capReqId = null; }
+  function openCardActivity(e, reqId) {
+    if (e) e.stopPropagation();
+    const pop = document.getElementById('card-act-pop');
+    if (!pop) return;
+    _capReqId = reqId;
+    const typeEl = document.getElementById('cap-type');
+    const textEl = document.getElementById('cap-text');
+    const dueEl  = document.getElementById('cap-due');
+    const whoEl  = document.getElementById('cap-who');
+    if (typeEl) typeEl.value = 'call';
+    if (textEl) textEl.value = '';
+    if (dueEl)  dueEl.value  = _capDateStr(0);   // default to today
+    const r = (requests || []).find(x => x.id === reqId);
+    if (whoEl) whoEl.textContent = r ? `· ${(r.firstName || '') + ' ' + (r.lastName || '')}`.trim() : '';
+    // Position near the clicked button, clamped to the viewport.
+    pop.style.display = 'block';
+    const btn = e && (e.currentTarget || e.target);
+    const rect = (btn && btn.getBoundingClientRect) ? btn.getBoundingClientRect() : { left: 120, right: 120, bottom: 120, top: 120 };
+    const pw = 250, ph = pop.offsetHeight || 230;
+    let left = rect.left;
+    let top = rect.bottom + 6;
+    if (left + pw > window.innerWidth - 12) left = window.innerWidth - pw - 12;
+    if (top + ph > window.innerHeight - 12) top = Math.max(12, rect.top - ph - 6);
+    pop.style.left = Math.max(12, left) + 'px';
+    pop.style.top = Math.max(12, top) + 'px';
+    setTimeout(() => { if (textEl) textEl.focus(); }, 30);
+  }
+  async function saveCardActivity() {
+    if (_capReqId == null) return;
+    const reqId = _capReqId;
+    const typeEl = document.getElementById('cap-type');
+    const textEl = document.getElementById('cap-text');
+    const dueEl  = document.getElementById('cap-due');
+    const title = ((textEl && textEl.value) || '').trim();
+    if (!title) { if (textEl) textEl.focus(); return; }
+    const a = _newActivity(reqId, typeEl ? typeEl.value : 'task', title, dueEl ? dueEl.value : '');
+    activities.push(a);
+    localStorage.setItem('am_activities', JSON.stringify(activities));
+    closeCardActivity();
+    _activitiesRefresh(reqId);
+    await dbPost('activities', { id: a.id, requestId: reqId, type: a.type, title: a.title, dueAt: a.dueAt });
+  }
+  // Close the popover on an outside click or Escape.
+  document.addEventListener('click', (e) => {
+    const pop = document.getElementById('card-act-pop');
+    if (!pop || pop.style.display === 'none') return;
+    if (pop.contains(e.target)) return;
+    if (e.target.closest && e.target.closest('.kb-addact')) return;
+    closeCardActivity();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCardActivity(); });
 
   function renderDashboard() {
     updateStats();
