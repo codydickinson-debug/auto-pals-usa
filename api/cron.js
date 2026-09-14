@@ -195,6 +195,19 @@ module.exports = async function handler(req, res) {
     const requests = await sbAll('requests', '?status=neq.sold&status=neq.rejected&order=submitted.desc');
     console.log('[CRON] active leads in scope:', requests.length);
 
+    // Emails with an upcoming call — so the auto-dormant pass never retires a
+    // lead who has a booking on the calendar. Floor at yesterday to be safe.
+    const _bkFloor = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    let bookedEmails = new Set();
+    let bookingsLoaded = false;
+    try {
+      const upcoming = await sbAll('bookings', `?date=gte.${_bkFloor}&select=email`);
+      bookedEmails = new Set((upcoming || []).map(b => String(b.email || '').toLowerCase()).filter(Boolean));
+      bookingsLoaded = true;
+    } catch (e) {
+      console.warn('[CRON] upcoming-bookings fetch failed (auto-dormant skipped this run):', e && e.message);
+    }
+
     for (const r of requests) {
       try {
         // ── FUTURE FOLLOW-UP (staff parked this lead as "not ready yet") ──
@@ -252,6 +265,38 @@ module.exports = async function handler(req, res) {
             }
           }
           continue; // paused: no other drip fires while the waitlist drip runs
+        }
+
+        // ── AUTO-DORMANT (metrics hygiene) ──
+        // Retire cold leads to 'dormant' so the active pipeline metrics stay
+        // accurate on their own — no more manual sweeps. A lead goes dormant once
+        // it's clearly gone quiet: unconverted, no upcoming call, no call in 7d,
+        // no reply in 14d, AND either 30d+ since it came in, an old (30d+) no-show,
+        // or already parked in Email Remarketing. Mirrors the one-time sweep of
+        // 2026-09-14. STATUS ONLY — it sends nothing: the booking/pre-call/deposit
+        // drips already skip dormant leads, and the long-term dormant re-engagement
+        // email campaign below continues as before. Skipped entirely if the
+        // upcoming-bookings lookup failed, so a blip can't dormant a booked lead.
+        if (bookingsLoaded
+            && ['new', 'qualified', 'called'].includes(r.status)
+            && !r.deposit_paid
+            && !r.skip_the_line
+            && !bookedEmails.has(String(r.email || '').toLowerCase())
+            && (!r.call_completed_at || hoursSince(r.call_completed_at) >= 7 * 24)
+            && (!r.last_reply_at || hoursSince(r.last_reply_at) >= 14 * 24)) {
+          const submittedH = hoursSince(r.submitted);
+          const noShowH = r.no_show_at ? hoursSince(r.no_show_at) : null;
+          const cold = (submittedH !== null && submittedH >= 30 * 24)
+                    || (noShowH !== null && noShowH >= 30 * 24)
+                    || r.pipeline_stage === 'email_remarketing';
+          if (cold) {
+            await sb('requests', 'PATCH',
+              { status: 'dormant', dormant_at: r.dormant_at || new Date().toISOString() },
+              `?id=eq.${r.id}`);
+            r.status = 'dormant';
+            summary.autoDormanted = (summary.autoDormanted || 0) + 1;
+            continue; // cold — skip the remaining drips for this lead this run
+          }
         }
 
         // ── BOOKING REMINDERS ──
