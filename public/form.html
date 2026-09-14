@@ -2054,7 +2054,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v225 · 2026-09-12</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v226 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2884,7 +2884,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
                 <th>Sale Price</th>
                 <th title="Total the client actually paid — separate from the vehicle sale price">Client Paid</th>
                 <th>Fees</th>
-                <th>Repairs</th>
+                <th title="Wholesale repair cost, and what the client paid for repairs (cost + markup)">Repairs</th>
                 <th title="Net margin on shipping (optional — can be added after the sale via Edit)">Shipping</th>
                 <th>Finder Fee</th>
                 <th>Net Profit</th>
@@ -8188,6 +8188,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const openCars   = repairCars.filter(c => !repairCarIsClosed(c));
     const activeCars = openCars.filter(c => !repairCarIsDone(c));
     const doneCars   = openCars.filter(c => repairCarIsDone(c));
+    // Closed = the deal has sold. These used to vanish from the tab entirely;
+    // owner wants to still see who's had repairs done, so they come back in a
+    // compact "Completed · Sold" history section below (repair cost + what the
+    // client paid, no markup).
+    const closedCars = repairCars.filter(c => repairCarIsClosed(c));
     document.getElementById('repair-count').textContent = activeCars.length;
     const allItems = activeCars.flatMap(c => c.repairs);
     document.getElementById('repair-items').textContent = allItems.length;
@@ -8199,12 +8204,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.getElementById('repair-time').textContent = totalHours ? totalHours + 'h' : '—';
     syncNavBadges();
     const container = document.getElementById('repair-cards-container');
-    if (!activeCars.length && !doneCars.length) {
+    if (!activeCars.length && !doneCars.length && !closedCars.length) {
       container.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:48px;font-family:system-ui,sans-serif;">No cars in repair. Use the 3-dot menu on a request or click &ldquo;+ Add Car to Repair&rdquo;.</div>';
       return;
     }
     const activeEmpty = !activeCars.length
-      ? '<div style="text-align:center;color:var(--text-muted);padding:32px 12px;font-family:system-ui,sans-serif;">No active repairs — everything below is done and awaiting paperwork.</div>'
+      ? `<div style="text-align:center;color:var(--text-muted);padding:32px 12px;font-family:system-ui,sans-serif;">${doneCars.length ? 'No active repairs — everything below is done and awaiting paperwork.' : 'No active repairs right now.'}</div>`
       : '';
     container.innerHTML = activeEmpty + activeCars.map(car => {
       // Totals reflect the LIVE scope of work: declined items (staff-excluded
@@ -8324,7 +8329,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           </div>
           ${car.notes ? `<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);font-style:italic;">${car.notes}</div>` : ''}
         </div>`;
-    }).join('') + renderRepairDoneSection(doneCars);
+    }).join('') + renderRepairDoneSection(doneCars) + renderRepairCompletedSection(closedCars);
   }
 
   // Compact list of finished repairs (car.doneAt set) — they've left the
@@ -8354,6 +8359,51 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <span style="font-family:system-ui,sans-serif;font-size:13px;font-weight:700;letter-spacing:0.02em;color:var(--text);">✓ Done · Awaiting Paperwork</span>
           <span style="display:inline-block;padding:2px 10px;border-radius:99px;background:#dbeafe;color:#1d4ed8;font-size:11px;font-weight:700;">${doneCars.length}</span>
           <span style="font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);">— finished repairs waiting on paperwork. Finalize from the profile.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">${rows}</div>
+      </div>`;
+  }
+
+  // Compact history of cars whose repairs are finished AND the deal has SOLD
+  // (repairCarIsClosed). They've left the active workflow, but the owner wants
+  // to still see who's had repairs done. Shows the wholesale Repair Cost and
+  // what the CLIENT PAID for the repairs (cost + markup) — NOT the markup/profit.
+  function renderRepairCompletedSection(closedCars) {
+    if (!closedCars || !closedCars.length) return '';
+    const fmtUsd = (n) => n ? '$' + Number(n).toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—';
+    const fmtDate = (iso) => { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); };
+    const sorted = [...closedCars].sort((a, b) => new Date(b.doneAt || 0) - new Date(a.doneAt || 0));
+    const rows = sorted.map(car => {
+      // In-scope items only (declined items drop out) — same basis as the active
+      // card totals, so the numbers agree with what the client was quoted.
+      const inScope = (car.repairs || []).filter(r => !isItemDeclined(r));
+      const cost   = inScope.reduce((a, r) => a + (Number(r.cost) || 0), 0);
+      const charge = inScope.reduce((a, r) => a + repairItemCharge(r), 0); // cost × markup + labor = what the client paid
+      return `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface);">
+        <div style="min-width:0;">
+          <div style="font-family:system-ui,sans-serif;font-weight:600;font-size:14px;color:var(--text);">${car.vehicle || '—'} <span style="display:inline-block;margin-left:4px;padding:1px 8px;border-radius:99px;background:var(--green-light,#dcfce7);color:var(--green,#166534);font-size:10px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;">Sold</span></div>
+          <div style="font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);">${car.client || ''}${car.vin ? ` · <span style="font-family:monospace;letter-spacing:0.05em;">${car.vin}</span>` : ''}${car.doneAt ? ` · finished ${fmtDate(car.doneAt)}` : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:22px;flex-shrink:0;">
+          <div style="text-align:right;font-family:system-ui,sans-serif;">
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Repair Cost</div>
+            <div style="font-size:14px;font-weight:700;color:var(--navy);">${fmtUsd(cost)}</div>
+          </div>
+          <div style="text-align:right;font-family:system-ui,sans-serif;">
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;font-weight:700;">Client Paid</div>
+            <div style="font-size:14px;font-weight:700;color:var(--navy);">${fmtUsd(charge)}</div>
+          </div>
+          <button class="filter-btn" onclick="openDoneCarProfile(${car.id})" title="Open the client's profile">Open profile →</button>
+        </div>
+      </div>`;
+    }).join('');
+    return `
+      <div style="margin-top:28px;border-top:1px solid var(--border);padding-top:18px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+          <span style="font-family:system-ui,sans-serif;font-size:13px;font-weight:700;letter-spacing:0.02em;color:var(--text);">✓ Completed · Sold</span>
+          <span style="display:inline-block;padding:2px 10px;border-radius:99px;background:var(--green-light,#dcfce7);color:var(--green,#166534);font-size:11px;font-weight:700;">${sorted.length}</span>
+          <span style="font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);">— cars whose repairs are done and the deal has closed. Shows repair cost and what the client paid.</span>
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;">${rows}</div>
       </div>`;
@@ -10370,6 +10420,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const shippingCell = (Number(s.shippingProfit) > 0)
         ? `<span style="color:var(--green);font-weight:600;">${fmtV(Number(s.shippingProfit))}</span>`
         : '<span style="color:var(--text-muted);">—</span>';
+      // Repairs: show the wholesale COST and what the CLIENT PAID for repairs
+      // (cost + markup) — not the markup figure on its own (owner request).
+      const repairCost   = Number(s.repair) || 0;
+      const repairCharge = repairCost + (Number(s.repairProfit) || 0);
+      const repairCell = (repairCost || repairCharge)
+        ? `${fmtV(repairCost)}<span style="display:block;font-size:10px;color:var(--text-muted);">client paid ${fmtV(repairCharge)}</span>`
+        : '<span style="color:var(--text-muted);">—</span>';
       return `<tr>
         <td><button class="sold-client-link" onclick="openSoldClientProfile(${s.id})" title="View this client's full profile">${escapeHtml(s.client)}</button></td>
         <td>${s.vehicle}</td>
@@ -10378,7 +10435,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <td>${fmtV(s.sale)}</td>
         <td>${(s.clientPaid != null && s.clientPaid !== '') ? fmtV(s.clientPaid) : '—'}</td>
         <td>${s.fees ? fmtV(s.fees) : '—'}</td>
-        <td>${s.repair ? fmtV(s.repair) : '—'}</td>
+        <td>${repairCell}</td>
         <td>${shippingCell}</td>
         <td>${s.finder ? fmtV(s.finder) : '—'}</td>
         <td style="font-weight:bold;color:${profitColor}">${profitStr}</td>
