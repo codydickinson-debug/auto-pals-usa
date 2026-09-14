@@ -1289,6 +1289,54 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // ── ACTIVITIES (Pipedrive-style tasks / to-dos) ───────────────
+    // Staff-only (gated above — not in isPublicOp). A lightweight task with an
+    // optional link to a lead (request_id), a type, a due date, and a done flag.
+    if (table === 'activities') {
+      if (req.method === 'GET') {
+        // Newest-due first; open (not done) tasks float up via the frontend.
+        const params = req.url.includes('?')
+          ? req.url.slice(req.url.indexOf('?'))
+          : '?order=due_at.asc.nullslast&limit=1000';
+        const data = await query('activities', 'GET', null, params);
+        return res.json(data || []);
+      }
+      if (req.method === 'POST') {
+        const row = {
+          id:         body.id || Date.now(),
+          request_id: (body.requestId != null ? body.requestId : (body.request_id != null ? body.request_id : null)),
+          type:       body.type || 'task',
+          title:      String(body.title || '').slice(0, 300),
+          due_at:     body.dueAt || body.due_at || null,
+          done:       !!body.done,
+          done_at:    body.done ? (body.doneAt || new Date().toISOString()) : null,
+          created_at: new Date().toISOString()
+        };
+        if (!row.title) return res.status(400).json({ error: 'missing_title' });
+        const data = await query('activities', 'POST', row);
+        return res.json(data);
+      }
+      if (req.method === 'PUT') {
+        const { id, ...b } = body;
+        const upd = {};
+        if (b.title     !== undefined) upd.title      = String(b.title || '').slice(0, 300);
+        if (b.type      !== undefined) upd.type       = b.type;
+        if (b.dueAt     !== undefined) upd.due_at     = b.dueAt || null;
+        if (b.due_at    !== undefined) upd.due_at     = b.due_at || null;
+        if (b.requestId !== undefined) upd.request_id = b.requestId;
+        if (b.done      !== undefined) {
+          upd.done    = !!b.done;
+          upd.done_at = b.done ? (b.doneAt || new Date().toISOString()) : null;
+        }
+        await query('activities', 'PATCH', upd, `?id=eq.${encodeURIComponent(id)}`);
+        return res.json({ ok: true });
+      }
+      if (req.method === 'DELETE') {
+        await query('activities', 'DELETE', null, `?id=eq.${encodeURIComponent(body.id)}`);
+        return res.json({ ok: true });
+      }
+    }
+
     // ── SALES ─────────────────────────────────────────────────────
     if (table === 'sales') {
       if (req.method === 'GET') {

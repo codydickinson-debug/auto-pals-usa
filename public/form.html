@@ -1458,6 +1458,32 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .kb-fu-overdue { color: #b91c1c; background: #fef2f2; }
   .kb-fu-today { color: #15803d; background: #e8f0e8; }
   .kb-fu-up { color: #475569; background: #f1f5f9; }
+  /* Activities panel (Pipedrive-style to-dos) */
+  .activities-panel { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 20px; }
+  .activities-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .activities-title { font-family: system-ui, sans-serif; font-size: 15px; font-weight: 700; color: var(--navy); }
+  .activities-count-badge { font-family: system-ui, sans-serif; font-size: 11px; font-weight: 700; color: var(--text-muted); background: var(--surface); border-radius: 99px; padding: 2px 10px; }
+  .activities-quickadd { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .act-input { font-family: system-ui, sans-serif; font-size: 13px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--white); color: var(--text); }
+  .act-title-in { flex: 1 1 240px; min-width: 160px; }
+  .act-type-sel, .act-due-in { flex: 0 0 auto; cursor: pointer; }
+  .act-add-btn { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 700; border: none; border-radius: 8px; padding: 8px 16px; background: var(--navy); color: #fff; cursor: pointer; }
+  .act-add-btn:active { transform: scale(0.97); }
+  .activities-list { display: flex; flex-direction: column; gap: 6px; }
+  .act-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); }
+  .act-check { width: 17px; height: 17px; cursor: pointer; accent-color: var(--green); flex: none; }
+  .act-icon { flex: none; font-size: 15px; }
+  .act-body { min-width: 0; flex: 1; }
+  .act-title { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 600; color: var(--text); }
+  .act-meta { font-family: system-ui, sans-serif; font-size: 11px; color: var(--text-muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .act-client { background: none; border: none; padding: 0; font: inherit; color: var(--navy); font-weight: 600; cursor: pointer; text-decoration: underline; }
+  .act-dot { color: var(--text-muted); }
+  .act-due-overdue { color: #b91c1c; font-weight: 700; }
+  .act-due-today { color: #15803d; font-weight: 700; }
+  .act-due-up { color: var(--text-muted); }
+  .act-del { flex: none; background: none; border: none; color: var(--text-muted); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; }
+  .act-del:hover { color: var(--red); }
+  .act-row.act-done .act-title { text-decoration: line-through; color: var(--text-muted); }
   .kb-empty { color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px 4px; font-family: system-ui, sans-serif; }
   .pl-fun-label { font-size: 13px; font-weight: 700; color: var(--text); font-family: system-ui, sans-serif; }
   .pl-fun-barwrap { background: #f1f5f9; border-radius: 6px; overflow: hidden; height: 26px; }
@@ -2062,7 +2088,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v231 · 2026-09-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v232 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2690,6 +2716,27 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
       <!-- Speed to Lead moved to its own Calls tab (see #view-calls). -->
 
+      <!-- 📋 Activities — Pipedrive-style to-dos: set one, see it here, check it off. -->
+      <div class="activities-panel" id="activities-panel">
+        <div class="activities-head">
+          <span class="activities-title">📋 Activities</span>
+          <span class="activities-count-badge" id="activities-count">0</span>
+        </div>
+        <div class="activities-quickadd">
+          <select id="act-quick-type" class="act-input act-type-sel" aria-label="Activity type">
+            <option value="call">📞 Call</option>
+            <option value="text">💬 Text</option>
+            <option value="email">✉️ Email</option>
+            <option value="meeting">🤝 Meeting</option>
+            <option value="task" selected>✅ To-do</option>
+          </select>
+          <input id="act-quick-title" class="act-input act-title-in" type="text" placeholder="Add an activity… (e.g. Call Marcus about financing)" onkeydown="if(event.key==='Enter'){event.preventDefault();quickAddActivity();}">
+          <input id="act-quick-due" class="act-input act-due-in" type="date" aria-label="Due date">
+          <button class="act-add-btn" onclick="quickAddActivity()">Add</button>
+        </div>
+        <div class="activities-list" id="activities-list"></div>
+      </div>
+
       <div id="panel-requests">
       <!-- Search bar -->
       <div class="dash-search-row">
@@ -3185,6 +3232,24 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button onclick="saveReminder()" id="dv-reminder-save" style="width:100%;padding:9px 14px;background:var(--navy,#0f2557);color:#fff;border:none;border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:13px;font-weight:700;cursor:pointer;">Set reminder</button>
           <button onclick="clearReminder()" id="dv-reminder-clear" style="display:none;width:100%;padding:8px 14px;background:transparent;color:var(--red);border:1px solid var(--red-light,#fecaca);border-radius:6px;font-family:'DM Sans',system-ui,sans-serif;font-size:12px;font-weight:600;cursor:pointer;">Clear reminder</button>
           <div id="dv-reminder-saved" style="display:none;font-family:system-ui,sans-serif;font-size:12px;color:var(--green);text-align:center;"></div>
+        </div>
+      </div>
+
+      <!-- 📋 Activities for this lead — set a task, check it off; also shows on the homepage. -->
+      <div id="dv-activities-section" style="margin-bottom:18px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:10px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:10px;">📋 Activities <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--text-muted);">· tasks for this lead</span></div>
+        <div id="dv-act-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <select id="dv-act-type" class="act-input act-type-sel" aria-label="Activity type">
+            <option value="call">📞 Call</option>
+            <option value="text">💬 Text</option>
+            <option value="email">✉️ Email</option>
+            <option value="meeting">🤝 Meeting</option>
+            <option value="task" selected>✅ To-do</option>
+          </select>
+          <input id="dv-act-title" class="act-input" style="flex:1 1 160px;min-width:120px;" type="text" placeholder="Add an activity…" onkeydown="if(event.key==='Enter'){event.preventDefault();addLeadActivity(activeRequestId);}">
+          <input id="dv-act-due" class="act-input" type="date" aria-label="Due date">
+          <button class="act-add-btn" onclick="addLeadActivity(activeRequestId)">Add</button>
         </div>
       </div>
 
@@ -4065,8 +4130,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   async function loadFromDB() {
     // Pull requests from Supabase (source of truth), but filter out tombstoned ids.
     // This lets deletes sync across devices and lets new submissions appear on refresh.
-    const [dbReqs, dbRepairs, dbSales] = await Promise.all([
-      dbGet('requests'), dbGet('repair_cars'), dbGet('sales')
+    const [dbReqs, dbRepairs, dbSales, dbActs] = await Promise.all([
+      dbGet('requests'), dbGet('repair_cars'), dbGet('sales'), dbGet('activities')
     ]);
     if (Array.isArray(dbReqs)) {
       const mapped = dbReqs.map(mapRequestFromDB).filter(r => !isDeleted(r.id));
@@ -4109,6 +4174,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         clientPaid:     (s.client_paid     != null ? Number(s.client_paid)     : (s.clientPaid     != null ? Number(s.clientPaid)     : null))
       }));
       localStorage.setItem('am_sales', JSON.stringify(sales));
+    }
+    // Activities can legitimately be empty, so we only skip on a failed fetch
+    // (dbGet returns null on failure, [] on a real empty table).
+    if (Array.isArray(dbActs)) {
+      activities = dbActs.map(mapActivityFromDB);
+      localStorage.setItem('am_activities', JSON.stringify(activities));
     }
     const allMsgs = await dbGet('messages');
     if (allMsgs?.length >= 0) {
@@ -4210,6 +4281,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
   // ─── DATA STORE ────────────────────────────────────────────────
   let requests = JSON.parse(localStorage.getItem('am_requests') || '[]');
+  // Pipedrive-style activities (tasks/to-dos). Loaded from Supabase; cached
+  // locally so the homepage panel paints instantly on load.
+  let activities = JSON.parse(localStorage.getItem('am_activities') || '[]');
   let currentFilter = 'all';
   let currentSort = 'date';
   let currentSourceFilter = 'all';   // lead-source (channel) dropdown filter
@@ -5784,10 +5858,167 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     _msgSearchTimer = setTimeout(() => { _msgSearchTimer = null; try { renderConvoList(); } catch (_) {} }, 140);
   }
 
+  // ═══ ACTIVITIES (Pipedrive-style tasks / to-dos) ═════════════════════
+  function mapActivityFromDB(a) {
+    return {
+      id: a.id,
+      requestId: (a.request_id != null ? a.request_id : null),
+      type: a.type || 'task',
+      title: a.title || '',
+      dueAt: a.due_at || null,
+      done: !!a.done,
+      doneAt: a.done_at || null,
+      createdAt: a.created_at || null
+    };
+  }
+  const ACTIVITY_TYPES = [
+    { key: 'call',    label: 'Call',    icon: '📞' },
+    { key: 'text',    label: 'Text',    icon: '💬' },
+    { key: 'email',   label: 'Email',   icon: '✉️' },
+    { key: 'meeting', label: 'Meeting', icon: '🤝' },
+    { key: 'task',    label: 'To-do',   icon: '✅' }
+  ];
+  function activityIcon(t) { const m = ACTIVITY_TYPES.find(x => x.key === t); return m ? m.icon : '✅'; }
+  function activityTypeOptions(sel) {
+    return ACTIVITY_TYPES.map(t => `<option value="${t.key}"${t.key === sel ? ' selected' : ''}>${t.icon} ${t.label}</option>`).join('');
+  }
+  // Due state for color-coding (overdue / today / upcoming / none).
+  function activityDueState(a) {
+    if (!a.dueAt) return 'none';
+    const due = new Date(a.dueAt); if (isNaN(due)) return 'none';
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const end = new Date();   end.setHours(23, 59, 59, 999);
+    if (due < start) return 'overdue';
+    if (due <= end)  return 'today';
+    return 'upcoming';
+  }
+  function _actClientName(a) {
+    if (a.requestId == null) return '';
+    const r = (requests || []).find(x => x.id === a.requestId);
+    return r ? `${r.firstName || ''} ${r.lastName || ''}`.trim() : '';
+  }
+  function _actDateStr(v) { const d = v ? new Date(v) : null; return (d && !isNaN(d)) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; }
+
+  // Homepage panel — open activities, soonest-due first (overdue on top).
+  function renderActivities() {
+    const wrap = document.getElementById('activities-list');
+    if (!wrap) return;
+    const open = (activities || []).filter(a => !a.done);
+    open.sort((a, b) => {
+      const ad = a.dueAt ? new Date(a.dueAt).getTime() : Infinity;
+      const bd = b.dueAt ? new Date(b.dueAt).getTime() : Infinity;
+      if (ad !== bd) return ad - bd;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+    const overdue = open.filter(a => activityDueState(a) === 'overdue').length;
+    const countEl = document.getElementById('activities-count');
+    if (countEl) countEl.textContent = open.length ? (open.length + (overdue ? ` · ${overdue} overdue` : '')) : '0';
+    if (!open.length) {
+      wrap.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 2px;font-family:system-ui,sans-serif;">Nothing due. Add an activity below, or from a lead’s profile.</div>';
+      return;
+    }
+    wrap.innerHTML = open.map(a => {
+      const st = activityDueState(a);
+      const dueCls = st === 'overdue' ? 'act-due-overdue' : st === 'today' ? 'act-due-today' : 'act-due-up';
+      const dueTxt = a.dueAt ? (_actDateStr(a.dueAt) + (st === 'overdue' ? ' · overdue' : st === 'today' ? ' · today' : '')) : 'No date';
+      const who = _actClientName(a);
+      const whoHtml = who ? `<button class="act-client" onclick="event.stopPropagation();openDetailView(${a.requestId})">${escapeHtml(who)}</button><span class="act-dot">·</span>` : '';
+      return `<div class="act-row">
+        <input type="checkbox" class="act-check" onchange="toggleActivityDone(${a.id}, this.checked)" title="Mark done" aria-label="Mark activity done">
+        <span class="act-icon" title="${activityIcon(a.type)}">${activityIcon(a.type)}</span>
+        <div class="act-body">
+          <div class="act-title">${escapeHtml(a.title)}</div>
+          <div class="act-meta">${whoHtml}<span class="${dueCls}">${dueTxt}</span></div>
+        </div>
+        <button class="act-del" onclick="deleteActivity(${a.id})" title="Delete">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  function _newActivity(reqId, type, title, dueVal) {
+    return {
+      id: Date.now(),
+      requestId: (reqId != null ? reqId : null),
+      type: type || 'task',
+      title: title,
+      dueAt: dueVal ? new Date(dueVal + 'T12:00:00').toISOString() : null,
+      done: false, doneAt: null, createdAt: new Date().toISOString()
+    };
+  }
+  // Quick-add from the homepage panel (standalone; not tied to a lead).
+  async function quickAddActivity() {
+    const titleEl = document.getElementById('act-quick-title');
+    const dueEl   = document.getElementById('act-quick-due');
+    const typeEl  = document.getElementById('act-quick-type');
+    const title = ((titleEl && titleEl.value) || '').trim();
+    if (!title) { if (titleEl) titleEl.focus(); return; }
+    const a = _newActivity(null, typeEl ? typeEl.value : 'task', title, dueEl ? dueEl.value : '');
+    activities.push(a);
+    localStorage.setItem('am_activities', JSON.stringify(activities));
+    if (titleEl) titleEl.value = '';
+    if (dueEl) dueEl.value = '';
+    renderActivities();
+    await dbPost('activities', { id: a.id, requestId: null, type: a.type, title: a.title, dueAt: a.dueAt });
+  }
+  // Add an activity attached to a specific lead (from the detail view).
+  async function addLeadActivity(reqId) {
+    const titleEl = document.getElementById('dv-act-title');
+    const dueEl   = document.getElementById('dv-act-due');
+    const typeEl  = document.getElementById('dv-act-type');
+    const title = ((titleEl && titleEl.value) || '').trim();
+    if (!title) { if (titleEl) titleEl.focus(); return; }
+    const a = _newActivity(reqId, typeEl ? typeEl.value : 'task', title, dueEl ? dueEl.value : '');
+    activities.push(a);
+    localStorage.setItem('am_activities', JSON.stringify(activities));
+    if (titleEl) titleEl.value = '';
+    if (dueEl) dueEl.value = '';
+    renderLeadActivities(reqId);
+    renderActivities();
+    await dbPost('activities', { id: a.id, requestId: reqId, type: a.type, title: a.title, dueAt: a.dueAt });
+  }
+  async function toggleActivityDone(id, done) {
+    const a = (activities || []).find(x => x.id === id);
+    if (!a) return;
+    a.done = !!done; a.doneAt = done ? new Date().toISOString() : null;
+    localStorage.setItem('am_activities', JSON.stringify(activities));
+    renderActivities();
+    if (a.requestId != null) renderLeadActivities(a.requestId);
+    await dbPut('activities', { id, done: a.done, doneAt: a.doneAt });
+  }
+  async function deleteActivity(id) {
+    const a = (activities || []).find(x => x.id === id);
+    activities = (activities || []).filter(x => x.id !== id);
+    localStorage.setItem('am_activities', JSON.stringify(activities));
+    renderActivities();
+    if (a && a.requestId != null) renderLeadActivities(a.requestId);
+    await dbDelete('activities', id);
+  }
+  // Per-lead activity list inside the detail view (open first, then done).
+  function renderLeadActivities(reqId) {
+    const wrap = document.getElementById('dv-act-list');
+    if (!wrap) return;
+    const list = (activities || []).filter(a => a.requestId === reqId)
+      .sort((a, b) => (Number(a.done) - Number(b.done))
+        || ((a.dueAt ? new Date(a.dueAt).getTime() : Infinity) - (b.dueAt ? new Date(b.dueAt).getTime() : Infinity)));
+    if (!list.length) { wrap.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">No activities yet.</div>'; return; }
+    wrap.innerHTML = list.map(a => {
+      const st = activityDueState(a);
+      const dueCls = st === 'overdue' ? 'act-due-overdue' : st === 'today' ? 'act-due-today' : 'act-due-up';
+      const dueTxt = a.dueAt ? _actDateStr(a.dueAt) : '';
+      return `<div class="act-row${a.done ? ' act-done' : ''}">
+        <input type="checkbox" class="act-check" ${a.done ? 'checked' : ''} onchange="toggleActivityDone(${a.id}, this.checked)" aria-label="Mark done">
+        <span class="act-icon">${activityIcon(a.type)}</span>
+        <div class="act-body"><div class="act-title">${escapeHtml(a.title)}</div>${dueTxt ? `<div class="act-meta"><span class="${dueCls}">${dueTxt}</span></div>` : ''}</div>
+        <button class="act-del" onclick="deleteActivity(${a.id})" title="Delete">×</button>
+      </div>`;
+    }).join('');
+  }
+
   function renderDashboard() {
     updateStats();
     updateBadges();
     renderTable();
+    if (typeof renderActivities === 'function') renderActivities();
     // Keep the PSI panel current if it happens to be the open view.
     const psiPanel = document.getElementById('panel-psi');
     if (psiPanel && psiPanel.style.display !== 'none' && typeof renderPsiList === 'function') renderPsiList();
@@ -6791,6 +7022,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
     // Staff follow-up reminder widget (Phase 2) — separate from the drip below.
     populateReminderWidget(r);
+
+    // Activities for this lead (Pipedrive-style tasks; also on the homepage).
+    if (typeof renderLeadActivities === 'function') renderLeadActivities(r.id);
 
     // Future follow-up card — reflect current schedule (if any) and prefill.
     const fuSection = document.getElementById('dv-followup-section');
