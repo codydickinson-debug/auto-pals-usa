@@ -1443,6 +1443,16 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .kb-col-body { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 48px; }
   .kb-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; cursor: grab; box-shadow: var(--shadow); transition: box-shadow 0.15s var(--ease-out); }
   .kb-card:hover { box-shadow: var(--shadow-md); }
+  /* Activity color stripe (Pipedrive-style): red past-due · green today · grey ahead · yellow none */
+  .kb-card.kb-act-overdue { border-left: 4px solid #dc2626; }
+  .kb-card.kb-act-today   { border-left: 4px solid #16a34a; }
+  .kb-card.kb-act-future  { border-left: 4px solid #94a3b8; }
+  .kb-card.kb-act-none    { border-left: 4px solid #f59e0b; }
+  .kb-actdot { flex: none; width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .kb-actdot-overdue { background: #dc2626; }
+  .kb-actdot-today   { background: #16a34a; }
+  .kb-actdot-future  { background: #94a3b8; }
+  .kb-actdot-none    { background: #f59e0b; }
   .kb-card:active { cursor: grabbing; }
   .kb-card.kb-dragging { opacity: 0.45; }
   .kb-card-name { font-family: 'DM Sans', system-ui, sans-serif; font-weight: 600; font-size: 13px; color: var(--text); display: flex; align-items: center; gap: 6px; }
@@ -2115,7 +2125,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 </head>
 <body>
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v233 · 2026-09-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v234 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3080,7 +3090,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <div id="view-board" class="view">
   <div style="max-width:1600px;margin:0 auto;padding:24px 28px 80px;">
     <div style="font-size:22px;font-weight:800;color:var(--navy);font-family:'DM Sans',system-ui,sans-serif;">Pipeline Board</div>
-    <div style="font-size:13px;color:var(--text-muted);margin:4px 0 20px;font-family:system-ui,sans-serif;">Drag a lead between stages to move them. A colored dot = a follow-up reminder (red = overdue, green = today). Click a card to open the lead.</div>
+    <div style="font-size:13px;color:var(--text-muted);margin:4px 0 20px;font-family:system-ui,sans-serif;">Drag a lead between stages to move them. Each card's color = its activity status: <span style="color:#dc2626;font-weight:700;">● past due</span> · <span style="color:#f59e0b;font-weight:700;">● no activity set</span> · <span style="color:#16a34a;font-weight:700;">● due today</span> · <span style="color:#94a3b8;font-weight:700;">● scheduled ahead</span>. Click a card to open the lead.</div>
     <div id="kanban-board" class="kb-wrap"></div>
   </div>
 </div>
@@ -4980,16 +4990,26 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     return 'upcoming';
   }
 
+  // Board-card ACTIVITY color (Pipedrive-style), from the lead's OPEN activities:
+  //   overdue (red) · today (green) · future incl. undated (grey) · none (yellow).
+  function leadActivityState(reqId) {
+    const mine = (activities || []).filter(a => a.requestId === reqId && !a.done);
+    if (!mine.length) return 'none';
+    if (mine.some(a => activityDueState(a) === 'overdue')) return 'overdue';
+    if (mine.some(a => activityDueState(a) === 'today'))   return 'today';
+    return 'future';
+  }
+
   function kbCard(r) {
     const veh = [r.make, r.model].filter(v => v && v !== '—').join(' ') || (r.searchMode === 'open' ? 'Open search' : '—');
     const budget = r.budgetMax ? '$' + Number(r.budgetMax).toLocaleString() : '';
     const rs = reminderState(r);
-    // Pipedrive-style follow-up flag (copied from their board): amber ▲ = no
-    // follow-up scheduled (not followed up), red = overdue, green = due today,
-    // grey = upcoming/scheduled.
-    const flag = rs === 'none'
-      ? `<span class="kb-warn" title="No follow-up scheduled"></span>`
-      : `<span class="kb-rem-dot kb-rem-${rs}" title="Follow-up ${rs}${r.reminderNote ? ': ' + escapeHtml(r.reminderNote) : ''}"></span>`;
+    // Pipedrive-style ACTIVITY color: red = past due, green = due today,
+    // grey = scheduled ahead, yellow = no activity set. Drives the card's left
+    // stripe (kb-act-*) and the dot before the name.
+    const actState = (typeof leadActivityState === 'function') ? leadActivityState(r.id) : 'none';
+    const actTitle = { overdue: 'Activity past due', today: 'Activity due today', future: 'Activity scheduled ahead', none: 'No activity set' }[actState];
+    const flag = `<span class="kb-actdot kb-actdot-${actState}" title="${actTitle}"></span>`;
     // Show the follow-up date on the card, colored by urgency.
     let fuDate = '';
     if (r.reminderAt) {
@@ -5015,7 +5035,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const meta = (subStr || act)
       ? `<div class="kb-meta">${subStr ? `<span title="Filled out the form">🗓 ${subStr}</span>` : ''}${act ? `<span class="kb-act">${act}</span>` : ''}</div>`
       : '';
-    return `<div class="kb-card" draggable="true" data-id="${r.id}" onclick="openDetailView(${r.id})">
+    return `<div class="kb-card kb-act-${actState}" draggable="true" data-id="${r.id}" onclick="openDetailView(${r.id})">
       <div class="kb-card-name">${flag}<span>${escapeHtml(r.firstName || '')} ${escapeHtml(r.lastName || '')}</span></div>
       <div class="kb-card-sub">${escapeHtml(veh)}${budget ? ' · ' + budget : ''}</div>
       ${meta}
