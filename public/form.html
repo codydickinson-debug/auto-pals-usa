@@ -2175,7 +2175,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v240 · 2026-09-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v242 · 2026-09-14</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -4955,10 +4955,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   const PIPELINE_STAGES = [
     { key: 'new_lead',          label: 'New Lead' },
     { key: 'contact_attempted', label: 'Contact Attempted' },
-    { key: 'followup_1',        label: 'Follow-up 1' },
-    { key: 'followup_2',        label: 'Follow-up 2' },
-    { key: 'followup_3',        label: 'Follow-up 3' },
-    { key: 'followup_4',        label: 'Follow-up 4' },
     { key: 'call_scheduled',    label: 'Call Scheduled' },
     { key: 'no_show',           label: 'No Show' },
     { key: 'good_call',         label: 'Good Call' },
@@ -5101,7 +5097,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   //   • New Lead       = filled the form within the last week and hasn't booked
   //   • Call Scheduled = has a genuine UPCOMING call (from CALL_TIMES)
   //   • No Show        = recently no-showed and hasn't rebooked
-  // The pre-call queue (Contact Attempted, Follow-up 1–4) and the outcome/terminal
+  // The pre-call queue (Contact Attempted) and the outcome/terminal
   // columns (Good/Bad Call, Deposit Pending, Closed, Lost, Email Remarketing,
   // Future Follow-up) are what Renz/staff set by dragging — those explicit stages
   // win. Booking a call auto-moves a lead into Call Scheduled (even out of the
@@ -5109,7 +5105,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // leaves Call Scheduled on its own.
   const NO_SHOW_WINDOW_DAYS  = 45;
   const TERMINAL_STAGES = new Set(['good_call','bad_call','deposit_pending','closed_deposit','lost','email_remarketing','future_follow_up']);
-  const PRECALL_STAGES  = new Set(['contact_attempted','followup_1','followup_2','followup_3','followup_4']);
+  const PRECALL_STAGES  = new Set(['contact_attempted']);
+  // Legacy board columns (Follow-up 1–4) were retired 2026-09-14 — staff now
+  // track follow-up cadence with ACTIVITIES while the lead sits in Contact
+  // Attempted, instead of dragging it through four columns. Any lead still
+  // stamped with an old followup_* stage collapses back into Contact Attempted
+  // (never New Lead) via this map.
+  const LEGACY_STAGE_MAP = { followup_1: 'contact_attempted', followup_2: 'contact_attempted', followup_3: 'contact_attempted', followup_4: 'contact_attempted' };
 
   function _daysAgo(v) {
     if (!v) return Infinity;
@@ -5131,7 +5133,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // in the Requests tab only). Order matters — see the comment block above.
   function boardStage(r) {
     if (!r) return null;
-    const stage = r.pipelineStage;
+    const stage = LEGACY_STAGE_MAP[r.pipelineStage] || r.pipelineStage;
     // 1) Explicit outcome / terminal columns staff set by hand always win.
     if (stage && TERMINAL_STAGES.has(stage)) return stage;
     // 2) Converted or dead leads are worked elsewhere → off the active board.
@@ -5149,7 +5151,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (typeof calledWithinFollowUpWindow === 'function' ? calledWithinFollowUpWindow(r) : (r.callCompletedAt && _daysAgo(r.callCompletedAt) <= 7)) {
       return r.callOutcome === 'bad' ? 'bad_call' : 'good_call';
     }
-    // 5) Renz's manual pre-call queue.
+    // 5) Renz's manual pre-call queue (Contact Attempted). Follow-up cadence is
+    // tracked with activities here now, not separate columns.
     if (stage && PRECALL_STAGES.has(stage)) return stage;
     // 6) New Lead = every active lead that hasn't booked a call and isn't already
     // in a later manual stage — so the board shows the SAME active leads the
@@ -6150,7 +6153,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // activity's checkbox opens this popover in "next activity" mode, and the
   // completion is only committed when the next one is added (Cancel = it stays
   // open). _completingActId holds the activity being closed out (null = plain add).
-  let _capReqId = null, _completingActId = null, _completingCallReq = null;
+  let _capReqId = null, _completingActId = null, _completingCallReq = null, _completingFollowupReq = null;
   // Toggle the popover between the activity form and the call-outcome step.
   function _capMode(mode) {
     const oc = document.getElementById('cap-calloutcome');
@@ -6179,6 +6182,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     _capReqId = null;
     _completingActId = null;
     _completingCallReq = null;
+    _completingFollowupReq = null;
     _capMode('activity');   // reset so the next open shows the form
     // Cancelled the "log next activity" step → the activity was NOT completed;
     // re-render so the checkbox that was ticked reverts to unchecked.
@@ -6195,6 +6199,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     _capReqId = reqId;
     _completingActId = (completingId != null) ? completingId : null;
     _completingCallReq = null;
+    _completingFollowupReq = null;
     _capMode('activity');
     const typeEl = document.getElementById('cap-type');
     const textEl = document.getElementById('cap-text');
@@ -6243,7 +6248,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     hideActivityHover();
     const pop = document.getElementById('card-act-pop');
     if (!pop) return;
-    _capReqId = reqId; _completingActId = null; _completingCallReq = reqId;
+    _capReqId = reqId; _completingActId = null; _completingCallReq = reqId; _completingFollowupReq = null;
     const r = (requests || []).find(x => x.id === reqId);
     const whoEl = document.getElementById('cap-who');
     const labelEl = document.getElementById('cap-head-label');
@@ -6254,6 +6259,34 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     _capMode('call');
     pop.style.display = 'block';
     _positionCardPop(pop, e && (e.currentTarget || e.target));
+  }
+  // Complete a Future Follow-up from the board: the circle-back is done, so
+  // clear its date and force the next activity (no good/bad outcome for these).
+  function requestCompleteFollowup(reqId, e) {
+    if (e) e.stopPropagation();
+    hideActivityHover();
+    const pop = document.getElementById('card-act-pop');
+    if (!pop) return;
+    _capReqId = reqId; _completingActId = null; _completingCallReq = null; _completingFollowupReq = reqId;
+    const r = (requests || []).find(x => x.id === reqId);
+    const labelEl = document.getElementById('cap-head-label');
+    const whoEl = document.getElementById('cap-who');
+    const noteEl = document.getElementById('cap-completing-note');
+    const addBtn = document.getElementById('cap-add-btn');
+    if (labelEl) labelEl.textContent = 'Log the next activity';
+    if (whoEl) whoEl.textContent = r ? `· ${(r.firstName || '') + ' ' + (r.lastName || '')}`.trim() : '';
+    if (noteEl) { noteEl.textContent = '✓ Follow-up done — schedule the next step to close it out.'; noteEl.style.display = 'block'; }
+    if (addBtn) addBtn.textContent = 'Complete & add next';
+    const typeEl = document.getElementById('cap-type');
+    const textEl = document.getElementById('cap-text');
+    const dueEl  = document.getElementById('cap-due');
+    if (typeEl) typeEl.value = 'call';
+    if (textEl) textEl.value = '';
+    if (dueEl)  dueEl.value  = _capDateStr(2);
+    _capMode('activity');
+    pop.style.display = 'block';
+    _positionCardPop(pop, e && (e.currentTarget || e.target));
+    setTimeout(() => { if (textEl) textEl.focus(); }, 30);
   }
   function pickCallOutcome(outcome) {
     const reqId = _completingCallReq;
@@ -6291,6 +6324,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (!title) { if (textEl) textEl.focus(); return; }
     const reqId = _capReqId;
     const completing = _completingActId;
+    const followupDone = _completingFollowupReq;
     const a = _newActivity(reqId, typeEl ? typeEl.value : 'task', title, dueEl ? dueEl.value : '');
     activities.push(a);
     // Commit the completion now that the next activity exists.
@@ -6299,12 +6333,19 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       doneA = (activities || []).find(x => x.id === completing);
       if (doneA) { doneA.done = true; doneA.doneAt = new Date().toISOString(); }
     }
+    // Completing a Future Follow-up clears its circle-back date (that step is done).
+    let fuLead = null;
+    if (followupDone != null) {
+      fuLead = (requests || []).find(x => x.id === followupDone);
+      if (fuLead) { fuLead.reminderAt = null; fuLead.reminderNote = ''; }
+    }
     localStorage.setItem('am_activities', JSON.stringify(activities));
-    _completingActId = null;   // so closeCardActivity doesn't treat this as a cancel
+    _completingActId = null; _completingFollowupReq = null;   // so closeCardActivity doesn't treat this as a cancel
     closeCardActivity();
     _activitiesRefresh(reqId);
     await dbPost('activities', { id: a.id, requestId: reqId, type: a.type, title: a.title, dueAt: a.dueAt });
     if (doneA) await dbPut('activities', { id: doneA.id, done: true, doneAt: doneA.doneAt });
+    if (fuLead) await dbPut('requests', { id: fuLead.id, reminderAt: null, reminderNote: '' });
   }
   // Close the popover on an outside click or Escape.
   document.addEventListener('click', (e) => {
@@ -6353,11 +6394,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       if (!isNaN(rd)) {
         const dueCls = rrs === 'overdue' ? 'act-due-overdue' : rrs === 'today' ? 'act-due-today' : 'act-due-up';
         const dueTxt = rd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + (rrs === 'overdue' ? ' · overdue' : rrs === 'today' ? ' · today' : '');
-        reminderRow = `<div class="ah-row ah-callrow">
-          <span class="ah-callmark">📅</span>
+        reminderRow = `<label class="ah-row ah-callrow">
+          <input type="checkbox" onchange="requestCompleteFollowup(${reqId}, event)" title="Mark follow-up done">
           <span class="ah-ic">⏰</span>
           <span class="ah-txt"><span class="ah-title">Follow up${r.reminderNote ? ': ' + escapeHtml(r.reminderNote) : ''}</span><span class="ah-due ${dueCls}">${dueTxt}</span></span>
-        </div>`;
+        </label>`;
       }
     }
     const rows = mine.map(a => {
@@ -7939,10 +7980,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   const BOARD_STAGE_META = {
     new_lead:          { label: 'New Lead',          color: '#64748b' },
     contact_attempted: { label: 'Contact Attempted', color: '#0ea5e9' },
-    followup_1:        { label: 'Follow-up 1',       color: '#0ea5e9' },
-    followup_2:        { label: 'Follow-up 2',       color: '#0ea5e9' },
-    followup_3:        { label: 'Follow-up 3',       color: '#0ea5e9' },
-    followup_4:        { label: 'Follow-up 4',       color: '#0ea5e9' },
     call_scheduled:    { label: 'Call Scheduled',    color: '#6d28d9' },
     no_show:           { label: 'No Show',           color: '#92400e' },
     good_call:         { label: 'Good Call',         color: '#047857' },
