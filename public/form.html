@@ -1457,6 +1457,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   /* Inline "+ Activity" button on a card + its quick popover */
   .kb-addact { margin-top: 8px; width: 100%; font-family: system-ui, sans-serif; font-size: 11px; font-weight: 600; color: var(--navy); background: transparent; border: 1px dashed var(--border); border-radius: 6px; padding: 5px; cursor: pointer; }
   .kb-addact:hover { background: var(--white); border-color: var(--navy); }
+  /* Card footer: + Activity button fills the row, source tag pinned bottom-right */
+  .kb-card-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+  .kb-card-foot .kb-addact { margin-top: 0; flex: 1; width: auto; }
+  .kb-tag-meta { flex: 0 0 auto; font-family: system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.03em; color: #fff; background: #1877F2; border-radius: 99px; padding: 3px 9px; }
   .card-act-pop { position: fixed; z-index: 3000; width: 250px; background: var(--white); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 10px 34px rgba(15,37,87,0.24); padding: 12px; }
   .cap-head { font-family: system-ui, sans-serif; font-size: 12px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
   .cap-who { font-weight: 600; color: var(--text-muted); }
@@ -2175,7 +2179,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v247 · 2026-09-16</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v248 · 2026-09-16</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -5047,12 +5051,20 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const meta = act
       ? `<div class="kb-meta"><span class="kb-act">${act}</span></div>`
       : '';
+    // Blue "Meta" tag on leads manually entered from the Meta Ads tab
+    // (source 'meta-ads-manual' / referralSource 'Meta Ads'). Purely a visual
+    // marker — routing to Contact Attempted is unchanged.
+    const isMeta = r.source === 'meta-ads-manual' || (r.referralSource || '') === 'Meta Ads';
+    const metaTag = isMeta ? `<span class="kb-tag-meta" title="Manually added from Meta Ads">Meta</span>` : '';
     return `<div class="kb-card kb-act-${actState}" draggable="true" data-id="${r.id}" onclick="openDetailView(${r.id})">
       <div class="kb-card-name">${flag}<span>${escapeHtml(r.firstName || '')} ${escapeHtml(r.lastName || '')}</span></div>
       <div class="kb-card-sub">${escapeHtml(veh)}${budget ? ' · ' + budget : ''}</div>
       ${meta}
       ${fuDate}
-      <button class="kb-addact" onclick="event.stopPropagation();openCardActivity(event, ${r.id})" title="Set an activity for this lead">+ Activity</button>
+      <div class="kb-card-foot">
+        <button class="kb-addact" onclick="event.stopPropagation();openCardActivity(event, ${r.id})" title="Set an activity for this lead">+ Activity</button>
+        ${metaTag}
+      </div>
     </div>`;
   }
 
