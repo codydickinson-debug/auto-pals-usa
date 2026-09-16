@@ -2175,7 +2175,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v242 · 2026-09-14</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v243 · 2026-09-16</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2731,16 +2731,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button class="sidebar-subitem" onclick="filterRequests('fu2', this)"><span class="sub-dot" style="background:#0284c7"></span>Follow-up 2 <span class="badge" id="badge-fu2">0</span></button>
           <button class="sidebar-subitem" onclick="filterRequests('fu3', this)"><span class="sub-dot" style="background:#0369a1"></span>Follow-up 3 <span class="badge" id="badge-fu3">0</span></button>
           <button class="sidebar-subitem" onclick="filterRequests('fu4', this)"><span class="sub-dot" style="background:#075985"></span>Follow-up 4 <span class="badge" id="badge-fu4">0</span></button>
-        </div>
-        <button class="sidebar-item" onclick="filterRequests('precall_followups', this)" title="Follow-ups for leads who have NOT had a call yet — chasing them to book / respond">
-          Pre-Call Follow-ups <span class="badge" id="badge-precall_followups">0</span>
-        </button>
-        <!-- Pre-call follow-up funnel (leads with no call yet) -->
-        <div class="sidebar-sub" id="precall-followups-sub">
-          <button class="sidebar-subitem" onclick="filterRequests('pfu1', this)"><span class="sub-dot" style="background:#f59e0b"></span>Follow-up 1 <span class="badge" id="badge-pfu1">0</span></button>
-          <button class="sidebar-subitem" onclick="filterRequests('pfu2', this)"><span class="sub-dot" style="background:#d97706"></span>Follow-up 2 <span class="badge" id="badge-pfu2">0</span></button>
-          <button class="sidebar-subitem" onclick="filterRequests('pfu3', this)"><span class="sub-dot" style="background:#b45309"></span>Follow-up 3 <span class="badge" id="badge-pfu3">0</span></button>
-          <button class="sidebar-subitem" onclick="filterRequests('pfu4', this)"><span class="sub-dot" style="background:#92400e"></span>Follow-up 4 <span class="badge" id="badge-pfu4">0</span></button>
         </div>
         <button class="sidebar-item" onclick="filterRequests('future_followups', this)" title="Leads who aren't ready yet — parked with a date to circle back. Runs a tailored 4-day follow-up drip starting on the date; the normal drip is paused until then.">
           📅 Future Follow-ups <span class="badge" id="badge-future_followups">0</span>
@@ -5065,10 +5055,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         fuDate = `<div class="kb-fu ${cls}">Follow-up ${rd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>`;
       }
     }
-    // Date the lead came in + its latest activity — the same signals the Requests
-    // row carries, so the two views read the same at a glance.
+    // Latest activity signal on the card (matches the Requests row). The
+    // form-submitted date was dropped from the card per owner request.
     const _sd = (v) => { const d = v ? new Date(v) : null; return (d && !isNaN(d)) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; };
-    const subStr = _sd(r.submitted);
     let act = '';
     const _ck = (r.email || '').toLowerCase();
     const _cal = _ck && CALL_TIMES[_ck];
@@ -5078,8 +5067,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     else if (r.callCompletedAt) act = `📞 Called ${_sd(r.callCompletedAt)}`;
     else if (r.noShowAt) act = `⚠ No-show ${_sd(r.noShowAt)}`;
     else if (r.lastReplyAt) act = `💬 Replied ${_sd(r.lastReplyAt)}`;
-    const meta = (subStr || act)
-      ? `<div class="kb-meta">${subStr ? `<span title="Filled out the form">🗓 ${subStr}</span>` : ''}${act ? `<span class="kb-act">${act}</span>` : ''}</div>`
+    const meta = act
+      ? `<div class="kb-meta"><span class="kb-act">${act}</span></div>`
       : '';
     return `<div class="kb-card kb-act-${actState}" draggable="true" data-id="${r.id}" onclick="openDetailView(${r.id})">
       <div class="kb-card-name">${flag}<span>${escapeHtml(r.firstName || '')} ${escapeHtml(r.lastName || '')}</span></div>
@@ -6579,11 +6568,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     counts.fu3 = requests.filter(r => calledWithinFollowUpWindow(r) && effectiveFollowUp(r) === 3).length;
     counts.fu4 = requests.filter(r => calledWithinFollowUpWindow(r) && effectiveFollowUp(r) === 4).length;
     counts.followups = counts.fu1 + counts.fu2 + counts.fu3 + counts.fu4;
-    counts.pfu1 = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) === 1).length;
-    counts.pfu2 = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) === 2).length;
-    counts.pfu3 = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) === 3).length;
-    counts.pfu4 = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) === 4).length;
-    counts.precall_followups = counts.pfu1 + counts.pfu2 + counts.pfu3 + counts.pfu4;
     counts.pending_deposit = requests.filter(isPendingDeposit).length;
     // Opted out of SMS (sms_consent === false) — the drip can't chase these, so
     // they surface here to be worked by hand. Active leads only.
@@ -6605,7 +6589,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     document.querySelectorAll('.action-card').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.sidebar-item, .sidebar-subitem').forEach(el => el.classList.remove('active'));
     btn.classList.add('active');
-    const titles = { all: 'All Requests', new: 'New Requests — this week', active: 'Active — new leads older than a week (still being worked)', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Post-Call Follow-ups (had a call)', fu1: 'Post-Call · Follow-up 1', fu2: 'Post-Call · Follow-up 2', fu3: 'Post-Call · Follow-up 3', fu4: 'Post-Call · Follow-up 4', precall_followups: 'Pre-Call Follow-ups (no call yet)', pfu1: 'Pre-Call · Follow-up 1', pfu2: 'Pre-Call · Follow-up 2', pfu3: 'Pre-Call · Follow-up 3', pfu4: 'Pre-Call · Follow-up 4', pending_deposit: 'Pending Deposit — good call, no deposit yet', no_sms: 'Opted Out of SMS — no auto follow-up; work by phone/email', future_followups: 'Future Follow-ups — parked "not ready" leads; auto-texts the client on the scheduled date', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
+    const titles = { all: 'All Requests', new: 'New Requests — this week', active: 'Active — new leads older than a week (still being worked)', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Post-Call Follow-ups (had a call)', fu1: 'Post-Call · Follow-up 1', fu2: 'Post-Call · Follow-up 2', fu3: 'Post-Call · Follow-up 3', fu4: 'Post-Call · Follow-up 4', pending_deposit: 'Pending Deposit — good call, no deposit yet', no_sms: 'Opted Out of SMS — no auto follow-up; work by phone/email', future_followups: 'Future Follow-ups — parked "not ready" leads; auto-texts the client on the scheduled date', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
     document.getElementById('table-title').textContent = titles[f] || 'Requests';
     renderTable();
   }
@@ -6857,11 +6841,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     } else if (currentFilter === 'fu1' || currentFilter === 'fu2' || currentFilter === 'fu3' || currentFilter === 'fu4') {
       const n = Number(currentFilter.slice(2));
       filtered = requests.filter(r => calledWithinFollowUpWindow(r) && effectiveFollowUp(r) === n);
-    } else if (currentFilter === 'precall_followups') {
-      filtered = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) > 0);
-    } else if (currentFilter === 'pfu1' || currentFilter === 'pfu2' || currentFilter === 'pfu3' || currentFilter === 'pfu4') {
-      const n = Number(currentFilter.slice(3));
-      filtered = requests.filter(r => !r.callCompletedAt && effectiveFollowUp(r) === n);
     } else if (currentFilter === 'new') {
       // New = this week's fresh 'new' leads only (aged-out ones move to Active).
       filtered = requests.filter(isNewRecent);
