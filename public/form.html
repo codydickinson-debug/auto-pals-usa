@@ -2175,7 +2175,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v245 · 2026-09-16</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v246 · 2026-09-16</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2641,17 +2641,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       <label for="ma-notes">Notes</label>
       <textarea id="ma-notes" rows="3" placeholder="Ad / campaign name, what they said, best time to reach, etc."></textarea>
     </div>
-
-    <hr class="form-divider">
-
-    <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text);font-weight:500;">
-      <input type="checkbox" id="ma-sms-consent" style="width:18px;height:18px;flex:0 0 auto;margin-top:1px;">
-      <span>Lead agreed to receive text messages <span style="color:var(--text-muted);font-weight:400;">— tick only if the ad's lead form had an SMS-consent box they checked. Required before we can text them (TCPA).</span></span>
-    </label>
-    <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text);font-weight:500;margin-top:12px;">
-      <input type="checkbox" id="ma-notify" style="width:18px;height:18px;flex:0 0 auto;margin-top:1px;">
-      <span>Send this lead our confirmation email + intro-call text now <span style="color:var(--text-muted);font-weight:400;">— the text only goes out if SMS consent above is ticked.</span></span>
-    </label>
 
     <button type="button" class="submit-btn" onclick="submitMetaLead()" id="ma-submit" style="margin-top:20px;">Add Meta Ads Lead</button>
 
@@ -5774,8 +5763,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   function maResetForm() {
     ['ma-firstname','ma-lastname','ma-email','ma-phone','ma-make','ma-model','ma-year','ma-budget','ma-notes']
       .forEach(id => { const el = document.getElementById(id); if (el) { el.value = ''; el.style.borderColor = ''; } });
-    const c1 = document.getElementById('ma-sms-consent'); if (c1) c1.checked = false;
-    const c2 = document.getElementById('ma-notify');      if (c2) c2.checked = false;
     const f  = document.getElementById('ma-firstname');   if (f) f.focus();
   }
 
@@ -5810,8 +5797,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const year      = g('ma-year').value.trim();
     const budgetRaw = g('ma-budget').value.trim();
     const notes     = g('ma-notes').value.trim();
-    const smsConsent   = g('ma-sms-consent').checked;
-    const notifyClient = g('ma-notify').checked;
+    // Meta Ads leads are worked by hand (Renz reaches out), so no automated
+    // client comms fire and SMS stays off — the consent/notify boxes were removed.
+    const smsConsent   = false;
+    const notifyClient = false;
 
     // ── Validation: name + valid email + phone are the hard requirements
     // (email is also enforced server-side by the spam gate in api/db.js). ──
@@ -5837,7 +5826,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const req = {
       id,
       submitted: new Date().toISOString(),
-      status: 'new',
+      // Meta Ads manual leads go straight to Contact Attempted on the board +
+      // Requests (Renz works them by hand), not New Lead. status 'qualified'
+      // keeps them out of the "New" bucket; pipelineStage drives the board/pill.
+      status: 'qualified',
+      pipelineStage: 'contact_attempted',
       portalCode, accessCode: portalCode,
       firstName, lastName, email, phone,
       address: '', city: '', state: '', zip: '',

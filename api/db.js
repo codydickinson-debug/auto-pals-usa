@@ -482,7 +482,9 @@ module.exports = async function handler(req, res) {
           sms_consent: typeof body.smsConsent === 'boolean' ? body.smsConsent : null,
           // Land every new lead on the pipeline board (the board is forward-
           // looking from 2026-09-12; historical leads were cleared to NULL).
-          pipeline_stage: 'new_lead'
+          // Meta Ads manual entries land straight in Contact Attempted (Renz
+          // reaches out by hand) rather than New Lead.
+          pipeline_stage: body.manualEntry ? 'contact_attempted' : 'new_lead'
         };
         const data = await query('requests', 'POST', row);
 
@@ -1294,11 +1296,13 @@ module.exports = async function handler(req, res) {
     // optional link to a lead (request_id), a type, a due date, and a done flag.
     if (table === 'activities') {
       if (req.method === 'GET') {
-        // Newest-due first; open (not done) tasks float up via the frontend.
-        const params = req.url.includes('?')
-          ? req.url.slice(req.url.indexOf('?'))
-          : '?order=due_at.asc.nullslast&limit=1000';
-        const data = await query('activities', 'GET', null, params);
+        // Due-order; open (not done) tasks float up via the frontend. NOTE: the
+        // incoming req.url carries the router's own ?table=activities, which is
+        // NOT a PostgREST filter — echoing it made Supabase 400 on a nonexistent
+        // `table` column, so the fetch silently failed and the dashboard fell
+        // back to localStorage (DB-inserted activities never appeared). Always
+        // use a clean PostgREST query string instead.
+        const data = await query('activities', 'GET', null, '?order=due_at.asc.nullslast&limit=1000');
         return res.json(data || []);
       }
       if (req.method === 'POST') {
