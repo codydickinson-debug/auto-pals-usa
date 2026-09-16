@@ -33,7 +33,10 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_RO
 const LOOKBACK_DAYS = 3;        // survives two consecutive missed runs
 const MAX_CONVERSATIONS = 60;
 const MAX_CALLS_PER_CONVERSATION = 50;
-const MAX_ENRICH = 40;
+// Most enrich rows now need only a recording (1 Quo req), since the webhook
+// already delivers summary/transcript — so a larger budget still stays well
+// inside the function timeout while clearing the recording backlog faster.
+const MAX_ENRICH = 60;
 
 const sbHeaders = (extra = {}) => ({
   apikey: SUPABASE_KEY,
@@ -125,12 +128,19 @@ async function reconcileCalls(sinceIso, stats) {
 // ── Step 2: enrich ──────────────────────────────────────────────────────────
 
 async function enrichCalls(stats) {
+  // Pick up calls missing EITHER a summary OR a recording. The recording clause
+  // is essential: the webhook now delivers call.summary/transcript reliably but
+  // NOT call.recording.completed, so a fresh call gets its summary within
+  // seconds — and under the old `summary=is.null`-only filter it was excluded
+  // from enrichment before the sync ever asked Quo for its recording. Result:
+  // recordings silently stopped linking after the first couple of weeks. Now a
+  // call that has a summary but no recording is still reconciled.
   const params = [
     'provider=eq.quo',
     'channel=eq.call',
-    'summary=is.null',
     'provider_id=not.is.null',
-    'select=id,provider_id,props',
+    'or=(summary.is.null,recording_url.is.null)',
+    'select=id,provider_id,props,summary,recording_url,ts',
     'order=ts.desc',
     `limit=${MAX_ENRICH}`,
   ].join('&');
@@ -138,34 +148,63 @@ async function enrichCalls(stats) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/communications?${params}`, { headers: sbHeaders() });
   if (!res.ok) { stats.errors.push(`enrich fetch: ${res.status}`); return; }
 
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
   const rows = (await res.json().catch(() => []))
-    // Already known to have no summary — asking again every day forever would
-    // make this pass slower for the rest of its life.
-    .filter((r) => !(r.props && r.props.quoSummaryMissing));
+    // Skip only rows where BOTH pieces are known dead ends — no summary AND no
+    // recording will ever come. A call missing just one still qualifies, so we
+    // don't re-ask forever yet don't strand a recording behind a known-missing
+    // summary (or vice-versa).
+    .filter((r) => {
+      const p = r.props || {};
+      const needSummary   = !r.summary       && !p.quoSummaryMissing;
+      const needRecording = !r.recording_url && !p.quoRecordingMissing;
+      return needSummary || needRecording;
+    });
 
   for (const row of rows) {
-    const sRes = await quo.getCallSummary(row.provider_id);
-    const tRes = await quo.getCallTranscript(row.provider_id);
-    const rRes = await quo.getCallRecordings(row.provider_id);
-
-    const summary = sRes.ok ? renderSummary(sRes.data) : null;
-    const flat = tRes.ok
-      ? quo.flattenTranscript((tRes.data && tRes.data.data) || tRes.data)
-      : { text: null, turns: [] };
-    const recs = rRes.ok ? ((rRes.data && rRes.data.data) || []) : [];
-    const rec = Array.isArray(recs) && recs.length ? recs[0] : null;
+    const p = row.props || {};
+    const needSummary   = !row.summary       && !p.quoSummaryMissing;
+    const needRecording = !row.recording_url && !p.quoRecordingMissing;
 
     const fields = {};
-    if (summary)    { fields.summary = summary.slice(0, 8000); stats.summariesAdded++; }
-    if (flat.text)  { fields.transcript = flat.text.slice(0, 100000); stats.transcriptsAdded++; }
-    if (rec && rec.url) { fields.recording_url = String(rec.url).slice(0, 2000); stats.recordingsLinked++; }
-
     // props is JSONB and PATCH replaces it wholesale — merge, do not clobber.
-    const props = { ...(row.props || {}) };
+    const props = { ...p };
     props.quoEnrichedAt = new Date().toISOString();
-    if (flat.turns.length) props.quoTranscriptTurns = flat.turns.length;
-    if (rec && rec.id) props.quoRecordingId = rec.id;
-    if (!summary && sRes.status === 404) { props.quoSummaryMissing = true; stats.noSummary++; }
+
+    if (needSummary) {
+      const sRes = await quo.getCallSummary(row.provider_id);
+      const tRes = await quo.getCallTranscript(row.provider_id);
+      const summary = sRes.ok ? renderSummary(sRes.data) : null;
+      const flat = tRes.ok
+        ? quo.flattenTranscript((tRes.data && tRes.data.data) || tRes.data)
+        : { text: null, turns: [] };
+      if (summary)   { fields.summary = summary.slice(0, 8000); stats.summariesAdded++; }
+      if (flat.text) { fields.transcript = flat.text.slice(0, 100000); stats.transcriptsAdded++; }
+      if (flat.turns.length) props.quoTranscriptTurns = flat.turns.length;
+      if (!summary && sRes.status === 404) { props.quoSummaryMissing = true; stats.noSummary++; }
+    }
+
+    if (needRecording) {
+      const rRes = await quo.getCallRecordings(row.provider_id);
+      const recs = rRes.ok ? ((rRes.data && rRes.data.data) || []) : [];
+      const rec = Array.isArray(recs) && recs.length ? recs[0] : null;
+      if (rec && rec.url) {
+        fields.recording_url = String(rec.url).slice(0, 2000);
+        if (rec.id) props.quoRecordingId = rec.id;
+        stats.recordingsLinked++;
+      } else {
+        // Nothing came back. If Quo says there is none (404), or the call is old
+        // enough that a recording would already have finished processing, stop
+        // re-asking every run. Recent calls stay unmarked so a later sync retries
+        // once Quo finishes generating the file.
+        const ageMs = row.ts ? (Date.now() - new Date(row.ts).getTime()) : Infinity;
+        if (rRes.status === 404 || (rRes.ok && ageMs > DAY_MS)) {
+          props.quoRecordingMissing = true;
+        }
+      }
+    }
+
     fields.props = props;
 
     const upd = await fetch(`${SUPABASE_URL}/rest/v1/communications?id=eq.${row.id}`, {
