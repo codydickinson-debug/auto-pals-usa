@@ -2175,7 +2175,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v246 · 2026-09-16</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v247 · 2026-09-16</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2586,7 +2586,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     <div class="form-header">
       <span class="form-eyebrow">Manual Lead Entry</span>
       <h1>Meta Ads Leads</h1>
-      <p>Add a lead that came in from a Facebook or Instagram ad. It lands in <strong>Requests</strong> tagged <strong>Meta&nbsp;Ads</strong> and mirrors to Pipedrive and the Leads sheet — same as a website submission. No confirmation email or text is sent unless you tick the box below.</p>
+      <p>Add a lead that came in from a Facebook or Instagram ad. It lands in the <strong>Contact&nbsp;Attempted</strong> column on the board (and in <strong>Requests</strong>) tagged <strong>Meta&nbsp;Ads</strong>, and mirrors to Pipedrive and the Leads sheet. No automated email or text goes out — Renz reaches out by hand.</p>
     </div>
 
     <!-- success / error banners -->
@@ -2641,6 +2641,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       <label for="ma-notes">Notes</label>
       <textarea id="ma-notes" rows="3" placeholder="Ad / campaign name, what they said, best time to reach, etc."></textarea>
     </div>
+
+    <hr class="form-divider">
+
+    <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text);font-weight:500;">
+      <input type="checkbox" id="ma-sms-consent" style="width:18px;height:18px;flex:0 0 auto;margin-top:1px;">
+      <span>Lead agreed to receive text messages <span style="color:var(--text-muted);font-weight:400;">— tick only if the ad's lead form had an SMS-consent box they checked. Records consent so we can text them later (TCPA); nothing is sent now.</span></span>
+    </label>
 
     <button type="button" class="submit-btn" onclick="submitMetaLead()" id="ma-submit" style="margin-top:20px;">Add Meta Ads Lead</button>
 
@@ -5763,6 +5770,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   function maResetForm() {
     ['ma-firstname','ma-lastname','ma-email','ma-phone','ma-make','ma-model','ma-year','ma-budget','ma-notes']
       .forEach(id => { const el = document.getElementById(id); if (el) { el.value = ''; el.style.borderColor = ''; } });
+    const c1 = document.getElementById('ma-sms-consent'); if (c1) c1.checked = false;
     const f  = document.getElementById('ma-firstname');   if (f) f.focus();
   }
 
@@ -5798,8 +5806,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const budgetRaw = g('ma-budget').value.trim();
     const notes     = g('ma-notes').value.trim();
     // Meta Ads leads are worked by hand (Renz reaches out), so no automated
-    // client comms fire and SMS stays off — the consent/notify boxes were removed.
-    const smsConsent   = false;
+    // client comms fire (notifyClient stays false — that box was removed). The
+    // SMS-consent box is kept to RECORD consent for later texting; nothing is
+    // sent now (the welcome SMS is gated on notifyClient, which is false here).
+    const smsConsent   = g('ma-sms-consent') ? g('ma-sms-consent').checked : false;
     const notifyClient = false;
 
     // ── Validation: name + valid email + phone are the hard requirements
@@ -5884,10 +5894,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
     try { track('meta_lead_added', { notify_client: !!notifyClient, has_vehicle: !!(make || model), budget_max: budgetMax || null }, id); } catch (e) {}
 
-    const notifyMsg = notifyClient
-      ? ` — confirmation email${smsConsent ? ' + intro-call text' : ''} sent`
-      : '';
-    maBanner(`✓ ${firstName} ${lastName} added to Requests${notifyMsg}.`, 'success');
+    const consentMsg = smsConsent ? ' · SMS consent recorded' : '';
+    maBanner(`✓ ${firstName} ${lastName} added to Contact Attempted${consentMsg}.`, 'success');
     maAddRecent(req);
     maResetForm();
   }
