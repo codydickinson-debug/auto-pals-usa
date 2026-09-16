@@ -2175,7 +2175,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v244 · 2026-09-16</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v245 · 2026-09-16</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3121,23 +3121,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       <div id="pl-funnel"></div>
     </div>
 
-    <div class="pl-two">
-      <div class="pl-card">
-        <div class="pl-card-title">Call outcomes</div>
-        <div class="pl-card-sub">Disposition of leads whose call was graded.</div>
-        <div id="pl-outcomes"></div>
-      </div>
-      <div class="pl-card">
-        <div class="pl-card-title">Post-call follow-up stages</div>
-        <div class="pl-card-sub">Leads who had a call, currently sitting at each follow-up.</div>
-        <div id="pl-fu-funnel"></div>
-      </div>
-    </div>
-
     <div class="pl-card">
-      <div class="pl-card-title">Post-Call Follow-up board</div>
-      <div class="pl-card-sub">Leads who <strong>had a call</strong> — who's in each follow-up right now. Click a card to open the lead.</div>
-      <div id="pl-board" class="pl-board"></div>
+      <div class="pl-card-title">Call outcomes</div>
+      <div class="pl-card-sub">Disposition of leads whose call was graded.</div>
+      <div id="pl-outcomes"></div>
     </div>
   </div>
 </div>
@@ -8106,53 +8093,6 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         : '<div class="pl-empty">No calls graded yet.</div>';
     }
 
-    // Follow-up funnels split by call status. Post-call = leads who HAD a call;
-    // pre-call = leads with no call yet (chasing a booking / response).
-    const _hadCall = r => !!r.callCompletedAt;
-    // Post-call follow-up membership = called within the last 7 days (older
-    // calls fall out of the funnel); pre-call = never called.
-    const _recentCall = r => calledWithinFollowUpWindow(r);
-    // Post-call follow-up stage distribution (effective = auto drip + manual).
-    const fu = [1, 2, 3, 4].map(n => all.filter(r => _recentCall(r) && effectiveFollowUp(r) === n).length);
-    const fuMax = Math.max(1, ...fu);
-    const fuEl = document.getElementById('pl-fu-funnel');
-    if (fuEl) {
-      const inFu = all.filter(r => _recentCall(r) && effectiveFollowUp(r) > 0);
-      const replied = inFu.filter(hasReplied).length;
-      const cold = inFu.filter(isCold).length;
-      const engagement = inFu.length
-        ? `<div class="pl-engage"><span class="reply-badge replied" style="margin-left:0;">💬 ${replied} replied</span><span class="reply-badge cold" style="margin-left:0;">🔇 ${cold} no reply</span></div>`
-        : '';
-      fuEl.innerHTML = fu.map((n, i) =>
-        `<div class="pl-fun-row"><div class="pl-fun-label">Follow-up ${i + 1}</div><div class="pl-fun-barwrap"><div class="pl-fun-bar" style="width:${Math.max(Math.round((n / fuMax) * 100), 4)}%;background:#0ea5e9;">${n}</div></div><div class="pl-fun-conv">&nbsp;</div></div>`
-      ).join('') + engagement;
-    }
-
-    // Shared lead-card renderer for both follow-up boards.
-    const _fuCard = (r) => {
-      const days = followUpDays(r);
-      const disp = callDisposition(r);
-      const dm = disp !== 'none' ? CALL_OUTCOME_META[disp] : null;
-      const veh = [r.make, r.model].filter(v => v && v !== '—').join(' ') || 'Open search';
-      const auto = followUpIsAuto(r) ? '<span class="pl-auto" title="Advanced automatically by the SMS drip">auto</span>' : '';
-      const rep = hasReplied(r) ? '<span class="reply-badge replied" style="margin-left:0;">💬</span>' : (isCold(r) ? '<span class="reply-badge cold" style="margin-left:0;">🔇</span>' : '');
-      return `<div class="pl-lead${isCold(r) ? ' pl-lead-cold' : ''}" onclick="openDetailView(${r.id})">
-        <div class="pl-lead-name">${escapeHtml(r.firstName + ' ' + r.lastName)}${auto}</div>
-        <div class="pl-lead-meta">${escapeHtml(veh)}${days != null ? ' · ' + days + 'd' : ''}</div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;">${dm ? `<span class="disp-badge" style="margin-left:0;background:${dm.bg};color:${dm.color};border:1px solid ${dm.border};">${dm.short}</span>` : ''}${rep}</div>
-      </div>`;
-    };
-    // One column per follow-up stage; `pred` scopes to post- vs pre-call.
-    const _renderFuBoard = (el, pred) => {
-      if (!el) return;
-      el.innerHTML = [1, 2, 3, 4].map(n => {
-        const leads = all.filter(r => pred(r) && effectiveFollowUp(r) === n)
-          .sort((a, b) => new Date(a.followUpUpdatedAt || 0) - new Date(b.followUpUpdatedAt || 0));
-        const cards = leads.length ? leads.map(_fuCard).join('') : '<div class="pl-empty">—</div>';
-        return `<div class="pl-col"><div class="pl-col-head">Follow-up ${n} <span class="pl-col-count">${leads.length}</span></div><div class="pl-col-body">${cards}</div></div>`;
-      }).join('');
-    };
-    _renderFuBoard(document.getElementById('pl-board'), _recentCall);
   }
 
   function updateStatusFromDetail(newStatus) {
