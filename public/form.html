@@ -1438,8 +1438,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .kb-wrap { display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 10px; align-items: flex-start; }
   .kb-col { flex: 0 0 226px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; display: flex; flex-direction: column; max-height: 72vh; }
   .kb-col.kb-over { outline: 2px dashed var(--navy); outline-offset: -2px; }
+  .kb-col.kb-nodrop { outline: 2px dashed #cbd5e1; outline-offset: -2px; opacity: 0.8; }
   .kb-col-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); font-family: 'DM Sans', system-ui, sans-serif; font-weight: 700; font-size: 12px; letter-spacing: 0.02em; color: var(--navy); position: sticky; top: 0; background: var(--bg); border-radius: 10px 10px 0 0; z-index: 1; }
+  .kb-col-head > span:first-child { flex: 1; }
   .kb-count { flex: none; min-width: 20px; text-align: center; font-size: 11px; font-weight: 700; color: var(--text-muted); background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 1px 7px; }
+  .kb-auto { flex: none; font-size: 8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); background: var(--border); border-radius: 4px; padding: 1px 5px; }
+  #kb-hint { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(8px); background: var(--navy); color: #fff; font-family: system-ui, sans-serif; font-size: 13px; font-weight: 600; line-height: 1.4; padding: 11px 16px; border-radius: 10px; box-shadow: 0 8px 28px rgba(15,37,87,0.28); max-width: 360px; text-align: center; opacity: 0; pointer-events: none; transition: opacity 0.18s var(--ease-out), transform 0.18s var(--ease-out); z-index: 4000; }
+  #kb-hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .kb-col-body { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 48px; }
   .kb-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; cursor: grab; box-shadow: var(--shadow); transition: box-shadow 0.15s var(--ease-out); }
   .kb-card:hover { box-shadow: var(--shadow-md); }
@@ -2179,7 +2184,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v248 · 2026-09-16</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v249 · 2026-09-17</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -5084,6 +5089,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   const NO_SHOW_WINDOW_DAYS  = 45;
   const TERMINAL_STAGES = new Set(['good_call','bad_call','deposit_pending','closed_deposit','lost','email_remarketing','future_follow_up']);
   const PRECALL_STAGES  = new Set(['contact_attempted']);
+  // AUTO columns are computed from a lead's real state (a genuine booked call /
+  // a recorded no-show), not set by hand — so they are NOT manual drop targets.
+  // Dropping onto them (or dragging a lead whose real state pins it) can't stick.
+  const AUTO_STAGES = new Set(['call_scheduled','no_show']);
   // Legacy board columns (Follow-up 1–4) were retired 2026-09-14 — staff now
   // track follow-up cadence with ACTIVITIES while the lead sits in Contact
   // Attempted, instead of dragging it through four columns. Any lead still
@@ -5162,7 +5171,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const cards = byStage[s.key];
       const inner = cards.length ? cards.map(kbCard).join('') : '<div class="kb-empty">—</div>';
       return `<div class="kb-col" data-stage="${s.key}">
-        <div class="kb-col-head"><span>${s.label}</span><span class="kb-count">${cards.length}</span></div>
+        <div class="kb-col-head"><span>${s.label}</span>${AUTO_STAGES.has(s.key) ? '<span class="kb-auto" title="Fills in automatically from real activity — not a manual drop target">auto</span>' : ''}<span class="kb-count">${cards.length}</span></div>
         <div class="kb-col-body" data-stage="${s.key}">${inner}</div>
       </div>`;
     }).join('');
@@ -5170,6 +5179,32 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
 
   let _kbDragId = null;
+  // Small transient toast for the board (e.g. why a card couldn't be dropped).
+  let _kbHintTimer = null;
+  function _kbHint(msg) {
+    let el = document.getElementById('kb-hint');
+    if (!el) { el = document.createElement('div'); el.id = 'kb-hint'; document.body.appendChild(el); }
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(_kbHintTimer);
+    _kbHintTimer = setTimeout(() => el.classList.remove('show'), 4200);
+  }
+  // Why a hand-drag didn't stick: the board recomputes a card's column from the
+  // lead's real state, which can override the target column.
+  function _kbOverrideMsg(computed) {
+    switch (computed) {
+      case 'call_scheduled': return 'This lead has an upcoming booked call, so the board keeps it in Call Scheduled.';
+      case 'no_show':        return 'This lead recently no-showed, so it stays in No Show until it rebooks.';
+      case 'good_call':      return 'This lead had a call in the last 7 days, so it stays in Good Call for now.';
+      case 'bad_call':       return 'This lead had a call in the last 7 days, so it stays in Bad Call for now.';
+      case null:
+      case undefined:        return 'This lead is off the active board (sold, dormant, or deposit paid), so it can’t be moved here.';
+      default: {
+        const label = (typeof BOARD_STAGE_META !== 'undefined' && BOARD_STAGE_META[computed] && BOARD_STAGE_META[computed].label) || 'its current stage';
+        return 'The board keeps this lead in “' + label + '” based on its current activity.';
+      }
+    }
+  }
   function bindKanbanDnD(wrap) {
     wrap.querySelectorAll('.kb-card').forEach(card => {
       card.addEventListener('dragstart', e => {
@@ -5185,17 +5220,42 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     });
     wrap.querySelectorAll('.kb-col-body').forEach(body => {
       const col = body.parentElement;
-      body.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; col.classList.add('kb-over'); });
-      body.addEventListener('dragleave', e => { if (!col.contains(e.relatedTarget)) col.classList.remove('kb-over'); });
+      const auto = AUTO_STAGES.has(body.dataset.stage);
+      body.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (auto) { e.dataTransfer.dropEffect = 'none'; col.classList.add('kb-nodrop'); }
+        else { e.dataTransfer.dropEffect = 'move'; col.classList.add('kb-over'); }
+      });
+      body.addEventListener('dragleave', e => {
+        if (!col.contains(e.relatedTarget)) { col.classList.remove('kb-over'); col.classList.remove('kb-nodrop'); }
+      });
       body.addEventListener('drop', e => {
         e.preventDefault();
-        col.classList.remove('kb-over');
+        col.classList.remove('kb-over'); col.classList.remove('kb-nodrop');
         const stage = body.dataset.stage;
         const r = (requests || []).find(x => x.id === _kbDragId);
         _kbDragId = null;
         if (!r || !stage || !STAGE_KEYS.has(stage)) return;
+        // Auto columns aren't manual targets — explain instead of snapping back.
+        if (auto) {
+          _kbHint(stage === 'call_scheduled'
+            ? 'Call Scheduled fills in automatically from booked calls — book a call from the lead to move it here.'
+            : 'To mark a no-show, use the lead’s “No-show” button so the rebooking follow-up runs correctly.');
+          return;
+        }
         if (boardStage(r) === stage && r.pipelineStage === stage) return;
+        // Tentatively move, then confirm the board will actually keep it there.
+        // A lead's real state (a booked call, a recent no-show, a call in the
+        // last 7 days) overrides a hand-drag — so rather than silently snapping
+        // back, revert and tell the user why.
+        const prevStage = r.pipelineStage;
         r.pipelineStage = stage;
+        if (boardStage(r) !== stage) {
+          const computed = boardStage(r);
+          r.pipelineStage = prevStage;
+          _kbHint(_kbOverrideMsg(computed));
+          return;
+        }
         const patch = { id: r.id, pipelineStage: stage };
         // Phase 3: realign the internal status so the Requests table + views agree
         // with the board. `boardMove` tells the backend to skip the Pipedrive push
