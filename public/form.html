@@ -2179,7 +2179,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v251 · 2026-09-17</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v252 · 2026-09-17</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -7808,12 +7808,18 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   function setCallOutcome(id, outcome) {
     const r = requests.find(x => x.id === id);
     if (!r) return;
+    // Marking an outcome moves the board card to the matching column. The board
+    // is manual, so we set pipeline_stage here — except when the lead is already
+    // in a deposit stage (don't drag a deal in progress backward).
+    const _keepStage = ['deposit_pending', 'closed_deposit'].includes(r.pipelineStage);
     if (outcome === 'noshow') {
       if (!confirm('Mark this call as a no-show?\n\nSends an instant "sorry we missed you — grab a new time" text + email, then day-1 and day-3 rebooking nudges. Stops automatically if they rebook and show, or pay a deposit.')) return;
       r.noShowAt = new Date().toISOString();
       r.callOutcome = null; // no-show isn't a good/bad grade
+      const nsPatch = { id: r.id, noShowAt: r.noShowAt, callOutcome: null };
+      if (!_keepStage) { r.pipelineStage = 'no_show'; nsPatch.pipelineStage = 'no_show'; }
       save();
-      dbPut('requests', { id: r.id, noShowAt: r.noShowAt, callOutcome: null });
+      dbPut('requests', nsPatch);
       renderDashboard();
       if (activeRequestId === id) populateDetailView(r);
       _refreshPipelineIfOpen();
@@ -7827,6 +7833,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     if (['new', 'review', 'qualified'].includes(r.status)) { r.status = 'called'; patch.status = 'called'; }
     // A good call clears any prior bad-call reason — it no longer applies.
     if (outcome !== 'bad' && r.callOutcomeReason) { r.callOutcomeReason = ''; patch.callOutcomeReason = ''; }
+    // Move the board card to Good Call / Bad Call to match the grade.
+    if (!_keepStage) { const _os = outcome === 'bad' ? 'bad_call' : 'good_call'; r.pipelineStage = _os; patch.pipelineStage = _os; }
     save();
     dbPut('requests', patch);
     renderDashboard();
