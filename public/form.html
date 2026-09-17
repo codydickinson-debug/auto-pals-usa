@@ -2179,7 +2179,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v250 · 2026-09-17</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v251 · 2026-09-17</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -6001,7 +6001,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   function _actDateStr(v) { const d = v ? new Date(v) : null; return (d && !isNaN(d)) ? d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; }
 
   // Homepage panel — open activities, soonest-due first (overdue on top).
+  // The Activities panel only belongs on the main All Requests page — not on
+  // the sidebar-filtered views or the action-queue views.
+  function _syncActivitiesPanel() {
+    const ap = document.getElementById('activities-panel');
+    if (ap) ap.style.display = (currentFilter === 'all' && !currentActionFilter) ? '' : 'none';
+  }
   function renderActivities() {
+    _syncActivitiesPanel();
     const wrap = document.getElementById('activities-list');
     if (!wrap) return;
     const open = (activities || []).filter(a => !a.done);
@@ -6577,6 +6584,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     btn.classList.add('active');
     const titles = { all: 'All Requests', new: 'New Requests — this week', active: 'Active — new leads older than a week (still being worked)', qualified: 'Qualified Leads', called: 'Called', called_good: 'Called · Good Call', called_bad: 'Called · Bad Call', called_noshow: 'Called · No-show', followups: 'Post-Call Follow-ups (had a call)', fu1: 'Post-Call · Follow-up 1', fu2: 'Post-Call · Follow-up 2', fu3: 'Post-Call · Follow-up 3', fu4: 'Post-Call · Follow-up 4', pending_deposit: 'Pending Deposit — good call, no deposit yet', no_sms: 'Opted Out of SMS — no auto follow-up; work by phone/email', future_followups: 'Future Follow-ups — parked "not ready" leads; auto-texts the client on the scheduled date', searching: 'Actively Searching', in_repair: 'In Repair', awaiting_paperwork: 'Awaiting Paperwork', dormant: 'Dormant (14d+ no deposit)', rejected: 'Rejected' };
     document.getElementById('table-title').textContent = titles[f] || 'Requests';
+    _syncActivitiesPanel();
     renderTable();
   }
 
@@ -6719,6 +6727,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const titles = { new: 'New requests — needs review', outreach: 'Outreach due — call these next', search: 'Active searches — deposit paid' };
     document.getElementById('table-title').textContent = currentActionFilter ? titles[kind] : 'All Requests';
     resetDashSearch();   // don't carry a search across tab switches
+    _syncActivitiesPanel();
     renderTable();
   }
   let currentActionFilter = null;
