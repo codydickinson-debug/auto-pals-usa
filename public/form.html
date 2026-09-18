@@ -2179,7 +2179,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v253 · 2026-09-17</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v254 · 2026-09-18</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3221,6 +3221,8 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
             ✓ Contract signed
             <span id="dv-contract-meta" style="font-weight:400;color:var(--text-muted);margin-left:6px;"></span>
           </div>
+          <button id="dv-contract-send" onclick="sendContract(activeRequestId, this)" style="display:none;margin-top:8px;padding:7px 12px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">📄 Send contract to client</button>
+          <div id="dv-contract-send-status" style="font-size:12px;font-family:system-ui,sans-serif;margin-top:5px;min-height:14px;color:var(--text-muted);"></div>
         </div>
       </div>
 
@@ -7676,14 +7678,26 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     }
 
     // Contract
-    if (r.contractSignedAt) {
-      document.getElementById('dv-contract-pending').style.display = 'none';
-      document.getElementById('dv-contract-signed').style.display = 'block';
-      const meta = '· ' + new Date(r.contractSignedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' }) + ' EST' + (r.contractSignatureName ? ' by ' + r.contractSignatureName : '');
-      document.getElementById('dv-contract-meta').textContent = meta;
-    } else {
-      document.getElementById('dv-contract-pending').style.display = 'block';
-      document.getElementById('dv-contract-signed').style.display = 'none';
+    {
+      const cPending = document.getElementById('dv-contract-pending');
+      const cSigned  = document.getElementById('dv-contract-signed');
+      const cSend    = document.getElementById('dv-contract-send');
+      const cStatus  = document.getElementById('dv-contract-send-status');
+      if (cStatus) cStatus.textContent = '';
+      if (r.contractSignedAt) {
+        cPending.style.display = 'none';
+        cSigned.style.display = 'block';
+        cSigned.querySelector('#dv-contract-meta').textContent = '· ' + new Date(r.contractSignedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York' }) + ' EST' + (r.contractSignatureName ? ' by ' + r.contractSignatureName : '');
+        if (cSend) cSend.style.display = 'none';
+      } else {
+        // A good call auto-sends the contract, so reflect "sent · awaiting
+        // signature" once the call is graded good; otherwise it's not sent yet.
+        const sentOnGood = (r.callOutcome === 'good' && r.callCompletedAt);
+        cSigned.style.display = 'none';
+        cPending.style.display = 'block';
+        cPending.textContent = sentOnGood ? '📄 Contract sent — awaiting client signature.' : 'Contract not yet signed by client';
+        if (cSend) { cSend.style.display = 'inline-block'; cSend.textContent = sentOnGood ? '📄 Resend contract' : '📄 Send contract to client'; }
+      }
     }
 
     // Internal notes — DON'T overwrite while staff is actively editing this
@@ -7837,6 +7851,24 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       if (status) { status.textContent = 'Could not send — check your connection.'; status.style.color = '#b91c1c'; }
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = _label; }
+    }
+  }
+  // Staff button: email the client their contract to sign (also auto-sent on a
+  // good call). Routes through the staff-gated PUT sendContract action.
+  async function sendContract(reqId, btn) {
+    const r = requests.find(x => x.id === reqId);
+    if (!r) return;
+    if (!r.email) { alert('This lead has no email on file.'); return; }
+    if (!confirm('Email the contract to sign to ' + r.email + '?')) return;
+    const status = document.getElementById('dv-contract-send-status');
+    const _label = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+    if (status) { status.textContent = ''; status.style.color = 'var(--text-muted)'; }
+    const ok = await dbPut('requests', { id: r.id, sendContract: true });
+    if (btn) { btn.disabled = false; btn.textContent = _label; }
+    if (status) {
+      if (ok) { status.textContent = '✓ Contract sent to ' + r.email; status.style.color = '#047857'; }
+      else    { status.textContent = 'Could not send — try again.'; status.style.color = '#b91c1c'; }
     }
   }
   function setCallOutcome(id, outcome) {

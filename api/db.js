@@ -633,6 +633,26 @@ module.exports = async function handler(req, res) {
       }
       if (req.method === 'PUT') {
         const b = body;
+        // Staff action: send the contract-to-sign email to the client (used by
+        // the profile "Send / Resend contract" button). Staff-gated (requests
+        // PUT is not a public op). Handled early — it's not a field update.
+        if (b.sendContract) {
+          let lead = null;
+          try {
+            const p = await query('requests', 'GET', null, `?id=eq.${b.id}&limit=1`);
+            if (p && p.length) lead = p[0];
+          } catch (e) { /* fall through to error below */ }
+          if (!lead || !lead.email) return res.status(400).json({ error: 'no_email' });
+          await safeSendEmail('contractToSign', {
+            firstName: lead.first_name,
+            lastName:  lead.last_name,
+            email:     lead.email,
+            make:      lead.make,
+            model:     lead.model,
+            portalUrl: PORTAL_URL
+          });
+          return res.json({ ok: true, sent: true });
+        }
         // Only update columns that exist in Supabase — ignore unknown fields
         const mapped = {
           status:            b.status,
@@ -977,6 +997,19 @@ module.exports = async function handler(req, res) {
               model:     priorRow.model,
               portalUrl: PORTAL_URL
             }));
+            // A GOOD call auto-sends the sourcing agreement to sign (the profile
+            // reflects it as "sent · awaiting signature"). Only on 'good' — a
+            // bad call is excluded by the block guard above anyway.
+            if (mapped.call_outcome === 'good') {
+              postCallFires.push(safeSendEmail('contractToSign', {
+                firstName: priorRow.first_name,
+                lastName:  priorRow.last_name,
+                email:     priorRow.email,
+                make:      priorRow.make,
+                model:     priorRow.model,
+                portalUrl: PORTAL_URL
+              }));
+            }
           }
           // Instant post-call SMS — Follow-Up #1 style ("great talking with
           // you"). Continues with +24h/+48h/+72h from the daily cron

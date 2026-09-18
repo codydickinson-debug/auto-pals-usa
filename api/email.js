@@ -664,6 +664,32 @@ ${footer(d)}`)
     });
   },
 
+  // ─── CONTRACT TO SIGN ─────────────────────────────────────────
+  // Sent when staff mark a call GOOD (from api/db.js), and re-sendable from the
+  // lead's profile. Points the client to their portal to review & sign the
+  // sourcing agreement. Client template (recipient = d.email).
+  contractToSign: (d) => {
+    const vehicle = d.make
+      ? `${d.make}${d.model && d.model !== '—' ? ' ' + d.model : ''}`
+      : 'vehicle';
+    return ({
+      subject: `Your Auto Pals agreement is ready to sign, ${d.firstName}`,
+      html: shell(`${header()}
+<tr><td style="padding:28px 40px 0;">
+<div style="font-family:Georgia,serif;font-size:24px;font-weight:700;color:${BRAND.ink};line-height:1.3;margin-bottom:14px;">Let's make it official, ${d.firstName}.</div>
+</td></tr>
+<tr><td style="padding:0 40px 20px;">${refundGuarantee()}</td></tr>
+<tr><td style="padding:0 40px 18px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:15px;color:${BRAND.muted};line-height:1.7;margin:0;">Great talking with you about your <strong style="color:${BRAND.ink};">${vehicle}</strong> search. Your sourcing agreement is ready in your portal — give it a read and add your signature whenever you're ready. Signing locks in your ${SEARCH_WINDOW_ADJ} search window.</p>
+</td></tr>
+<tr><td style="padding:0 40px 14px;">${button(d.portalUrl, 'Review &amp; sign your agreement →')}</td></tr>
+<tr><td style="padding:0 40px 8px;">
+<p style="font-family:-apple-system,'Segoe UI',sans-serif;font-size:13px;color:${BRAND.muted};line-height:1.65;margin:0;">Log in with your email, open the <strong style="color:${BRAND.ink};">Contract</strong> section, and sign. Questions before you sign? Just hit reply — we read every message.</p>
+</td></tr>
+${footer(d)}`)
+    });
+  },
+
   // ─── NO-SHOW / MISSED-CALL FOLLOW-UPS ─────────────────────────
   // Sent when a booked call is marked a no-show: instant (from api/db.js),
   // then +24h and +72h from the daily cron. Warm + blame-free; the CTA
