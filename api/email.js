@@ -1145,6 +1145,15 @@ const STAFF_TEMPLATES = new Set([
   'systemAlert'
 ]);
 
+// Extra fixed recipients for specific staff templates, on TOP of
+// STAFF_NOTIFY_EMAIL. Owner request 2026-09-17: Josh gets every booked-call
+// notice so scheduled sales calls land in his inbox automatically. Overridable
+// via env (comma-list) without a code change.
+const STAFF_EXTRA_RECIPIENTS = {
+  staffCallBooked: (process.env.CALL_BOOKED_EXTRA_NOTIFY || 'josh@autopalsusa.com')
+    .split(',').map(s => s.trim()).filter(Boolean)
+};
+
 // Recipient resolution for staff templates. Anything that lands here is
 // guaranteed to have AT LEAST one recipient, because we fall back to
 // FROM_EMAIL when STAFF_NOTIFY_EMAIL is missing/empty. That mailbox is
@@ -1258,9 +1267,13 @@ async function sendTemplate(type, data) {
   const payload = { ...(data || {}) };
   if (isStaff) {
     payload.email = resolveStaffRecipients();
+    const extra = STAFF_EXTRA_RECIPIENTS[type];
+    if (extra && extra.length) payload.email = [payload.email, ...extra].filter(Boolean).join(',');
   }
+  const _seen = new Set();
   const recipients = String(payload.email || '')
-    .split(',').map(s => s.trim()).filter(Boolean);
+    .split(',').map(s => s.trim()).filter(Boolean)
+    .filter(a => { const k = a.toLowerCase(); if (_seen.has(k)) return false; _seen.add(k); return true; });
   if (!recipients.length) {
     console.error('[EMAIL] no recipient for', type, '— payload had no email');
     logAttempt({

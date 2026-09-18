@@ -2179,7 +2179,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v252 · 2026-09-17</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v253 · 2026-09-17</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3346,6 +3346,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
             <button onclick="undoNoShowFromDetail()" style="padding:6px 12px;background:none;color:#92400e;border:1px solid #fcd34d;border-radius:6px;font-family:system-ui,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">Undo</button>
           </div>
         </div>
+      </div>
+
+      <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Client Account</div>
+        <button onclick="sendPortalDetails(activeRequestId, this)" style="padding:8px 14px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">📧 Send account / portal details</button>
+        <div id="dv-portal-send-status" style="font-size:12px;font-family:system-ui,sans-serif;margin-top:6px;min-height:15px;color:var(--text-muted);"></div>
       </div>
 
       <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Follow-up Funnel</div>
@@ -7805,6 +7810,35 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // callCompletedAt (idempotent), clear any stale no-show, and ensure the lead
   // is at least 'called'. noshow => reuse the no-show flow (instant "we missed
   // you" + day-1/day-3 rebooking drip fire server-side off the no_show_at flip).
+  // Staff button: email the client their portal login link (email-only magic
+  // link via /api/portal-login). Explicit staff action — sends only on click.
+  async function sendPortalDetails(reqId, btn) {
+    const r = requests.find(x => x.id === reqId);
+    if (!r) return;
+    if (!r.email) { alert('This lead has no email on file.'); return; }
+    if (!confirm('Email their account / portal login details to ' + r.email + '?')) return;
+    const status = document.getElementById('dv-portal-send-status');
+    const _label = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+    if (status) { status.textContent = ''; status.style.color = 'var(--text-muted)'; }
+    try {
+      const res = await fetch('/api/portal-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send', email: r.email })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data && data.ok) {
+        if (status) { status.textContent = '✓ Sent to ' + r.email; status.style.color = '#047857'; }
+      } else {
+        if (status) { status.textContent = 'Could not send — try again.'; status.style.color = '#b91c1c'; }
+      }
+    } catch (e) {
+      if (status) { status.textContent = 'Could not send — check your connection.'; status.style.color = '#b91c1c'; }
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = _label; }
+    }
+  }
   function setCallOutcome(id, outcome) {
     const r = requests.find(x => x.id === id);
     if (!r) return;
