@@ -2216,7 +2216,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v257 · 2026-09-23</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v258 · 2026-09-23</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3551,11 +3551,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
     <div class="detail-section">
       <div class="detail-section-title">Client &amp; Vehicle</div>
-      <div class="form-group" style="margin-bottom:14px;">
+      <!-- When the sale is opened from the pipeline (repair/PSI → sold), the
+           client + vehicle are already known and shown read-only here; the
+           editable inputs below carry .sm-full-only and are hidden. -->
+      <div id="sm-car-summary" style="display:none;margin-bottom:14px;padding:10px 12px;background:var(--cream);border:1px solid var(--border);border-radius:8px;font-family:system-ui,sans-serif;font-size:13px;font-weight:700;color:var(--text);"></div>
+      <div class="form-group sm-full-only" style="margin-bottom:14px;">
         <label for="sm-client" style="font-size:12px;">Client Name</label>
         <input type="text" id="sm-client" placeholder="e.g. John Smith">
       </div>
-      <div class="form-group" style="margin-bottom:14px;">
+      <div class="form-group sm-full-only" style="margin-bottom:14px;">
         <label for="sm-vehicle" style="font-size:12px;">Vehicle</label>
         <input type="text" id="sm-vehicle" placeholder="e.g. 2021 Toyota Tacoma TRD">
       </div>
@@ -3568,7 +3572,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <label for="sm-miles" style="font-size:12px;">Mileage at Sale <span class="req">*</span></label>
         <input type="number" id="sm-miles" placeholder="e.g. 34000">
       </div>
-      <div class="form-group" style="margin-bottom:0;">
+      <div class="form-group sm-full-only" style="margin-bottom:0;">
         <label for="sm-date" style="font-size:12px;">Date Sold</label>
         <input type="date" id="sm-date">
       </div>
@@ -3578,34 +3582,34 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       <div class="detail-section-title">Financials</div>
       <!-- Restored in v163 — user wants both auction-side and client-side
            prices captured so the profit stat stays honest. -->
-      <div class="form-group" style="margin-bottom:14px;">
-        <label for="sm-purchase" style="font-size:12px;">Purchase Price &mdash; what you paid at auction ($)</label>
+      <div class="form-group sm-full-only" style="margin-bottom:14px;">
+        <label for="sm-purchase" style="font-size:12px;">Purchase Price &mdash; what you paid at auction ($) <span style="color:var(--text-muted);font-weight:400;">— auto-filled from PSI</span></label>
         <input type="number" id="sm-purchase" placeholder="e.g. 22000" oninput="calcSaleProfit()">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label for="sm-sale" style="font-size:12px;">Sale Price &mdash; the vehicle price ($) <span style="color:var(--text-muted);font-weight:400;">— auto-filled from PSI</span></label>
+        <label for="sm-sale" style="font-size:12px;">Sale Cost &mdash; the vehicle price ($)</label>
         <input type="number" id="sm-sale" placeholder="e.g. 27500" oninput="calcSaleProfit()">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label for="sm-client-paid" style="font-size:12px;">Client Paid &mdash; total the client actually paid ($) <span style="color:var(--text-muted);font-weight:400;">— optional</span></label>
+        <label for="sm-client-paid" style="font-size:12px;">Client Paid &mdash; total the client actually paid ($)</label>
         <input type="number" id="sm-client-paid" placeholder="e.g. 29050">
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">What the client actually handed over in total (vehicle + finder fee + repair markup + shipping, or however the deal settled). Recorded on the sale and shown in Sold Cars.</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">What the client actually handed over in total. Recorded on the sale and shown in Sold Cars.</div>
       </div>
-      <div class="form-group" style="margin-bottom:14px;">
+      <div class="form-group sm-full-only" style="margin-bottom:14px;">
         <label for="sm-repair" style="font-size:12px;">Repair Cost — your wholesale ($) <span style="color:var(--text-muted);font-weight:400;">— internal only, auto-filled from Repairs</span></label>
         <input type="number" id="sm-repair" placeholder="e.g. 1200" oninput="calcSaleProfit()">
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label for="sm-repair-profit" style="font-size:12px;">Repair Markup — charged to client on top ($)</label>
+        <label for="sm-repair-profit" style="font-size:12px;">Repair Profit — charged to client on top ($) <span style="color:var(--text-muted);font-weight:400;">— auto-filled from Repairs</span></label>
         <input type="number" id="sm-repair-profit" placeholder="e.g. 700" oninput="calcSaleProfit()">
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Profit margin on repairs (client pays this on top of your wholesale cost). Auto-filled from Repairs when the car was tracked there.</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Markup on repairs the client pays on top of your wholesale cost. Auto-filled from the Repairs tab when the car was tracked there.</div>
       </div>
       <div class="form-group" style="margin-bottom:14px;">
-        <label for="sm-shipping-profit" style="font-size:12px;">Shipping Profit — if any ($) <span style="color:var(--text-muted);font-weight:400;">— optional, leave blank if no shipping</span></label>
+        <label for="sm-shipping-profit" style="font-size:12px;">Shipping Cost ($) <span style="color:var(--text-muted);font-weight:400;">— optional</span></label>
         <input type="number" id="sm-shipping-profit" placeholder="e.g. 200" oninput="calcSaleProfit()">
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Net margin on shipping (what the client paid for shipping minus what we paid). Skip now and come back later via Edit — folds into Net Profit and all the averages the moment it's saved.</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Folds into Net Profit. Leave blank if there was no shipping.</div>
       </div>
-      <div class="form-group" style="margin-bottom:14px;">
+      <div class="form-group sm-full-only" style="margin-bottom:14px;">
         <label for="sm-finder" style="font-size:12px;">Finder Fee (charged to client) ($) <span style="color:var(--text-muted);font-weight:400;">— defaults to $850</span></label>
         <input type="number" id="sm-finder" placeholder="850" oninput="calcSaleProfit()">
       </div>
@@ -3616,7 +3620,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       </div>
     </div>
 
-    <div class="detail-section">
+    <div class="detail-section sm-full-only">
       <div class="detail-section-title">Notes</div>
       <textarea class="notes-area" id="sm-notes" placeholder="Any notes about this deal..." aria-label="Sale notes"></textarea>
     </div>
@@ -10776,6 +10780,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
     pendingSoldReqId = prefillReq ? prefillReq.id : null;
 
+    // Simplified form on the pipeline path (repair/PSI → sold): client, vehicle,
+    // date, purchase, repair cost + finder auto-fill, so hide them and ask only
+    // for sale cost, client paid, miles, VIN, repair profit, shipping cost. A
+    // manual "+ Log a Sale" (no prefill) keeps the full form.
+    document.querySelectorAll('#sale-modal .sm-full-only').forEach(el => { el.style.display = prefillReq ? 'none' : ''; });
+    const carSummary = document.getElementById('sm-car-summary');
+    if (carSummary) carSummary.style.display = 'none';
+
     const banner = document.getElementById('sm-prefill-banner');
     if (prefillReq) {
       const name = prefillReq.firstName + ' ' + prefillReq.lastName;
@@ -10783,6 +10795,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const vehicle = prefillReq.psiCar || [prefillReq.yearFrom !== prefillReq.yearTo ? prefillReq.yearFrom + '–' + prefillReq.yearTo : prefillReq.yearFrom, prefillReq.make, prefillReq.model !== '—' ? prefillReq.model : ''].filter(Boolean).join(' ');
       document.getElementById('sm-client').value = name;
       document.getElementById('sm-vehicle').value = vehicle;
+      if (carSummary) { carSummary.textContent = [name, vehicle].filter(Boolean).join(' · '); carSummary.style.display = 'block'; }
       // Carry over the financial bundle captured at PSI: miles, what we
       // paid at auction, and what the client is paying. Mirrors the user's
       // ask that the Awaiting Paperwork form be "pre-filled with everything
@@ -10798,7 +10811,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       // Auto-fill repair costs (labor + parts) from the matching repair record.
       // Previously only summed labor; parts were silently excluded so margin
       // looked higher than reality.
-      const repairRecord = repairCars.find(c => c.client === name || c.vehicle === vehicle);
+      // Match the repair record case/space-insensitively so a good repair→sold
+      // auto-fill isn't missed by a stray capital or trailing space.
+      const _norm = s => String(s || '').trim().toLowerCase();
+      const repairRecord = repairCars.find(c =>
+        (_norm(c.client)  && _norm(c.client)  === _norm(name)) ||
+        (_norm(c.vehicle) && _norm(c.vehicle) === _norm(vehicle)));
       let totalLaborCost = 0, totalPartsCost = 0, totalLaborCharge = 0, totalPartsCharge = 0;
       if (repairRecord) {
         if (Array.isArray(repairRecord.repairs)) {
@@ -11055,6 +11073,10 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // Hide the PSI-prefill banner (it's a new-sale UX cue, doesn't apply when editing)
     const banner = document.getElementById('sm-prefill-banner');
     if (banner) banner.style.display = 'none';
+    // Editing needs full control — show every field (the simplified pipeline
+    // view only applies to a fresh sale) and hide the read-only car summary.
+    document.querySelectorAll('#sale-modal .sm-full-only').forEach(el => { el.style.display = ''; });
+    const _cs = document.getElementById('sm-car-summary'); if (_cs) _cs.style.display = 'none';
     // Stamp the live profit preview so staff see it immediately
     if (typeof calcSaleProfit === 'function') calcSaleProfit();
     // No pendingSoldReqId — editing a sale never touches a request's status
@@ -11100,13 +11122,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const vehicle  = document.getElementById('sm-vehicle').value.trim();
     const vinEl    = document.getElementById('sm-vin');
     const vin      = vinEl ? vinEl.value.trim().toUpperCase() : '';
-    const date     = document.getElementById('sm-date').value;
-    const purchase = parseFloat(document.getElementById('sm-purchase').value);
+    const date     = document.getElementById('sm-date').value || new Date().toISOString().split('T')[0];
+    // Purchase auto-fills from PSI and is hidden on the simplified form — default
+    // to 0 when it wasn't captured rather than blocking the save.
+    const purchase = parseFloat(document.getElementById('sm-purchase').value) || 0;
     const sale     = parseFloat(document.getElementById('sm-sale').value);
     const miles    = parseInt(document.getElementById('sm-miles').value);
 
-    if (!client || !vehicle || !date || isNaN(purchase) || isNaN(sale)) {
-      alert('Please fill in client name, vehicle, date, purchase price, and sale price.');
+    if (!client || !vehicle || isNaN(sale)) {
+      alert('Please fill in the sale price (and client + vehicle if shown).');
       return;
     }
     if (!vin) {
