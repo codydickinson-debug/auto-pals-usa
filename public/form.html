@@ -1513,6 +1513,13 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .activities-panel { background: var(--white); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 20px; }
   .activities-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .activities-title { font-family: system-ui, sans-serif; font-size: 15px; font-weight: 700; color: var(--navy); }
+  /* Collapsible header: whole row is the hit target. Caret rotates, no layout shift. */
+  .activities-head-toggle { cursor: pointer; user-select: none; margin-bottom: 0; }
+  #activities-body { margin-top: 12px; }
+  .activities-panel.is-collapsed #activities-body { display: none; }
+  .activities-caret { font-size: 11px; color: var(--text-muted); transition: transform 0.15s ease; display: inline-block; }
+  .activities-panel.is-collapsed .activities-caret { transform: rotate(-90deg); }
+  .activities-head-toggle:focus-visible { outline: 2px solid var(--navy); outline-offset: 3px; border-radius: 6px; }
   .activities-count-badge { font-family: system-ui, sans-serif; font-size: 11px; font-weight: 700; color: var(--text-muted); background: var(--surface); border-radius: 99px; padding: 2px 10px; }
   .activities-quickadd { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
   .act-input { font-family: system-ui, sans-serif; font-size: 13px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--white); color: var(--text); }
@@ -2179,7 +2186,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v254 · 2026-09-18</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v215 · 2026-09-23</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2795,10 +2802,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 
       <!-- 📋 Activities — Pipedrive-style to-dos: set one, see it here, check it off. -->
       <div class="activities-panel" id="activities-panel">
-        <div class="activities-head">
+        <div class="activities-head activities-head-toggle" id="activities-head" role="button" tabindex="0"
+             aria-expanded="true" aria-controls="activities-body"
+             onclick="toggleActivitiesPanel()"
+             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleActivitiesPanel();}">
+          <span class="activities-caret" id="activities-caret" aria-hidden="true">▾</span>
           <span class="activities-title">📋 Activities</span>
           <span class="activities-count-badge" id="activities-count">0</span>
         </div>
+        <!-- Collapsed state hides the quick-add AND the list, but the count badge
+             stays visible in the header so overdue items still nag you. -->
+        <div id="activities-body">
         <div class="activities-quickadd">
           <select id="act-quick-type" class="act-input act-type-sel" aria-label="Activity type">
             <option value="call">📞 Call</option>
@@ -2812,6 +2826,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <button class="act-add-btn" onclick="quickAddActivity()">Add</button>
         </div>
         <div class="activities-list" id="activities-list"></div>
+        </div><!-- /activities-body -->
       </div>
 
       <div id="panel-requests">
@@ -6014,6 +6029,30 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const ap = document.getElementById('activities-panel');
     if (ap) ap.style.display = (currentFilter === 'all' && !currentActionFilter) ? '' : 'none';
   }
+  // ── Activities panel collapse ────────────────────────────────────
+  // Purely a view preference, so it lives in localStorage rather than the DB —
+  // per-browser, no server round-trip. Default is OPEN (no key stored yet).
+  const ACT_COLLAPSE_KEY = 'am_activities_collapsed';
+
+  function applyActivitiesCollapsed(collapsed) {
+    const panel = document.getElementById('activities-panel');
+    const head  = document.getElementById('activities-head');
+    if (panel) panel.classList.toggle('is-collapsed', collapsed);
+    if (head)  head.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+  }
+
+  function toggleActivitiesPanel() {
+    const panel = document.getElementById('activities-panel');
+    if (!panel) return;
+    const collapsed = !panel.classList.contains('is-collapsed');
+    applyActivitiesCollapsed(collapsed);
+    try { localStorage.setItem(ACT_COLLAPSE_KEY, collapsed ? '1' : '0'); } catch (e) {}
+  }
+
+  // Restore on load. Runs at script-eval time (the panel markup is static and
+  // sits above this script), so there's no flash of the open state.
+  try { applyActivitiesCollapsed(localStorage.getItem(ACT_COLLAPSE_KEY) === '1'); } catch (e) {}
+
   function renderActivities() {
     _syncActivitiesPanel();
     const wrap = document.getElementById('activities-list');
