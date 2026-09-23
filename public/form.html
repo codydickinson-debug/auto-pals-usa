@@ -790,6 +790,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     margin-bottom: 8px;
     padding: 0 8px;
   }
+  /* Sign out: separated from the Archive filters above it, and red on hover so
+     it reads as "ends your session" rather than "another filter". */
+  .sidebar-logout {
+    margin-top: 10px; padding-top: 12px;
+    border-top: 1px solid var(--border);
+    border-radius: 0 0 var(--radius) var(--radius);
+    color: var(--text-muted); font-weight: 600;
+  }
+  .sidebar-logout:hover { background: var(--red-light, #fee2e2); color: var(--red, #b91c1c); }
   .sidebar-item {
     display: flex;
     align-items: center;
@@ -2151,15 +2160,15 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   .dash-search-wrap { position: relative; max-width: 480px; }
   .dash-search-icon { position: absolute; top: 50%; left: 12px; transform: translateY(-50%);
     color: var(--text-muted); pointer-events: none; }
-  #dash-search-input { width: 100%; padding: 9px 38px 9px 36px; border: 1px solid var(--border);
+  #dash-search-input, #board-search-input { width: 100%; padding: 9px 38px 9px 36px; border: 1px solid var(--border);
     border-radius: var(--radius); font-family: system-ui, sans-serif; font-size: 13px;
     background: var(--surface); color: var(--text); outline: none; transition: border-color 0.12s; }
-  #dash-search-input:focus { border-color: var(--navy); }
-  #dash-search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  #dash-search-input:focus, #board-search-input:focus { border-color: var(--navy); }
+  #dash-search-clear, #board-search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
     width: 22px; height: 22px; border: none; background: var(--accent-light); border-radius: 50%;
     color: var(--text-muted); cursor: pointer; align-items: center; justify-content: center;
     font-size: 16px; line-height: 1; padding: 0; }
-  #dash-search-clear:hover { background: var(--border); color: var(--text); }
+  #dash-search-clear:hover, #board-search-clear:hover { background: var(--border); color: var(--text); }
 </style>
 <link rel="icon" type="image/x-icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
@@ -2207,7 +2216,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v256 · 2026-09-23</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v257 · 2026-09-23</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2232,7 +2241,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     </div>
   </div>
   <div class="nav-tabs">
-    <a href="home.html" class="nav-tab" style="text-decoration:none;">← Home</a>
+    <!-- For a signed-in staff member "Home" means the Requests tab, not the
+         public website — leaving the dashboard mid-task was never the intent.
+         Signed out there's no dashboard to land on, so it still goes to the
+         public site. -->
+    <button class="nav-tab" id="nav-home" onclick="goHome()">← Home</button>
     <button class="nav-tab" id="nav-client-form" onclick="showView('client')">Client Form</button>
     <div id="staff-tabs" style="display:none;">
       <button class="nav-tab" onclick="showView('dashboard')" id="nav-requests">Requests</button>
@@ -2795,6 +2808,11 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <button class="sidebar-item" onclick="filterRequests('rejected', this)" title="Auto-declined — budget under our $5,000 sourcing minimum. Kept as a quiet record.">
           Rejected <span class="badge" id="badge-rejected">0</span>
         </button>
+        <!-- Sign out sits below Archive, visually separated so it can't be hit
+             while reaching for Rejected. -->
+        <button class="sidebar-item sidebar-logout" onclick="staffLogout()" title="End this staff session on this device">
+          ⎋ Log out
+        </button>
       </div>
     </div>
 
@@ -3146,6 +3164,16 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   <div style="max-width:1600px;margin:0 auto;padding:24px 28px 80px;">
     <div style="font-size:22px;font-weight:800;color:var(--navy);font-family:'DM Sans',system-ui,sans-serif;">Pipeline Board</div>
     <div style="font-size:13px;color:var(--text-muted);margin:4px 0 20px;font-family:system-ui,sans-serif;">Drag a lead between stages to move them. Each card's color = its activity status: <span style="color:#dc2626;font-weight:700;">● past due</span> · <span style="color:#f59e0b;font-weight:700;">● no activity set</span> · <span style="color:#16a34a;font-weight:700;">● due today</span> · <span style="color:#94a3b8;font-weight:700;">● scheduled ahead</span>. Click a card to open the lead.</div>
+    <!-- Board search — same control as the Requests tab, filtering the cards
+         in place so the columns keep their stage counts honest. -->
+    <div class="dash-search-row">
+      <div class="dash-search-wrap">
+        <svg class="dash-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="board-search-input" placeholder="Search this board by name, vehicle, phone, or email..." oninput="onBoardSearchInput()" autocomplete="off" aria-label="Search board">
+        <button id="board-search-clear" onclick="clearBoardSearch()" title="Clear" style="display:none;">×</button>
+      </div>
+      <div id="board-search-note" style="display:none;font-family:system-ui,sans-serif;font-size:12px;color:var(--text-muted);margin-top:6px;"></div>
+    </div>
     <div id="kanban-board" class="kb-wrap"></div>
   </div>
 </div>
@@ -3912,6 +3940,42 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   const DB_BASE = '/api/db';
   const isLocal = window.location.protocol === 'file:';
 
+  // "← Home" in the nav. For signed-in staff this means the Requests tab —
+  // the dashboard IS their home. Signed out, there's no dashboard to show, so
+  // it behaves like the old link and goes to the public site.
+  function goHome() {
+    const requestsTab = document.getElementById('nav-requests');
+    if (sessionStorage.getItem('staff_auth') === '1' && requestsTab) {
+      // Click the real Requests tab rather than calling showView() directly:
+      // showView reads the implicit global `event` to set the active tab, so
+      // calling it from here would light up "Home" instead of "Requests".
+      requestsTab.click();
+      if (typeof filterRequests === 'function') {
+        // Land on the default "All" view rather than whatever filter was last
+        // applied, so Home is a genuine reset.
+        const allBtn = document.querySelector('.sidebar-item[onclick*="\'all\'"]');
+        try { filterRequests('all', allBtn); } catch (e) {}
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    window.location.href = 'home.html';
+  }
+
+  // Sign out of the staff session on this device. Clears the same keys the
+  // expiry path clears, stops the polling timers so a dead session can't keep
+  // firing requests, then reloads to the locked state.
+  function staffLogout() {
+    if (!confirm('Log out of the staff dashboard on this device?')) return;
+    sessionStorage.removeItem('staff_auth');
+    sessionStorage.removeItem('staff_token');
+    if (typeof stopPolling === 'function') { try { stopPolling(); } catch (e) {} }
+    if (typeof _autoRefreshTimer !== 'undefined' && _autoRefreshTimer) {
+      try { clearInterval(_autoRefreshTimer); } catch (e) {}
+    }
+    window.location.reload();
+  }
+
   // Called when the server rejects our staff token (e.g. after daily rotation).
   // Clears auth state and kicks the user back to the login modal so they can re-enter the password.
   let sessionExpiredHandled = false;
@@ -4319,7 +4383,17 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         localStorage.setItem('am_msgs_' + reqId, JSON.stringify(byReq[reqId] || []));
       });
     }
-    renderDashboard();
+    // Only repaint when something actually changed. loadFromDB runs on the 20s
+    // auto-refresh and renderDashboard() rebuilds the whole requests table:
+    // measured ~130ms at 500 leads, ~360ms at 1500, ~750ms at 3000. That's a
+    // main-thread freeze every 20 seconds even when the poll returned identical
+    // data — which is what made the dashboard feel like it locks up (clicking
+    // something just before a tick looked like the click caused the hang).
+    // Building the signature costs ~2ms at 3000 leads, so it pays for itself
+    // many times over. renderDashboard() paints the table, the stats and the
+    // activities panel, so the signature spans both arrays it reads.
+    const _sig = dashboardSignature();
+    if (_sig === null || _sig !== _lastRenderSig) renderDashboard();
     syncNavBadges();
     renderConvoList();
     // Speed-to-lead is its own round trip and moves on the scale of hours, so
@@ -5183,6 +5257,41 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     return null;
   }
 
+  // ── Board search ─────────────────────────────────────────────────
+  // Filters the cards the board draws. Deliberately NOT reusing the Requests
+  // tab's query: the two views get searched for different reasons and a shared
+  // box would surprise you when switching tabs.
+  let boardSearchQuery = '';
+
+  function boardMatchesSearch(r) {
+    if (!boardSearchQuery) return true;
+    const hay = [
+      r.firstName, r.lastName, `${r.firstName || ''} ${r.lastName || ''}`,
+      r.make, r.model, `${r.make || ''} ${r.model || ''}`,
+      r.email, r.phone, (r.phone || '').replace(/\D/g, ''), r.portalCode, r.psiCar
+    ].filter(Boolean).join(' ').toLowerCase();
+    // Every term must appear, so "honda smith" narrows instead of widening.
+    return boardSearchQuery.split(/\s+/).filter(Boolean).every(term => hay.includes(term));
+  }
+
+  function onBoardSearchInput() {
+    const input = document.getElementById('board-search-input');
+    boardSearchQuery = (input ? input.value : '').trim().toLowerCase();
+    const clear = document.getElementById('board-search-clear');
+    if (clear) clear.style.display = boardSearchQuery ? 'flex' : 'none';
+    renderPipelineBoard();
+  }
+
+  function clearBoardSearch() {
+    const input = document.getElementById('board-search-input');
+    if (input) input.value = '';
+    boardSearchQuery = '';
+    const clear = document.getElementById('board-search-clear');
+    if (clear) clear.style.display = 'none';
+    renderPipelineBoard();
+    if (input) input.focus();
+  }
+
   function renderPipelineBoard() {
     const wrap = document.getElementById('kanban-board');
     if (!wrap) return;
@@ -5190,11 +5299,27 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     PIPELINE_STAGES.forEach(s => { byStage[s.key] = []; });
     // Membership honors each card's stored stage (fully manual board); a stage
     // is only derived for legacy leads that were never placed.
+    let _total = 0, _shown = 0;
     (Array.isArray(requests) ? requests : []).forEach(r => {
       const st = boardStage(r);
       if (!st || !byStage[st]) return;
+      _total++;
+      if (!boardMatchesSearch(r)) return;
+      _shown++;
       byStage[st].push(r);
     });
+    // Say what's hidden, so an empty-looking board is never a mystery.
+    const note = document.getElementById('board-search-note');
+    if (note) {
+      if (boardSearchQuery) {
+        note.textContent = _shown
+          ? `Showing ${_shown} of ${_total} leads matching “${boardSearchQuery}”.`
+          : `No leads match “${boardSearchQuery}”.`;
+        note.style.display = 'block';
+      } else {
+        note.style.display = 'none';
+      }
+    }
     Object.values(byStage).forEach(list => list.sort((a, b) => new Date(b.submitted) - new Date(a.submitted)));
     wrap.innerHTML = PIPELINE_STAGES.map(s => {
       const cards = byStage[s.key];
@@ -6489,6 +6614,18 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     pop.style.left = Math.max(12, left) + 'px';
     pop.style.top = Math.max(12, top) + 'px';
   }
+  // Fingerprint of everything renderDashboard() paints. Used by loadFromDB to
+  // skip a full repaint when the 20s poll came back with identical data.
+  // Recorded HERE rather than only at the call site, so it always describes
+  // what is actually on screen no matter which code path rendered it —
+  // otherwise a local edit could be painted, then silently skipped and left
+  // showing stale rows.
+  let _lastRenderSig = null;
+  function dashboardSignature() {
+    try { return JSON.stringify(requests) + '|' + JSON.stringify(activities || []); }
+    catch (e) { return null; }   // circular/oversized → null never matches, so we just render
+  }
+
   function renderDashboard() {
     updateStats();
     updateBadges();
@@ -6497,6 +6634,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     // Keep the PSI panel current if it happens to be the open view.
     const psiPanel = document.getElementById('panel-psi');
     if (psiPanel && psiPanel.style.display !== 'none' && typeof renderPsiList === 'function') renderPsiList();
+    _lastRenderSig = dashboardSignature();
   }
 
   function showDashboard() {
