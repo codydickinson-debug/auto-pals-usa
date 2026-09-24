@@ -243,7 +243,14 @@ async function createCalendarEvent(token, booking) {
     start: { dateTime: start, timeZone: 'America/New_York' },
     end: { dateTime: end, timeZone: 'America/New_York' },
     attendees: [
-      { email: booking.email, displayName: `${booking.firstName} ${booking.lastName}` }
+      { email: booking.email, displayName: `${booking.firstName} ${booking.lastName}` },
+      // Every scheduled call also lands on Josh's calendar (owner request
+      // 2026-09-24). Internal attendee — with sendUpdates=externalOnly below he
+      // gets no per-booking email, but Google Workspace auto-adds the event to
+      // his calendar. Comma-list, overridable via env without a code change.
+      ...(process.env.CALL_CALENDAR_ATTENDEE || 'josh@autopalsusa.com')
+        .split(',').map(s => s.trim()).filter(Boolean)
+        .map(e => ({ email: e }))
     ],
     // No event-level reminders (2026-07-02, owner request). The previous
     // overrides (email 60min + popup 15min) fired for everyone watching the
