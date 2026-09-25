@@ -14,6 +14,7 @@
     { "source": "/api/create-checkout","destination": "/api/create-checkout.js" },
     { "source": "/api/quo-webhook",   "destination": "/api/quo-webhook.js" },
     { "source": "/api/quo-sync",      "destination": "/api/quo-sync.js" },
+    { "source": "/api/backfill-josh-calendar", "destination": "/api/backfill-josh-calendar.js" },
     { "source": "/home",     "destination": "/home.html" },
     { "source": "/form",     "destination": "/form.html" },
     { "source": "/request",  "destination": "/request.html" },
@@ -40,6 +41,7 @@
   "functions": {
     "api/sms-consent-sync.js": { "maxDuration": 60 },
     "api/quo-sync.js": { "maxDuration": 60 },
+    "api/backfill-josh-calendar.js": { "maxDuration": 60 },
     "api/cron.js": { "maxDuration": 300 }
   },
   "crons": [

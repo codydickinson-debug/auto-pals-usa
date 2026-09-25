@@ -2216,7 +2216,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v258 · 2026-09-23</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v259 · 2026-09-25</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -2729,6 +2729,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <span id="calls-sync-status" style="font-family:system-ui,sans-serif;font-size:11px;color:var(--text-muted);" aria-live="polite"></span>
         <button onclick="renderCallsTab(true)" id="calls-refresh" title="Re-read the call log from our database (no Quo call)" style="font-family:system-ui,sans-serif;font-size:12px;font-weight:600;color:var(--navy);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;">↻ Refresh</button>
         <button onclick="syncFromQuo(this)" id="calls-sync" title="Pull the latest calls, summaries, and recordings from Quo right now" style="font-family:system-ui,sans-serif;font-size:12px;font-weight:700;color:#fff;background:var(--navy);border:1px solid var(--navy);border-radius:8px;padding:6px 13px;cursor:pointer;">⟳ Sync from Quo</button>
+        <button onclick="syncJoshCalendar(this)" id="calls-josh-sync" title="Put every upcoming scheduled call on Josh's Google Calendar (skips ones already there)" style="font-family:system-ui,sans-serif;font-size:12px;font-weight:700;color:#fff;background:#0b8043;border:1px solid #0b8043;border-radius:8px;padding:6px 13px;cursor:pointer;">📅 Sync to Josh's calendar</button>
       </div>
     </div>
     <div id="calls-log"><div style="color:var(--text-muted);font-size:13px;padding:12px 0;">Loading…</div></div>
@@ -7359,6 +7360,37 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       if (status) status.textContent = '⚠ Sync failed — try again in a moment.';
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = label || '⟳ Sync from Quo'; }
+    }
+  }
+
+  // Backfill: put every upcoming scheduled call on Josh's Google Calendar
+  // (existing bookings; new ones go on automatically). Idempotent — skips calls
+  // already on his calendar. Staff-gated endpoint; no client is re-notified.
+  async function syncJoshCalendar(btn) {
+    if (btn && btn.disabled) return;
+    const status = document.getElementById('calls-sync-status');
+    const label = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '📅 Syncing…'; }
+    if (status) status.textContent = "Adding upcoming calls to Josh's calendar…";
+    try {
+      const res = await fetch('/api/backfill-josh-calendar', { method: 'POST', headers: dbHeaders() });
+      if (res.status === 401) { handleSessionExpired(); return; }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) throw new Error(data.hint || data.detail || data.error || 'sync failed');
+      const c = data.created || 0, s = data.skippedExisting || 0, u = data.upcoming || 0;
+      if (status) {
+        status.textContent = c === 0
+          ? `✓ Josh's calendar already had all ${u} upcoming call${u === 1 ? '' : 's'}`
+          : `✓ Added ${c} call${c === 1 ? '' : 's'} to Josh's calendar${s ? ` · ${s} already there` : ''}`;
+      }
+      if (Array.isArray(data.errors) && data.errors.length) {
+        console.warn('[josh-calendar backfill] errors:', data.errors);
+      }
+    } catch (e) {
+      console.warn('[josh-calendar backfill]', e && e.message);
+      if (status) status.textContent = '⚠ Could not sync to Josh\'s calendar — ' + (e && e.message ? e.message : 'try again');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = label || "📅 Sync to Josh's calendar"; }
     }
   }
 

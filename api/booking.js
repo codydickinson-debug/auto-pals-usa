@@ -433,3 +433,10 @@ module.exports = async function handler(req, res) {
     staffSmsOk:   staffSmsRes.status === 'fulfilled'
   });
 }
+
+// Reusable helpers for the one-off Josh-calendar backfill
+// (api/backfill-josh-calendar.js). Named exports alongside the default handler.
+module.exports.getAccessToken  = getAccessToken;
+module.exports.buildEventTimes = buildEventTimes;
+module.exports.easternIsoFor   = easternIsoFor;
+module.exports.todayET         = todayET;
