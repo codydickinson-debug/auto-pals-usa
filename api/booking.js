@@ -267,18 +267,31 @@ async function createCalendarEvent(token, booking) {
     }
   };
 
-  // sendUpdates=externalOnly (was =all): the client — an external attendee —
-  // still receives their Google invite with the Meet link, but workspace-
-  // internal watchers of the team calendar no longer get an email per
-  // booking created.
-  const res = await fetch(
-    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(process.env.GOOGLE_CALENDAR_ID)}/events?conferenceDataVersion=1&sendUpdates=externalOnly`,
+  // Create the event DIRECTLY on Josh's calendar so every scheduled call lands
+  // on it (owner request 2026-09-25 — inviting him as an attendee depended on
+  // his Workspace auto-add setting). Requires the booking Google account to have
+  // "Make changes to events" on josh@autopalsusa.com's calendar. If that write
+  // fails (no access), fall back to the shared team calendar so a booking is
+  // NEVER lost — Josh is still on it as an attendee. Overridable via env.
+  // sendUpdates=externalOnly: the client (external) still gets their Google
+  // invite + Meet link; internal watchers don't get an email per booking.
+  const primaryCal  = process.env.CALL_CALENDAR_ID || 'josh@autopalsusa.com';
+  const fallbackCal = process.env.GOOGLE_CALENDAR_ID;
+  const postTo = (cal) => fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal)}/events?conferenceDataVersion=1&sendUpdates=externalOnly`,
     {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(event)
     }
   );
+
+  let res = await postTo(primaryCal);
+  if (!res.ok && fallbackCal && fallbackCal !== primaryCal) {
+    const firstErr = await res.text();
+    console.warn(`[booking] calendar create on ${primaryCal} failed (${res.status}: ${firstErr}) — falling back to team calendar ${fallbackCal}`);
+    res = await postTo(fallbackCal);
+  }
   if (!res.ok) {
     const err = await res.text();
     throw new Error(`Calendar API error: ${err}`);
