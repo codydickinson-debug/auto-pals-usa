@@ -1629,7 +1629,9 @@ module.exports = async function handler(req, res) {
         // MAX_PER_DAY in public/booking.html.
         const MAX_BOOKINGS_PER_DAY = 10;
         const existing = await query('bookings', 'GET', null, `?date=eq.${encodeURIComponent(body.date)}`);
-        if (existing && existing.length >= MAX_BOOKINGS_PER_DAY) {
+        // Staff (dashboard) can schedule a manual call even on a "full" day — the
+        // cap protects the public calendar's daily load, not staff-set calls.
+        if (!isStaff && existing && existing.length >= MAX_BOOKINGS_PER_DAY) {
           return res.status(409).json({ error: 'day_full', count: existing.length });
         }
         // ≤ 1-week booking window (owner): clients can't book more than a week

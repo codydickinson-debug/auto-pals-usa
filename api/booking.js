@@ -321,18 +321,24 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
-  // No same-day bookings. UI already greys today out, but we enforce
-  // server-side too so a direct POST can't slip past. `date` is a
-  // YYYY-MM-DD string from the booking form, so a string compare against
-  // today-in-ET is sufficient.
-  if (typeof date === 'string' && date <= todayET()) {
+  // Staff-scheduled calls (from the dashboard lead profile) carry a staff token
+  // and bypass the client-facing date window — Renz can schedule a manually-
+  // handled lead same-day or beyond a week. They also skip the Meta CAPI fire
+  // below (the browser signals here are the staff member's, not the client's).
+  const _stok = req.headers['x-staff-token'] || (req.headers.authorization || '').replace(/^Bearer\s+/i, '') || booking.staffToken || '';
+  const isStaffBooking = verifyToken(_stok);
+
+  // No same-day bookings for clients. UI already greys today out, but we enforce
+  // server-side too so a direct POST can't slip past. `date` is a YYYY-MM-DD
+  // string from the booking form, so a string compare against today-in-ET is
+  // sufficient. Staff bypass this.
+  if (!isStaffBooking && typeof date === 'string' && date <= todayET()) {
     return res.status(400).json({
       error: "Same-day calls aren't available — please pick tomorrow or later."
     });
   }
-  // No booking more than a week out (owner). date is YYYY-MM-DD, so a string
-  // compare against the Eastern max date is enough.
-  if (typeof date === 'string' && date > maxBookableET()) {
+  // No client booking more than a week out (owner). Staff bypass this.
+  if (!isStaffBooking && typeof date === 'string' && date > maxBookableET()) {
     return res.status(400).json({
       error: "We only schedule intro calls up to a week out — please pick a day within the next 7 days."
     });
@@ -347,7 +353,7 @@ module.exports = async function handler(req, res) {
   // cookies and IP are legitimately ours to forward; scheduleEventId is
   // minted in booking.html so Meta collapses the two copies into one.
   const _sig = meta.browserSignals(req);
-  const metaSchedulePromise = meta.send({
+  const metaSchedulePromise = isStaffBooking ? Promise.resolve({ skipped: 'staff' }) : meta.send({
     eventName: 'Schedule',
     eventId: booking.scheduleEventId || undefined,
     actionSource: 'website',

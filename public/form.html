@@ -2216,7 +2216,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v262 · 2026-09-26</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v263 · 2026-09-26</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3380,6 +3380,18 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           <input id="dv-act-due" class="act-input" type="date" aria-label="Due date">
           <button class="act-add-btn" onclick="addLeadActivity(activeRequestId)">Add</button>
         </div>
+      </div>
+
+      <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Schedule a Call</div>
+        <!-- Staff scheduler for manually-handled leads: sets a call date/time,
+             creates the booking + puts it on the Auto Pals (Josh's) calendar. -->
+        <div id="dv-sched-current" style="display:none;font-family:system-ui,sans-serif;font-size:13px;color:var(--green);background:var(--green-light);border:1px solid #a7f3d0;border-radius:6px;padding:8px 12px;margin-bottom:10px;"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+          <div><label for="dv-sched-date" style="display:block;font-size:11px;color:var(--text-muted);font-family:system-ui,sans-serif;margin-bottom:3px;">Date</label><input type="date" id="dv-sched-date" style="font-family:system-ui,sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;"></div>
+          <div><label for="dv-sched-time" style="display:block;font-size:11px;color:var(--text-muted);font-family:system-ui,sans-serif;margin-bottom:3px;">Time</label><input type="time" id="dv-sched-time" style="font-family:system-ui,sans-serif;font-size:13px;padding:6px 8px;border:1px solid var(--border);border-radius:6px;"></div>
+          <button onclick="scheduleManualCall(activeRequestId, this)" style="padding:8px 14px;background:var(--navy);color:#fff;border:none;border-radius:6px;font-family:system-ui,sans-serif;font-size:12px;font-weight:700;cursor:pointer;">📅 Schedule &amp; add to calendar</button>
+        </div>
+        <div id="dv-sched-status" style="font-size:12px;font-family:system-ui,sans-serif;margin-top:6px;min-height:14px;color:var(--text-muted);"></div>
       </div>
 
       <div style="margin-bottom:18px;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Call Outcome</div>
@@ -7969,6 +7981,26 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       }
     }
 
+    // Schedule-a-Call — show the current upcoming call (if any) above the picker.
+    {
+      const cur = document.getElementById('dv-sched-current');
+      const st = document.getElementById('dv-sched-status');
+      if (st) st.textContent = '';
+      if (cur) {
+        const k = (r.email || '').toLowerCase();
+        const cal = k && (typeof CALL_TIMES !== 'undefined') && CALL_TIMES[k];
+        if (cal && cal.startIso && new Date(cal.startIso).getTime() >= Date.now() - 3600000) {
+          cur.style.display = 'block';
+          cur.textContent = `📅 Call scheduled: ${cal.dateLabel || ''}${cal.timeLabel ? ' at ' + cal.timeLabel : ''} — on the calendar. Pick a new date/time below to reschedule.`;
+        } else if (r.bookingConfirmedAt) {
+          cur.style.display = 'block';
+          cur.textContent = `📅 Booked call on file (${new Date(r.bookingConfirmedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}).`;
+        } else {
+          cur.style.display = 'none';
+        }
+      }
+    }
+
     // Internal notes — DON'T overwrite while staff is actively editing this
     // textarea (auto-refresh re-renders the detail view every 20s; without
     // this guard, any in-progress typing gets wiped to the last-saved value).
@@ -8093,6 +8125,66 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   // callCompletedAt (idempotent), clear any stale no-show, and ensure the lead
   // is at least 'called'. noshow => reuse the no-show flow (instant "we missed
   // you" + day-1/day-3 rebooking drip fire server-side off the no_show_at flip).
+  // Staff scheduler for manually-handled leads: set a call date/time, create the
+  // booking, and put it on the Auto Pals (Josh's) Google Calendar + send the
+  // client their invite. Reuses the same endpoints the client booking page uses;
+  // the staff token bypasses the same-day / 7-day / day-full limits.
+  async function scheduleManualCall(reqId, btn) {
+    const r = requests.find(x => x.id === reqId);
+    if (!r) return;
+    const status = document.getElementById('dv-sched-status');
+    const date = (document.getElementById('dv-sched-date') || {}).value || '';   // YYYY-MM-DD
+    const time24 = (document.getElementById('dv-sched-time') || {}).value || ''; // HH:MM (24h)
+    const setErr = m => { if (status) { status.textContent = m; status.style.color = '#b91c1c'; } };
+    if (!date || !time24) return setErr('Pick a date and time.');
+    if (!r.email) return setErr('This lead has no email on file — add one first.');
+    const [hh, mm] = time24.split(':').map(Number);
+    const timeLabel = `${(hh % 12) || 12}:${String(mm).padStart(2, '0')} ${hh >= 12 ? 'PM' : 'AM'}`;
+    const dObj = new Date(date + 'T12:00:00');
+    const dateLabel = dObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+    const vehicle = [r.make, r.model].filter(v => v && v !== '—').join(' ');
+    if (!confirm(`Schedule a call with ${(r.firstName || '') + ' ' + (r.lastName || '')} for ${dateLabel} at ${timeLabel}?\n\nThis adds it to the Auto Pals calendar and emails the client their invite.`)) return;
+    const _label = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Scheduling…'; }
+    if (status) { status.textContent = ''; status.style.color = 'var(--text-muted)'; }
+    try {
+      // 1) booking row — cross-links to this lead (sets booking_confirmed_at +
+      // call_scheduled). Staff token bypasses day-full / 7-day limits.
+      const bRes = await fetch(`${DB_BASE}?table=bookings`, {
+        method: 'POST', headers: dbHeaders(),
+        body: JSON.stringify({ date, time: timeLabel, firstName: r.firstName, lastName: r.lastName, email: r.email, phone: r.phone || '', vehicle })
+      });
+      if (bRes.status === 401) { handleSessionExpired(); return; }
+      if (!bRes.ok) {
+        const err = await bRes.json().catch(() => ({}));
+        setErr(err.error === 'slot_taken' ? 'That exact time is already taken — pick another.' : 'Could not save the booking — try again.');
+        if (btn) { btn.disabled = false; btn.textContent = _label; }
+        return;
+      }
+      const leadPortal = bRes.headers.get('X-Lead-Portal') || r.portalCode || '';
+      // 2) Google Calendar event on Josh's calendar + client invite + staff notice.
+      await fetch('/api/booking', {
+        method: 'POST', headers: dbHeaders(),
+        body: JSON.stringify({ firstName: r.firstName, lastName: r.lastName, email: r.email, phone: r.phone || '', vehicle, date, time: timeLabel, dateLabel, portalCode: leadPortal, scheduleEventId: newEventId('schedule') })
+      }).catch(() => {});
+      // 3) reflect locally: booked → Call Scheduled + fill CALL_TIMES so the board
+      // and profile show it immediately.
+      r.bookingConfirmedAt = new Date().toISOString();
+      r.pipelineStage = 'call_scheduled';
+      try { const k = (r.email || '').toLowerCase(); if (k) CALL_TIMES[k] = { startIso: new Date(`${date}T${time24}:00`).toISOString(), dateLabel: dObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), timeLabel }; } catch (e) {}
+      if (typeof save === 'function') save();
+      renderDashboard();
+      if (activeRequestId === reqId) populateDetailView(r);
+      if (typeof _refreshPipelineIfOpen === 'function') _refreshPipelineIfOpen();
+      // Set AFTER populateDetailView (which clears the status field on re-render).
+      if (status) { status.textContent = `✓ Scheduled for ${dateLabel} at ${timeLabel} — added to the calendar.`; status.style.color = '#047857'; }
+    } catch (e) {
+      setErr('Could not schedule — check your connection.');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = _label; }
+    }
+  }
+
   // Staff button: email the client their portal login link (email-only magic
   // link via /api/portal-login). Explicit staff action — sends only on click.
   async function sendPortalDetails(reqId, btn) {
