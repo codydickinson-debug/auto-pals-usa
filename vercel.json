@@ -15,6 +15,8 @@
     { "source": "/api/quo-webhook",   "destination": "/api/quo-webhook.js" },
     { "source": "/api/quo-sync",      "destination": "/api/quo-sync.js" },
     { "source": "/api/backfill-josh-calendar", "destination": "/api/backfill-josh-calendar.js" },
+    { "source": "/api/precall", "destination": "/api/precall.js" },
+    { "source": "/precall",  "destination": "/precall.html" },
     { "source": "/home",     "destination": "/home.html" },
     { "source": "/form",     "destination": "/form.html" },
     { "source": "/request",  "destination": "/request.html" },

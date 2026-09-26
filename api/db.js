@@ -170,7 +170,7 @@ async function crossLinkOrCreateRequest(body, deps = {}) {
   if (anyMatch && anyMatch.length) {
     const prior = anyMatch[0];
     // Already linked to a booking? Nothing to do.
-    if (prior.booking_confirmed_at) return { action: 'already_linked', id: prior.id };
+    if (prior.booking_confirmed_at) return { action: 'already_linked', id: prior.id, portalCode: prior.portal_code };
     // Booking a call moves the lead to Call Scheduled on the board, so
     // "New Lead = no booked call" stays true.
     const patch = { booking_confirmed_at: now(), pipeline_stage: 'call_scheduled' };
@@ -180,7 +180,7 @@ async function crossLinkOrCreateRequest(body, deps = {}) {
       await pd.syncStatusChange({ ...prior, ...patch }, patch.status)
         .catch(err => console.warn('[pipedrive] booking cross-link sync failed', err && err.message));
     }
-    return { action: 'cross_linked', id: prior.id };
+    return { action: 'cross_linked', id: prior.id, portalCode: prior.portal_code };
   }
 
   // No request exists. Skip obvious placeholder contacts.
@@ -1698,7 +1698,10 @@ module.exports = async function handler(req, res) {
         // before we respond; it never throws, so a failure here can't block
         // the booking the client already made.
         try {
-          await crossLinkOrCreateRequest(body);
+          const _cl = await crossLinkOrCreateRequest(body);
+          // Expose the lead's opaque portal code so booking.html can carry it to
+          // the pre-call page (precall.html) as the lead key — no PII in the URL.
+          if (_cl && _cl.portalCode) res.setHeader('X-Lead-Portal', _cl.portalCode);
         } catch (e) {
           console.warn('[DB] booking cross-link/create failed', e && e.message);
         }

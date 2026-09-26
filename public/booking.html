@@ -1085,6 +1085,12 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   }
 
   // ── BOOKING ─────────────────────────────────────────────────────
+  // Pre-call confirmation page (precall.html) redirect. OFF until the pre-call
+  // videos are in — flip to true to send every booked prospect there instead of
+  // the in-page confirmation. The appointment is saved either way.
+  const PRECALL_REDIRECT = false;
+  let _leadPortal = '';
+
   async function confirmBooking() {
     const fn = document.getElementById('b-fn').value.trim();
     const ln = document.getElementById('b-ln').value.trim();
@@ -1162,6 +1168,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         throw new Error('save_failed_http_' + res.status);
       }
       bookingSaved = true;
+      // Opaque lead key for the pre-call page (no PII in the URL). Header set by
+      // the bookings POST cross-link; fall back to a portal code in sessionStorage.
+      try { _leadPortal = res.headers.get('X-Lead-Portal') || sessionStorage.getItem('portal_code') || ''; } catch (e) {}
     } catch(e) {
       // Network error, timeout, non-JSON body, or the throw above. Do NOT
       // advance to the confirmation screen — tell them plainly and let them
@@ -1282,6 +1291,14 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       }
       const desc = document.querySelector('#step-3 .confirmed-desc');
       if (desc) desc.textContent = 'Your call is reserved. Alex or Josh will call you at the scheduled time.';
+    }
+    // Pre-call page redirect (when enabled) — carry name, appointment, and the
+    // opaque lead key so engagement attributes to the right prospect.
+    if (PRECALL_REDIRECT) {
+      const params = new URLSearchParams({ fn, date: dateLabel, time: selectedTime, tz: 'ET' });
+      if (_leadPortal) params.set('pc', _leadPortal);
+      window.location.href = 'precall.html?' + params.toString();
+      return;
     }
     showStep(3);
   }

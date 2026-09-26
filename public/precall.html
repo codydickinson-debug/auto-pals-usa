@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex,nofollow">
+<title>You're Booked — Auto Pals USA</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>">
+<style>
+  :root {
+    --cream: #f5f0e8; --cream-dark: #ede5d4;
+    --navy: #0f2557; --navy-mid: #1a3470; --navy-light: #e8edf8;
+    --text: #1a1a2e; --text-muted: #5a6480;
+    --border: #ddd5c0; --white: #fffdf7;
+    --green: #1a5c32; --green-light: #e8f0e8;
+    --gold: #c8873f; --gold-light: #f7ecdb;
+    --red: #b91c1c;
+    --radius: 12px;
+    --shadow-card: 0 1px 1px rgba(15,37,87,0.04), 0 2px 4px rgba(15,37,87,0.04), 0 10px 28px rgba(15,37,87,0.07);
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  * { box-sizing: border-box; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--cream); color: var(--text);
+    font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6; -webkit-font-smoothing: antialiased;
+  }
+  img, video { max-width: 100%; display: block; }
+  h1, h2, h3 { font-family: Georgia, 'Times New Roman', serif; color: var(--navy); line-height: 1.2; text-wrap: balance; margin: 0; }
+  a { color: var(--navy); }
+  ::selection { background: var(--navy); color: var(--cream); }
+  :focus-visible { outline: 2px solid var(--navy); outline-offset: 3px; border-radius: 6px; }
+
+  .topbar { background: var(--navy); color: var(--cream); padding: 14px 20px; display: flex; align-items: center; gap: 10px; }
+  .topbar .logo { font-weight: 800; letter-spacing: 0.02em; font-size: 16px; font-family: -apple-system, sans-serif; }
+  .topbar .logo b { color: var(--gold); }
+
+  .wrap { max-width: 680px; margin: 0 auto; padding: 0 18px 72px; }
+  .section { padding: 30px 0 6px; }
+
+  /* 1. Confirmation header */
+  .hero { text-align: center; padding: 40px 0 8px; }
+  .hero .badge {
+    display: inline-flex; align-items: center; gap: 7px; margin-bottom: 16px;
+    background: var(--green-light); color: var(--green); border: 1px solid #bfe0c8;
+    border-radius: 99px; padding: 6px 14px; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+    font-family: -apple-system, sans-serif;
+  }
+  .hero h1 { font-size: clamp(27px, 7vw, 38px); margin-bottom: 12px; }
+  .hero p { font-size: 16px; color: var(--text-muted); max-width: 500px; margin: 0 auto; }
+  .appt-card {
+    margin: 22px auto 0; max-width: 440px; background: var(--white); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow-card); padding: 18px 20px; text-align: left;
+    display: grid; grid-template-columns: 1fr; gap: 10px;
+  }
+  .appt-row { display: flex; align-items: center; gap: 12px; font-size: 15px; }
+  .appt-row .ic { width: 34px; height: 34px; flex: none; border-radius: 9px; background: var(--navy-light); color: var(--navy); display: grid; place-items: center; font-size: 17px; }
+  .appt-row .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); font-weight: 700; font-family: -apple-system, sans-serif; }
+  .appt-row .val { font-weight: 700; color: var(--navy); }
+  .step-note { margin: 20px auto 0; max-width: 480px; background: var(--gold-light); border: 1px solid #ecd5b0; border-radius: var(--radius); padding: 14px 18px; font-size: 14px; color: #6b4a1e; }
+  .step-note b { color: #5a3d15; }
+
+  /* section titles */
+  .sec-eyebrow { text-align: center; font-family: -apple-system, sans-serif; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin-bottom: 8px; }
+  .sec-title { text-align: center; font-size: clamp(21px, 5vw, 27px); margin-bottom: 20px; }
+
+  /* 2. video */
+  .video-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; background: var(--navy); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-card); }
+  .video-frame video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+  .video-ph {
+    position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; text-align: center; padding: 24px;
+    background: radial-gradient(120% 120% at 50% 0%, var(--navy-mid), var(--navy));
+    color: var(--cream);
+  }
+  .video-ph .play { width: 66px; height: 66px; border-radius: 50%; background: rgba(255,255,255,0.14); border: 2px solid rgba(255,255,255,0.4); display: grid; place-items: center; }
+  .video-ph .play::after { content: ''; border-style: solid; border-width: 12px 0 12px 20px; border-color: transparent transparent transparent var(--cream); margin-left: 5px; }
+  .video-ph .t { font-family: Georgia, serif; font-size: 19px; font-weight: 700; }
+  .video-ph .s { font-size: 13px; opacity: 0.8; }
+  .video-cap { text-align: center; font-size: 13px; color: var(--text-muted); margin-top: 12px; }
+
+  /* 3. FAQ */
+  .faq { display: flex; flex-direction: column; gap: 10px; }
+  .faq-item { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .faq-q { width: 100%; text-align: left; background: none; border: 0; padding: 16px 18px; font-size: 15.5px; font-weight: 700; color: var(--navy); cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 14px; font-family: -apple-system, sans-serif; }
+  .faq-q .chev { flex: none; width: 22px; height: 22px; transition: transform .22s var(--ease-out); color: var(--gold); }
+  .faq-item.open .faq-q .chev { transform: rotate(180deg); }
+  .faq-a { max-height: 0; overflow: hidden; transition: max-height .28s var(--ease-out); }
+  .faq-a-inner { padding: 0 18px 16px; font-size: 14.5px; color: var(--text-muted); }
+
+  /* 4. proof */
+  .proof-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+  @media (min-width: 620px) { .proof-grid { grid-template-columns: repeat(3, 1fr); } }
+  .proof-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-card); display: flex; flex-direction: column; cursor: pointer; transition: transform .18s var(--ease-out), box-shadow .18s var(--ease-out); }
+  .proof-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(15,37,87,0.13); }
+  .proof-thumb { position: relative; aspect-ratio: 16 / 10; background: linear-gradient(135deg, var(--navy-mid), var(--navy)); display: grid; place-items: center; }
+  .proof-thumb img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+  .proof-thumb .pico { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.16); border: 2px solid rgba(255,255,255,0.5); display: grid; place-items: center; position: relative; z-index: 1; }
+  .proof-thumb .pico::after { content: ''; border-style: solid; border-width: 8px 0 8px 14px; border-color: transparent transparent transparent #fff; margin-left: 4px; }
+  .proof-badge { position: absolute; top: 10px; left: 10px; z-index: 2; background: rgba(255,253,247,0.94); color: var(--navy); font-size: 10px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 9px; border-radius: 6px; font-family: -apple-system, sans-serif; }
+  .proof-body { padding: 13px 14px 15px; }
+  .proof-veh { font-weight: 700; color: var(--navy); font-size: 14px; }
+  .proof-nums { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0 10px; }
+  .proof-num .k { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; }
+  .proof-num .v { font-size: 15px; font-weight: 800; color: var(--navy); font-variant-numeric: tabular-nums; }
+  .proof-cta { font-family: -apple-system, sans-serif; font-size: 13px; font-weight: 800; color: var(--gold); display: inline-flex; align-items: center; gap: 6px; }
+  .social { text-align: center; margin-top: 26px; padding: 18px; background: var(--navy); color: var(--cream); border-radius: var(--radius); }
+  .social .big { font-family: Georgia, serif; font-size: 22px; font-weight: 700; }
+  .social .sub { font-size: 13px; opacity: 0.82; margin-top: 4px; }
+  .social .links { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 14px; }
+  .social .links a { background: rgba(255,255,255,0.12); color: var(--cream); border: 1px solid rgba(255,255,255,0.25); border-radius: 99px; padding: 7px 16px; font-size: 13px; font-weight: 700; text-decoration: none; font-family: -apple-system, sans-serif; }
+
+  /* 5. readiness */
+  .ready { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-card); padding: 24px 20px; margin-top: 8px; }
+  .ready .lead-in { font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); text-align: center; }
+  .ready h2 { text-align: center; font-size: 21px; margin: 8px 0 20px; }
+  .opts { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .opt { display: flex; align-items: center; gap: 12px; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; cursor: pointer; transition: border-color .15s, background .15s; font-size: 15px; font-weight: 600; }
+  .opt:hover { border-color: var(--navy-mid); }
+  .opt input { accent-color: var(--navy); width: 19px; height: 19px; flex: none; }
+  .opt.sel { border-color: var(--navy); background: var(--navy-light); }
+  .cta-btn { width: 100%; background: var(--green); color: #fff; border: 0; border-radius: var(--radius); padding: 16px; font-size: 16px; font-weight: 800; letter-spacing: 0.02em; cursor: pointer; font-family: -apple-system, sans-serif; transition: transform .12s var(--ease-out), background .15s; }
+  .cta-btn:hover { background: #16693a; }
+  .cta-btn:active { transform: scale(0.98); }
+  .cta-btn:disabled { opacity: 0.6; cursor: default; }
+  .ready-note { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 12px; }
+
+  /* 6. completion */
+  .done { text-align: center; background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-card); padding: 36px 24px; margin-top: 8px; }
+  .done .check { width: 60px; height: 60px; border-radius: 50%; background: var(--green-light); color: var(--green); display: grid; place-items: center; margin: 0 auto 16px; font-size: 30px; }
+  .done h2 { font-size: 25px; margin-bottom: 12px; }
+  .done p { color: var(--text-muted); font-size: 15px; max-width: 440px; margin: 0 auto 8px; }
+  .done .when { color: var(--navy); font-weight: 700; }
+  .done-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px; }
+  .done-actions a { text-decoration: none; border: 1.5px solid var(--navy); color: var(--navy); border-radius: 99px; padding: 10px 20px; font-size: 14px; font-weight: 700; font-family: -apple-system, sans-serif; }
+
+  /* lightbox */
+  .lb { position: fixed; inset: 0; background: rgba(6,14,33,0.9); display: none; place-items: center; z-index: 100; padding: 18px; }
+  .lb.open { display: grid; }
+  .lb video { width: min(92vw, 900px); max-height: 82vh; border-radius: 10px; }
+  .lb .lb-close { position: absolute; top: 16px; right: 18px; background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.4); border-radius: 99px; width: 40px; height: 40px; font-size: 20px; cursor: pointer; }
+  .foot { text-align: center; font-size: 12px; color: var(--text-muted); padding: 26px 0 0; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="topbar"><span class="logo">AUTO <b>PALS</b> USA</span></div>
+
+  <div class="wrap">
+    <!-- 1. Confirmation -->
+    <header class="hero">
+      <span class="badge">✓ Appointment reserved</span>
+      <h1 id="hero-title">You're Booked With Auto Pals</h1>
+      <p>Your call has been reserved. Watch this 2-minute video below so you're prepared for your call.</p>
+      <div class="appt-card" id="appt-card" hidden>
+        <div class="appt-row"><span class="ic">📆</span><div><div class="lbl">Your call</div><div class="val"><span id="appt-date">—</span> at <span id="appt-time">—</span> <span id="appt-tz"></span></div></div></div>
+        <div class="appt-row" id="appt-rep-row" hidden><span class="ic">👤</span><div><div class="lbl">With</div><div class="val" id="appt-rep">our team</div></div></div>
+      </div>
+      <div class="step-note">
+        <b>One quick step before your call:</b> check your email and <b>accept the calendar invite</b>, then watch the short video below.
+      </div>
+    </header>
+
+    <!-- 2. Alex video -->
+    <section class="section">
+      <div class="sec-eyebrow">Watch first</div>
+      <h2 class="sec-title">A quick note from Alex before your call</h2>
+      <div class="video-frame" id="alex-frame">
+        <div class="video-ph" id="alex-ph">
+          <div class="play"></div>
+          <div class="t">Alex's pre-call message</div>
+          <div class="s">2-minute video</div>
+        </div>
+      </div>
+      <div class="video-cap">Please watch this before your appointment — it explains exactly how Auto Pals works.</div>
+    </section>
+
+    <!-- 3. FAQ -->
+    <section class="section">
+      <div class="sec-eyebrow">Good to know</div>
+      <h2 class="sec-title">Before your call, make sure you understand how this works</h2>
+      <div class="faq" id="faq"></div>
+    </section>
+
+    <!-- 4. Proof -->
+    <section class="section">
+      <div class="sec-eyebrow">Real purchases</div>
+      <h2 class="sec-title">Watch Auto Pals actually buy cars for clients</h2>
+      <div class="proof-grid" id="proof-grid"></div>
+      <div class="social" id="social"></div>
+    </section>
+
+    <!-- 5. Readiness -->
+    <section class="section">
+      <div class="ready" id="ready">
+        <div class="lead-in">One last thing before your call…</div>
+        <h2>If Auto Pals can realistically help you find the vehicle you're looking for, are you prepared to move forward with the $850 deposit?</h2>
+        <div class="opts" id="opts">
+          <label class="opt"><input type="radio" name="readiness" value="YES"><span>Yes — I'm ready if it's a good fit</span></label>
+          <label class="opt"><input type="radio" name="readiness" value="MAYBE"><span>Maybe — I have a few questions first</span></label>
+          <label class="opt"><input type="radio" name="readiness" value="NO"><span>No — I'm not prepared to move forward yet</span></label>
+        </div>
+        <button class="cta-btn" id="confirm-btn" onclick="submitReadiness()">Confirm I'm Ready For My Call</button>
+        <div class="ready-note">Your appointment is confirmed either way — this just helps our team prepare for your call.</div>
+      </div>
+
+      <!-- 6. Completion -->
+      <div class="done" id="done" hidden>
+        <div class="check">✓</div>
+        <h2>You're all set.</h2>
+        <p id="done-when">We'll see you at your scheduled time.</p>
+        <p>Please be somewhere you can talk for 15–20 minutes. Our team will review the vehicle you're looking for and your budget before the call so we can tell you what's realistic.</p>
+        <div class="done-actions">
+          <a href="https://autopalsusa.com" id="done-home">Back to Auto Pals</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="foot">Auto Pals USA · Licensed dealer · Questions? Reply to your confirmation email.</div>
+  </div>
+
+  <div class="lb" id="lb" onclick="closeLb(event)">
+    <button class="lb-close" onclick="closeLb(event, true)" aria-label="Close">✕</button>
+    <video id="lb-video" controls playsinline></video>
+  </div>
+
+<script>
+  // ─────────────────────────────────────────────────────────────────────────
+  // CONFIG — drop your videos in here. Empty src = a clean placeholder shows.
+  // Files can live in /videos (e.g. '/videos/alex-precall.mp4') or be full URLs.
+  // ─────────────────────────────────────────────────────────────────────────
+  const PRECALL_CONFIG = {
+    alexVideo:  '',            // e.g. '/videos/alex-precall.mp4'
+    alexPoster: '',            // optional poster image URL
+    proof: [
+      { badge: 'Everyday vehicle',   vehicle: 'Civic / Corolla / Accord', budget: '', auctionPrice: '', src: '', poster: '' },
+      { badge: 'Higher-end vehicle', vehicle: '',                          budget: '', auctionPrice: '', src: '', poster: '' },
+      { badge: 'Out-of-state client',vehicle: '',                          budget: '', auctionPrice: '', src: '', poster: '' }
+    ],
+    social: {
+      headline: '300,000+ followers across social media',
+      sub: 'See the process, the numbers, and the deliveries — every week.',
+      links: [
+        // { label: 'Instagram', url: 'https://instagram.com/...' },
+        // { label: 'TikTok',    url: 'https://tiktok.com/@...' },
+        // { label: 'YouTube',   url: 'https://youtube.com/@...' }
+      ]
+    }
+  };
+
+  const FAQ = [
+    { q: 'Are you actually a licensed dealer?', a: "Yes. Auto Pals purchases vehicles through dealer-only auctions that aren't available to the general public." },
+    { q: 'Do you mark up the car?', a: "No — that's one of the biggest differences. You see what the vehicle actually sells for at auction. You pay the auction price plus applicable auction fees, transportation, inspection/reconditioning and other applicable costs." },
+    { q: "Can you guarantee you'll find my exact car?", a: "No. Auction inventory changes every week. That's why we first determine whether your expectations are realistic." },
+    { q: 'What happens to my $850?', a: 'It activates the 60-day vehicle search. If we cannot find the agreed-upon fit within the 60-day period under the terms of the agreement, the deposit is refundable.' },
+    { q: "Can you help me if I'm outside Florida?", a: "Yes. You don't have to live in Florida to use Auto Pals." },
+    { q: "Why wouldn't I just buy from a dealership?", a: "A traditional dealer buys inventory wholesale and then needs to sell it for more. Our model is different: we're helping you source the vehicle rather than buying inventory specifically to mark it up and retail it." }
+  ];
+
+  // ── URL params (personalization + lead key) ──────────────────────────────
+  const qs = new URLSearchParams(location.search);
+  const P = {
+    fn:   (qs.get('fn') || '').trim(),
+    date: (qs.get('date') || '').trim(),
+    time: (qs.get('time') || '').trim(),
+    tz:   (qs.get('tz') || '').trim(),
+    rep:  (qs.get('rep') || '').trim(),
+    pc:   (qs.get('pc') || '').trim()   // opaque portal code — the lead key
+  };
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // ── tracking (fire-and-forget, keepalive) ────────────────────────────────
+  let _sid = null;
+  function sessionId() {
+    if (_sid) return _sid;
+    try { let s = localStorage.getItem('aup_session_id'); if (!s) { s = (crypto.randomUUID ? crypto.randomUUID() : 's_' + Date.now()); localStorage.setItem('aup_session_id', s); } return (_sid = s); }
+    catch (e) { return (_sid = 's_' + Date.now()); }
+  }
+  function track(name, props) {
+    try {
+      fetch('/api/db?table=events', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+        body: JSON.stringify({ name, sessionId: sessionId(), page: '/precall', props: Object.assign({ pc: P.pc || null }, props || null) })
+      }).catch(() => {});
+    } catch (e) {}
+  }
+  // Save engagement to the lead record (deposit readiness + flags).
+  function savePrecall(payload) {
+    if (!P.pc) return Promise.resolve();
+    return fetch('/api/precall', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+      body: JSON.stringify(Object.assign({ portalCode: P.pc }, payload))
+    }).catch(() => {});
+  }
+
+  // ── render personalization ───────────────────────────────────────────────
+  (function personalize() {
+    if (P.fn) document.getElementById('hero-title').textContent = `You're Booked, ${P.fn}`;
+    if (P.date || P.time) {
+      document.getElementById('appt-card').hidden = false;
+      if (P.date) document.getElementById('appt-date').textContent = P.date;
+      if (P.time) document.getElementById('appt-time').textContent = P.time;
+      if (P.tz) document.getElementById('appt-tz').textContent = P.tz;
+      if (P.rep) { document.getElementById('appt-rep-row').hidden = false; document.getElementById('appt-rep').textContent = P.rep; }
+    }
+  })();
+
+  // ── Alex video ───────────────────────────────────────────────────────────
+  (function mountAlex() {
+    const frame = document.getElementById('alex-frame');
+    const src = PRECALL_CONFIG.alexVideo;
+    if (!src) {
+      // placeholder — clicking just nudges them (no video yet)
+      document.getElementById('alex-ph').style.cursor = 'default';
+      return;
+    }
+    const v = document.createElement('video');
+    v.src = src; v.controls = true; v.playsInline = true; v.preload = 'metadata';
+    if (PRECALL_CONFIG.alexPoster) v.poster = PRECALL_CONFIG.alexPoster;
+    frame.innerHTML = '';
+    frame.appendChild(v);
+    let played = false, completed = false;
+    v.addEventListener('play', () => { if (!played) { played = true; track('precall_video_play'); } });
+    v.addEventListener('timeupdate', () => {
+      if (!completed && v.duration && v.currentTime / v.duration >= 0.9) {
+        completed = true; track('precall_video_complete'); savePrecall({ videoCompleted: true });
+      }
+    });
+  })();
+
+  // ── FAQ ──────────────────────────────────────────────────────────────────
+  (function mountFaq() {
+    const box = document.getElementById('faq');
+    box.innerHTML = FAQ.map((f, i) => `
+      <div class="faq-item" data-i="${i}">
+        <button class="faq-q" aria-expanded="false">
+          <span>${esc(f.q)}</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <div class="faq-a"><div class="faq-a-inner">${esc(f.a)}</div></div>
+      </div>`).join('');
+    let faqTracked = false;
+    box.querySelectorAll('.faq-item').forEach(item => {
+      const btn = item.querySelector('.faq-q');
+      const ans = item.querySelector('.faq-a');
+      btn.addEventListener('click', () => {
+        const open = item.classList.toggle('open');
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        ans.style.maxHeight = open ? (ans.scrollHeight + 'px') : '0';
+        if (open && !faqTracked) { faqTracked = true; track('faq_interaction', { q: FAQ[+item.dataset.i].q }); }
+      });
+    });
+  })();
+
+  // ── Proof cards ──────────────────────────────────────────────────────────
+  (function mountProof() {
+    const grid = document.getElementById('proof-grid');
+    grid.innerHTML = PRECALL_CONFIG.proof.map((c, i) => {
+      const nums = [];
+      if (c.budget) nums.push(`<div class="proof-num"><div class="k">Client budget</div><div class="v">${esc(c.budget)}</div></div>`);
+      if (c.auctionPrice) nums.push(`<div class="proof-num"><div class="k">Auction price</div><div class="v">${esc(c.auctionPrice)}</div></div>`);
+      const thumbImg = c.poster ? `<img src="${esc(c.poster)}" alt="">` : '';
+      return `<div class="proof-card" data-i="${i}" role="button" tabindex="0">
+        <div class="proof-thumb">${thumbImg}<span class="proof-badge">${esc(c.badge || 'Purchase')}</span><span class="pico"></span></div>
+        <div class="proof-body">
+          <div class="proof-veh">${esc(c.vehicle || 'Real client purchase')}</div>
+          <div class="proof-nums">${nums.join('')}</div>
+          <span class="proof-cta">▶ Watch the purchase</span>
+        </div>
+      </div>`;
+    }).join('');
+    const open = (i) => {
+      const c = PRECALL_CONFIG.proof[i];
+      track('proof_video_play', { badge: c.badge || null, vehicle: c.vehicle || null });
+      if (!c.src) { alert('This purchase video is coming soon.'); return; }
+      const lb = document.getElementById('lb'), v = document.getElementById('lb-video');
+      v.src = c.src; lb.classList.add('open'); v.play().catch(() => {});
+    };
+    grid.querySelectorAll('.proof-card').forEach(card => {
+      const i = +card.dataset.i;
+      card.addEventListener('click', () => open(i));
+      card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(i); } });
+    });
+    // social proof
+    const s = PRECALL_CONFIG.social || {};
+    document.getElementById('social').innerHTML =
+      `<div class="big">${esc(s.headline || '')}</div>` +
+      (s.sub ? `<div class="sub">${esc(s.sub)}</div>` : '') +
+      ((s.links && s.links.length) ? `<div class="links">${s.links.map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`).join('')}</div>` : '');
+  })();
+
+  function closeLb(e, force) {
+    const lb = document.getElementById('lb');
+    if (force || e.target === lb) { const v = document.getElementById('lb-video'); v.pause(); v.removeAttribute('src'); v.load(); lb.classList.remove('open'); }
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLb(null, true); });
+
+  // ── readiness options highlight ──────────────────────────────────────────
+  document.querySelectorAll('.opt input').forEach(r => {
+    r.addEventListener('change', () => {
+      document.querySelectorAll('.opt').forEach(o => o.classList.remove('sel'));
+      if (r.checked) r.closest('.opt').classList.add('sel');
+    });
+  });
+
+  // ── submit readiness ─────────────────────────────────────────────────────
+  async function submitReadiness() {
+    const picked = document.querySelector('.opt input:checked');
+    const btn = document.getElementById('confirm-btn');
+    const val = picked ? picked.value : '';
+    if (!val) {
+      // Not required to preserve the appointment, but nudge a choice for the closer.
+      document.getElementById('opts').style.animation = 'none';
+      alert('Pick one option so our team knows how to prepare — your appointment is confirmed either way.');
+      return;
+    }
+    btn.disabled = true; btn.textContent = 'Confirming…';
+    track('deposit_readiness', { value: val });
+    await savePrecall({ readiness: val });
+    track('precall_complete', { value: val });
+    // swap to completion state
+    const when = (P.date || P.time)
+      ? `We'll see you on <span class="when">${esc(P.date || 'your scheduled day')}${P.time ? ` at ${esc(P.time)}` : ''}${P.tz ? ' ' + esc(P.tz) : ''}</span>.`
+      : "We'll see you at your scheduled time.";
+    document.getElementById('done-when').innerHTML = when;
+    document.getElementById('ready').hidden = true;
+    document.getElementById('done').hidden = false;
+    document.getElementById('done').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  window.submitReadiness = submitReadiness;
+
+  // ── page view ────────────────────────────────────────────────────────────
+  track('precall_page_view');
+  savePrecall({ pageView: true });
+</script>
+</body>
+</html>
