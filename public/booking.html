@@ -1091,6 +1091,22 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
   const PRECALL_REDIRECT = false;
   let _leadPortal = '';
 
+  // ── META ADS BOOKING LINK ───────────────────────────────────────
+  // The Meta ad's "Book Now" button opens this page directly. The lead already
+  // gave their contact info to Meta's instant form, so there's no portal code
+  // and no request row yet — Meta mode (a) bypasses the portal gate so a cold
+  // ad-clicker can reach the calendar, and (b) flags the booking so the
+  // auto-created lead is tagged "Meta Ads" (blue board tag) and filed under the
+  // Meta channel. Triggered by the /book-call vanity path (vercel.json rewrite)
+  // or an explicit ?src=meta / ?meta=1 on booking.html itself.
+  const META_MODE = (function () {
+    try {
+      const p = new URLSearchParams(location.search);
+      if (p.get('src') === 'meta' || p.get('meta') === '1') return true;
+      return /^\/book-call\/?$/i.test(location.pathname || '');
+    } catch (e) { return false; }
+  })();
+
   async function confirmBooking() {
     const fn = document.getElementById('b-fn').value.trim();
     const ln = document.getElementById('b-ln').value.trim();
@@ -1117,7 +1133,9 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
           date: selectedDate, time: selectedTime,
           firstName: fn, lastName: ln, email,
           phone: document.getElementById('b-phone').value.trim(),
-          vehicle: document.getElementById('b-vehicle').value.trim()
+          vehicle: document.getElementById('b-vehicle').value.trim(),
+          // Meta ad booking → tag the auto-created lead as a Meta lead.
+          metaAd: META_MODE
         })
       });
 
@@ -1417,13 +1435,21 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
     const portalCode = (sessionStorage.getItem('portal_code') || '').trim();
     const gate = document.getElementById('booking-gate');
     const content = document.getElementById('booking-content');
-    if (!portalCode) {
+    // Meta ad clickers have no portal code (they never hit our form) — Meta mode
+    // lets them straight through to the calendar; the booking creates their lead.
+    if (!portalCode && !META_MODE) {
       if (gate) gate.style.display = 'block';
       if (content) content.style.display = 'none';
       return; // no calendar init
     }
     if (gate) gate.style.display = 'none';
     if (content) content.style.display = '';  // clears inline none; CSS class restores grid layout
+    if (META_MODE && !portalCode) {
+      const ribbon = document.getElementById('booking-welcome-ribbon');
+      const rtext  = document.getElementById('booking-welcome-text');
+      if (rtext) rtext.textContent = "You're almost there — pick a time for your call below.";
+      if (ribbon) ribbon.style.display = 'flex';
+    }
     renderCalendar();
     await preloadMonthBookings();
     await autoSelectFirstBookable();

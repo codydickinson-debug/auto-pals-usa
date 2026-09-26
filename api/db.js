@@ -194,6 +194,11 @@ async function crossLinkOrCreateRequest(body, deps = {}) {
   // purpose — this person booked a call but never opted into texts, so they
   // stay out of every SMS drip until staff capture consent on the call.
   const id = newId();
+  // Meta Ads booking link (booking.html?src=meta / the /book-call vanity path):
+  // the lead clicked the ad and booked directly, so tag the auto-created lead as
+  // Meta — referral_source 'Meta Ads' is what lights the blue "Meta" board tag,
+  // and source 'meta' files it under the Meta channel in the Leads tab.
+  const isMetaAd = body.metaAd === true || body.source === 'meta';
   const reqRow = {
     id,
     submitted: now(),
@@ -206,8 +211,11 @@ async function crossLinkOrCreateRequest(body, deps = {}) {
     search_mode: (body.vehicle || '').trim() ? 'specific' : 'open',
     status:     'qualified',
     portal_code: genPortalCode(body.firstName, id),
-    referral_source: 'Booked a call (no request form)',
-    notes: 'Auto-created from a booked call — this client booked without submitting the request form, so their details were captured from the booking.',
+    referral_source: isMetaAd ? 'Meta Ads' : 'Booked a call (no request form)',
+    source: isMetaAd ? 'meta' : (body.source || null),
+    notes: isMetaAd
+      ? 'Auto-created from the Meta Ads booking link — this lead clicked the ad and booked a call directly. Details were captured at booking.'
+      : 'Auto-created from a booked call — this client booked without submitting the request form, so their details were captured from the booking.',
     sms_consent: false,
     deposit_paid: false,
     booking_confirmed_at: now(),
