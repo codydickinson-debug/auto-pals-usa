@@ -12,7 +12,8 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY
   || process.env.SUPABASE_ANON_KEY
   || process.env.SUPABASE_ANNON_KEY;
 
-const READINESS = new Set(['YES', 'MAYBE', 'NO']);
+// Purchase-timeline answers from precall.html (how soon they're looking to buy).
+const READINESS = new Set(['7D', '30D', '90D']);
 
 async function sb(method, path, body) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {

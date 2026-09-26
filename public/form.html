@@ -2216,7 +2216,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v261 · 2026-09-26</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v262 · 2026-09-26</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -3424,7 +3424,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
         <div id="dv-portal-send-status" style="font-size:12px;font-family:system-ui,sans-serif;margin-top:6px;min-height:15px;color:var(--text-muted);"></div>
       </div>
 
-      <div id="dv-precall-section" style="margin-bottom:18px;display:none;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Pre-Call Readiness</div>
+      <div id="dv-precall-section" style="margin-bottom:18px;display:none;"><div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent-bright);font-family:system-ui,sans-serif;margin-bottom:8px;">Purchase Timeline</div>
         <div id="dv-precall-body" style="font-family:system-ui,sans-serif;font-size:13px;color:var(--text);line-height:1.6;"></div>
       </div>
 
@@ -7948,19 +7948,19 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       }
     }
 
-    // Pre-Call Readiness — what the prospect answered on precall.html before the
-    // call (deposit readiness YES/MAYBE/NO). Sales intelligence for the closer.
+    // Pre-Call — the prospect's purchase-timeline answer on precall.html before
+    // the call (how soon they're looking to buy). Sales intelligence for the closer.
     {
       const sec = document.getElementById('dv-precall-section');
       const bodyEl = document.getElementById('dv-precall-body');
       if (sec && bodyEl) {
         if (r.depositReadiness || r.precallCompletedAt) {
-          const rMeta = { YES: { t: 'Ready to move forward if it\'s a good fit', c: '#047857', bg: '#e8f0e8' }, MAYBE: { t: 'Interested — wants a few questions answered', c: '#b45309', bg: '#fef3c7' }, NO: { t: 'Still exploring for now', c: '#b91c1c', bg: '#fef2f2' } }[r.depositReadiness] || null;
+          const rMeta = { '7D': { t: 'Within 7 days', c: '#047857', bg: '#e8f0e8' }, '30D': { t: 'Within 30 days', c: '#b45309', bg: '#fef3c7' }, '90D': { t: 'Within 90 days', c: '#1d4ed8', bg: '#e8edf8' } }[r.depositReadiness] || null;
           const when = r.precallCompletedAt ? new Date(r.precallCompletedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }) : '';
           const chip = rMeta
-            ? `<span style="display:inline-block;font-weight:700;color:${rMeta.c};background:${rMeta.bg};border:1px solid ${rMeta.c}33;border-radius:20px;padding:2px 10px;">${r.depositReadiness} — ${rMeta.t}</span>`
+            ? `<span style="display:inline-block;font-weight:700;color:${rMeta.c};background:${rMeta.bg};border:1px solid ${rMeta.c}33;border-radius:20px;padding:2px 10px;">${rMeta.t}</span>`
             : '<span style="color:var(--text-muted);">No answer</span>';
-          bodyEl.innerHTML = `<div>Deposit readiness: ${chip}</div>`
+          bodyEl.innerHTML = `<div>Ready to buy: ${chip}</div>`
             + `<div style="color:var(--text-muted);font-size:12px;margin-top:5px;">✓ Pre-call page completed${when ? ' · ' + when : ''}${r.precallVideoCompleted ? ' · watched Alex\'s video' : ''}</div>`;
           sec.style.display = 'block';
         } else {

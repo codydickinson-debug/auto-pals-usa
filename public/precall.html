@@ -195,11 +195,11 @@
     <section class="section">
       <div class="ready" id="ready">
         <div class="lead-in">Just so we can prepare for your call</div>
-        <h2>After your call, if Auto Pals looks like the right fit for you, how ready do you think you'd be to move forward?</h2>
+        <h2>How ready are you to purchase your next car?</h2>
         <div class="opts" id="opts">
-          <label class="opt"><input type="radio" name="readiness" value="YES"><span>Ready to move forward if it's a good fit</span></label>
-          <label class="opt"><input type="radio" name="readiness" value="MAYBE"><span>Interested — I'd just want a few questions answered first</span></label>
-          <label class="opt"><input type="radio" name="readiness" value="NO"><span>Still exploring for now</span></label>
+          <label class="opt"><input type="radio" name="readiness" value="7D"><span>Within the next 7 days</span></label>
+          <label class="opt"><input type="radio" name="readiness" value="30D"><span>Within the next 30 days</span></label>
+          <label class="opt"><input type="radio" name="readiness" value="90D"><span>Within the next 90 days</span></label>
         </div>
         <button class="cta-btn" id="confirm-btn" onclick="submitReadiness()">Confirm My Call</button>
         <div class="ready-note">Your appointment is confirmed either way — this just helps our team prepare for your call.</div>
@@ -416,7 +416,7 @@
       return;
     }
     btn.disabled = true; btn.textContent = 'Confirming…';
-    track('deposit_readiness', { value: val });
+    track('purchase_timeline', { value: val });
     await savePrecall({ readiness: val });
     track('precall_complete', { value: val });
     // swap to completion state
