@@ -2216,7 +2216,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
 <!-- Hover-card shown when the mouse is over a board card's activity dot. -->
 <div id="act-hover" class="act-hover" style="display:none;" onmouseenter="cancelHideActivityHover()" onmouseleave="hideActivityHoverSoon()"></div>
 
-<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v260 · 2026-09-26</div>
+<div id="form-build-stamp" style="position:fixed;bottom:14px;left:14px;z-index:50;padding:5px 10px;background:rgba(15,37,87,0.92);color:#f5f0e8;border-radius:99px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;box-shadow:0 2px 8px rgba(15,37,87,0.25);user-select:none;pointer-events:none;">v261 · 2026-09-26</div>
 
 <!-- Auto-refresh status pill (staff dashboard only — hidden until first tick).
      Stacked above the version stamp at bottom-left. -->
@@ -7955,7 +7955,7 @@ src="https://www.facebook.com/tr?id=979507655137437&ev=PageView&noscript=1"
       const bodyEl = document.getElementById('dv-precall-body');
       if (sec && bodyEl) {
         if (r.depositReadiness || r.precallCompletedAt) {
-          const rMeta = { YES: { t: 'Ready if it\'s a good fit', c: '#047857', bg: '#e8f0e8' }, MAYBE: { t: 'Has a few questions first', c: '#b45309', bg: '#fef3c7' }, NO: { t: 'Not ready to move forward yet', c: '#b91c1c', bg: '#fef2f2' } }[r.depositReadiness] || null;
+          const rMeta = { YES: { t: 'Ready to move forward if it\'s a good fit', c: '#047857', bg: '#e8f0e8' }, MAYBE: { t: 'Interested — wants a few questions answered', c: '#b45309', bg: '#fef3c7' }, NO: { t: 'Still exploring for now', c: '#b91c1c', bg: '#fef2f2' } }[r.depositReadiness] || null;
           const when = r.precallCompletedAt ? new Date(r.precallCompletedAt).toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }) : '';
           const chip = rMeta
             ? `<span style="display:inline-block;font-weight:700;color:${rMeta.c};background:${rMeta.bg};border:1px solid ${rMeta.c}33;border-radius:20px;padding:2px 10px;">${r.depositReadiness} — ${rMeta.t}</span>`
